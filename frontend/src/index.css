@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased font-sans;
+  }
+}
+
+/* Custom form and scrollbar utilities */
+input, select, textarea, button {
+  @apply min-h-[44px];
+}
+
+input[type="checkbox"], input[type="radio"] {
+  @apply min-h-[18px] min-w-[18px];
+}
