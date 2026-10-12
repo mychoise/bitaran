@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { rupeesToPaisa, paisaToRupees } from '../../lib/money';
-import { Plus, Trash2, ArrowLeft, Save } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Save, ShieldAlert } from 'lucide-react';
+import { useAuth } from '../../lib/auth';
 
 interface VariantInput {
   id?: string;
@@ -19,6 +20,8 @@ export const ProductFormPage: React.FC = () => {
   const isEdit = !!id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { activeOrg } = useAuth();
+  const isApproved = activeOrg?.orgStatus === 'APPROVED';
 
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');

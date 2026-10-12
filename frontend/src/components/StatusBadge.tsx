@@ -14,6 +14,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
       case 'PENDING':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'SUSPENDED':
+      case 'DISABLED':
+      case 'VOIDED':
         return 'bg-rose-50 text-rose-700 border-rose-200';
 
       // Order status

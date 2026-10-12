@@ -15,6 +15,8 @@ import {
   FolderTree,
   Truck,
   ClipboardList,
+  Users,
+  BarChart3,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -114,6 +116,18 @@ export const Sidebar: React.FC = () => {
               <Inbox className="w-4 h-4" />
               <span>Incoming orders</span>
             </NavLink>
+            {activeOrg?.permissions?.includes('fieldseller.manage') && (
+              <NavLink to="/seller/field-sellers" className={navClass}>
+                <Users className="w-4 h-4" />
+                <span>Field sellers</span>
+              </NavLink>
+            )}
+            {activeOrg?.permissions?.includes('fieldanalytics.view') && (
+              <NavLink to="/seller/field-analytics" className={navClass}>
+                <BarChart3 className="w-4 h-4" />
+                <span>Field analytics</span>
+              </NavLink>
+            )}
           </nav>
         </div>
       )}

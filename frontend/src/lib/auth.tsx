@@ -14,7 +14,9 @@ export interface Membership {
 export interface User {
   id: string;
   name: string;
-  email: string;
+  email?: string | null;
+  username?: string | null;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthContextType {
@@ -23,10 +25,12 @@ export interface AuthContextType {
   activeOrg: Membership | null;
   isAuthenticated: boolean;
   isPlatformStaff: boolean;
+  isFieldSeller: boolean;
   login: (data: { user: User; tokens: { accessToken: string; refreshToken: string }; memberships: Membership[] }) => void;
   logout: () => Promise<void>;
   switchOrg: (orgId: string) => void;
   refreshUserData: () => Promise<void>;
+  updateUser: (partial: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -110,6 +114,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     (m) => m.roleName === 'ADMIN' || m.roleName === 'SUPER_ADMIN',
   );
 
+  const isFieldSeller = memberships.some(
+    (m) => m.roleName === 'FIELD_SELLER',
+  );
+
+  const updateUser = (partial: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...partial };
+      localStorage.setItem('bitaran_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -118,10 +135,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeOrg,
         isAuthenticated: !!user,
         isPlatformStaff,
+        isFieldSeller,
         login,
         logout,
         switchOrg,
         refreshUserData,
+        updateUser,
       }}
     >
       {children}

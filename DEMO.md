@@ -158,4 +158,115 @@ This numbered walkthrough guides a reviewer or client step-by-step through the c
 3. Open the order.
 4. Notice all timeline steps (Payment pending &rarr; Paid &rarr; Confirmed &rarr; Ready for pickup &rarr; In delivery &rarr; Delivered) are completely filled in green, with logistics tracking information displayed!
 
+---
+
+### Step 11: Owner Creates and Manages Field Sellers (Milestone 8)
+
+1. Log in as wholesale business owner:
+   - **Email:** `seller1@demo.test` (Himalayan Wholesale Distributors)
+   - **Password:** `Password123!`
+2. In the sidebar, navigate to **Field sellers** (`/seller/field-sellers`).
+3. Review the existing seeded team:
+   - **Ramesh Shrestha** (`@field1`, password `Password123!`)
+   - **Sita Gurung** (`@field2`, password `Password123!`)
+   - Notice the live performance numbers for Today, This Month, and To Date.
+4. Click the green **"Add field seller"** button (`/seller/field-sellers/new`).
+5. Fill in the new representative's details:
+   - **Full Name:** Bikash Thapa
+   - **Username:** `bikash.sales`
+   - **Phone Number:** `9812345678`
+6. Click **"Create Field Seller"**.
+7. **Notice the Temporary Password Box:**
+   - The generated 12-character temporary password is displayed in a highlighted golden box.
+   - Click the **"Copy password"** button to copy it.
+   - Notice the warning: *"Share this password securely with the seller. They will be required to change it on first login. It will not be shown again."*
+
+---
+
+### Step 12: Field Seller First Login & Forced Password Change
+
+1. Open a mobile browser view or private window and go to the Field Seller login screen:
+   `http://localhost:5173/field/login`
+2. Attempt login with your newly created seller credentials (or reset password credentials):
+   - **Username:** `bikash.sales` (or test account `@field1` with a newly reset password)
+   - **Password:** *[Pasted temporary password]*
+3. Click **"Sign In"**.
+4. **Forced Password Change:**
+   - Because `mustChangePassword` is active, the app automatically blocks access to home and redirects to `/field/password`.
+   - Any attempt to navigate away is intercepted.
+5. Enter:
+   - **Current Password:** *[Pasted temporary password]*
+   - **New Password:** `MySecretPassword123!`
+   - **Confirm New Password:** `MySecretPassword123!`
+6. Click **"Save and Continue"**.
+7. You are immediately redirected to the mobile **Field Home** (`/field/home`)!
+
+---
+
+### Step 13: Field Seller Records a Sale on Mobile
+
+1. On the mobile screen, sign in as seeded seller `@field1`:
+   - URL: `http://localhost:5173/field/login`
+   - **Username:** `field1`
+   - **Password:** `Password123!`
+2. Notice the clean mobile dashboard:
+   - **Sold Today** summary card (e.g. Rs 0.00 / 0 sales).
+   - **Sold to Date** card.
+   - Large green 48px touch-target button: **"Record new sale"**.
+3. Tap **"Record new sale"** (or use the bottom tab **New sale** &rarr; `/field/sales/new`):
+4. **Select Products:**
+   - Use the search bar to filter variants: type `"Rice"` or `"Salt"`.
+   - Tap **"Basmati Rice Premium 25kg"** (Rs 2,800.00 / bag). Tap the `+` button to set quantity to `2`.
+   - Tap **"Himalayan Pink Rock Salt 25kg"** (Rs 1,200.00 / bag). Set quantity to `1`.
+   - Notice the floating bottom cart bar updates instantly to **3 items • Rs 6,800.00**.
+5. **Customer & Payment Info:**
+   - Customer Name: `Sunil Shrestha`
+   - Customer Phone: `9841112233`
+   - Select Payment Method: Tap the large **"eSewa"** payment button.
+   - Note: `Cash received at counter`.
+6. Tap the large green **"Review and Save Sale"** button.
+7. Confirm details in the review modal and tap **"Confirm & Record Sale"**.
+8. **Success Screen:**
+   - Server computes total (`Rs 6,800.00`) and records immutable snapshots.
+   - Sale confirmed screen appears with invoice reference.
+   - Tap **"View My Sales"**.
+
+---
+
+### Step 14: Field Seller Views Live History
+
+1. In the bottom navigation bar, tap **"My sales"** (`/field/sales`).
+2. Notice:
+   - Sales are cleanly grouped by date.
+   - The newly recorded sale to `Sunil Shrestha` is displayed at the top with badge `Active`, payment badge `eSewa`, and total `Rs 6,800.00`.
+   - Tap the card to expand and review all snapshotted line items and SKUs.
+3. Tap **"Home"** tab (`/field/home`):
+   - Notice **"Sold today"** and **"Sold to date"** counters have updated immediately in real time!
+
+---
+
+### Step 15: Owner Inspects Seller, Voids a Sale, and Views Analytics
+
+1. Switch back to the business owner account at `http://localhost:5173/login`:
+   - **Email:** `seller1@demo.test`
+   - **Password:** `Password123!`
+2. In the sidebar, click **Field sellers** (`/seller/field-sellers`):
+   - Notice Ramesh Shrestha (`@field1`) now has updated today and all-time revenue numbers.
+3. Click **"View"** next to Ramesh (`/seller/field-sellers/:id`):
+   - **Overview Tab:** Review the 14-day sales trend bar chart in Recharts.
+   - **Sales Tab:** Review all sales recorded by Ramesh. Click on the Rs 6,800.00 sale to open its detail drawer.
+   - **Void Action:** Click the red **"Void"** button.
+   - Enter mandatory reason (min 3 chars): `"Customer cancelled order at doorstep"`.
+   - Click **"Confirm Void"**.
+   - Notice the sale total is struck through with badge `Voided`. The revenue is instantly deducted from all active totals!
+   - **Account Tab:** Test clicking **"Reset PW"** to generate a new temporary password, or click **"Disable Account"** to test revoking active sessions.
+4. In the sidebar, click **Field analytics** (`/seller/field-analytics`):
+   - **Date Range Presets:** Toggle between **Last 7 days**, **Last 30 days**, **This month**, or **Custom**.
+   - **Filter by Seller:** Pick **All Field Sellers** or select **Ramesh Shrestha**.
+   - **Totals Tiles:** Total revenue, sales count, physical units sold, and average sale value.
+   - **Revenue by Day Chart:** Full Recharts bar chart showing daily revenue trends.
+   - **Seller Leaderboard:** Ranks field representatives by total revenue and sales count.
+   - **Payment Methods Split:** Distribution between Cash, eSewa, Khalti, and Other with percentage progress bars.
+   - **Top 10 Products:** Highest moving catalog items by units sold.
+
 **End of demo.**

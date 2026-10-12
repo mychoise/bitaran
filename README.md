@@ -99,15 +99,18 @@ All seeded demo accounts use the standard password: `Password123!`
 | **Buyer Dealer 2** | `buyer2@demo.test` / `dealer2@demo.test` | `Password123!` | Pokhara Lakeside Stores |
 | **Seller & Buyer** | `both@demo.test` | `Password123!` | Apex Multi-Trade Enterprise (Wholesaler-to-wholesaler trading) |
 | **Pending Business** | `pending@demo.test` | `Password123!` | Sunrise General Suppliers (Awaiting Admin KYC approval) |
+| **Field Seller 1** | `field1` (username) | `Password123!` | Himalayan Wholesale Distributors (Field Rep: Ramesh Shrestha) |
+| **Field Seller 2** | `field2` (username) | `Password123!` | Himalayan Wholesale Distributors (Field Rep: Sita Gurung) |
 
 ---
 
 ## 3. Architecture Overview
 
 ### Backend (NestJS + TypeScript Strict + Drizzle ORM)
-- **Monolith Domain Modules:** Auth, Orgs, Catalog, Inventory, Cart, Checkout, Orders, Payments, Shipments, Admin.
+- **Monolith Domain Modules:** Auth, Orgs, Catalog, Inventory, Cart, Checkout, Orders, Payments, Shipments, Admin, Field.
 - **Multi-Tenancy Scoping:**
   - Tenant queries strictly require active `orgId` resolved from the `X-Org-Id` header via global `OrgContextGuard`.
+  - For `FIELD_SELLER` users, `OrgContextGuard` automatically uses their single organization membership and ignores any `X-Org-Id` header.
   - Platform administrators automatically resolve platform privileges even without `X-Org-Id`.
 - **Atomic Stock Reservation:**
   - Stock reservations use single conditional updates within `db.transaction(...)`:
@@ -129,6 +132,7 @@ All seeded demo accounts use the standard password: `Password123!`
 - **Shared App Constant:** `APP_NAME = 'Bitaran'` imported across all navigation, page titles, logos, and notifications.
 - **Safe Currency Display:** `formatMoney(paisa)` formats integer paisa into readable `Rs 1,200.00` representations with zero floating point inaccuracy.
 - **Role-Adaptive Layout:** Real-time role and multi-business switcher updating `X-Org-Id` header dynamically on API calls.
+- **Field Seller Mobile Web App:** Dedicated mobile-first layout (`/field/*`) with sticky header, 48px touch targets, quick variant search, quantity stepper, payment buttons, and bottom tab bar.
 
 ---
 
@@ -136,7 +140,9 @@ All seeded demo accounts use the standard password: `Password123!`
 
 ### Authentication & Tenant
 - `POST /api/v1/auth/register` - Register user and new pending business
-- `POST /api/v1/auth/login` - Login with email and password
+- `POST /api/v1/auth/login` - Login with email and password (rejects FIELD_SELLER)
+- `POST /api/v1/auth/field/login` - Login with username and password (field sellers only)
+- `POST /api/v1/auth/password` - Change own password (field sellers and users with `must_change_password`)
 - `POST /api/v1/auth/refresh` - Rotate refresh token
 - `POST /api/v1/auth/logout` - Revoke refresh tokens
 - `GET  /api/v1/orgs/my` - List active user memberships
@@ -153,6 +159,24 @@ All seeded demo accounts use the standard password: `Password123!`
 - `POST /api/v1/catalog/products` - Create product and variants (Seller)
 - `PUT  /api/v1/catalog/products/:id` - Update product and variants (Seller)
 - `GET  /api/v1/catalog/categories` - List categories
+
+### Field Sellers (Field Sales Team)
+- `GET  /api/v1/field/me/summary` - Today and all-time revenue and sales counts (Asia/Kathmandu)
+- `GET  /api/v1/field/products` - Active catalog variants and snapshotted prices for the employer
+- `POST /api/v1/field/sales` - Record a new field sale (catalog-computed server pricing)
+- `GET  /api/v1/field/sales` - Paginated own sales history (newest first)
+
+### Owner Field Seller Management & Analytics
+- `POST /api/v1/seller/field-sellers` - Create field seller account (returns temporary password once)
+- `GET  /api/v1/seller/field-sellers` - List field sellers with today, month, and all-time totals
+- `GET  /api/v1/seller/field-sellers/:id` - Get field seller detail with 14-day revenue breakdown
+- `PATCH /api/v1/seller/field-sellers/:id` - Update field seller display name and phone
+- `POST /api/v1/seller/field-sellers/:id/disable` - Disable seller and revoke refresh tokens
+- `POST /api/v1/seller/field-sellers/:id/enable` - Re-enable field seller account
+- `POST /api/v1/seller/field-sellers/:id/reset-password` - Reset temporary password (returns once)
+- `GET  /api/v1/seller/field-sales` - Filterable seller sales history
+- `POST /api/v1/seller/field-sales/:id/void` - Void sale with mandatory audit reason (3-200 chars)
+- `GET  /api/v1/seller/field-analytics` - Aggregated analytics (totals, leaderboard, day trend, top 10 products, payment method split)
 
 ### Inventory
 - `GET  /api/v1/inventory/stock` - List inventory items for active seller
@@ -193,7 +217,41 @@ All seeded demo accounts use the standard password: `Password123!`
 
 ---
 
-## 5. What is Mocked or Stubbed
+## 5. Roles & Permissions (Milestone 8)
+
+| Role | Permissions | Description |
+|---|---|---|
+| **SUPER_ADMIN** / **ADMIN** | `admin.*` | Platform administrators managing approvals and shipments |
+| **OWNER** | `fieldseller.manage`, `fieldsale.view_all`, `fieldsale.void`, `fieldanalytics.view`, plus standard seller permissions | Wholesaler business owner |
+| **STAFF** | Standard seller permissions | Wholesaler business staff (no field seller management by default) |
+| **FIELD_SELLER** | `fieldsale.create`, `fieldsale.view_own`, `fieldcatalog.view` | Mobile representative selling products on the road |
+
+---
+
+## 6. Temporary Password Behavior
+
+When an owner creates a new field seller account or resets an existing field seller's password:
+1. The server generates a random 12-character temporary password meeting complexity requirements (uppercase, lowercase, digits, symbols).
+2. The password is hashed using `bcrypt` (12 salt rounds) and saved to the database.
+3. `must_change_password = true` is set on the user record.
+4. The temporary password is returned **strictly once** in the API JSON response (`temporaryPassword`).
+5. The temporary password is **never logged** in console logs or database audit records.
+6. Until the user changes their password via `POST /api/v1/auth/password`, `JwtAuthGuard` blocks all other endpoints with an HTTP 403 / redirect to password change screen.
+
+---
+
+## 7. Field sellers: not included
+
+The following capabilities are deliberately omitted from this version:
+1. **Stock Deductions:** Field sales in v1 have no stock reservation or inventory decrement effects.
+2. **Cash Handover & Reconciliation:** Daily cash settlements between field sellers and the business owner are out of scope.
+3. **Offline Mode:** The mobile web app requires an active internet connection.
+4. **Customer Accounts / Buyer Businesses:** Field sales are direct walk-in/phone retail transactions, not marketplace orders between platform-registered businesses.
+5. **Commissions & Incentives:** Calculation of seller commissions, bonuses, or payout ledgering is not included.
+
+---
+
+## 8. What is Mocked or Stubbed
 
 As specified in the prototype requirements, the following components are simulated or stubbed for client demonstration:
 
@@ -210,11 +268,21 @@ As specified in the prototype requirements, the following components are simulat
 
 ---
 
-## 6. Assumptions & Engineering Decisions
+## 9. Assumptions & Engineering Decisions
 
 1. **Self-Purchasing Restriction:** An organization is blocked at both cart addition and checkout from purchasing its own products.
 2. **Platform Admin Tenancy:** Platform admins belonging to `PLATFORM` organization are granted administrative permissions without requiring an `X-Org-Id` header for platform routes.
-3. **Order State Machine:** Transitions strictly adhere to the documented lifecycle:
+3. **Field Seller Tenancy & Route Isolation:**
+   - Field sellers have exactly one membership. `OrgContextGuard` ignores any `X-Org-Id` header and automatically resolves this single membership.
+   - Field sellers are strictly forbidden from accessing buyer, seller, and platform admin routes (`403 Forbidden`).
+4. **Catalog Price Calculation:**
+   - Prices and line totals are strictly calculated by the server using snapshotted variant catalog prices. Any client-submitted prices or totals are ignored.
+5. **Server-Enforced Timestamps & Timezones:**
+   - `sold_at` is generated solely by the server (`defaultNow()`). Client timestamps are rejected.
+   - Today and monthly aggregations use PostgreSQL `AT TIME ZONE 'Asia/Kathmandu'`.
+6. **Sales Immutability & Voiding:**
+   - Field sales are immutable (no updates or deletes). Owners can void sales with a mandatory reason (3-200 characters). Voided sales remain visible in audit logs but are completely excluded from totals, leaderboard, and analytics aggregations.
+7. **Order State Machine:** Transitions strictly adhere to the documented lifecycle:
    ```
    PAYMENT_PENDING -> PAID | PAYMENT_FAILED | CANCELLED
    PAID -> CONFIRMED | REJECTED_REFUND_PENDING

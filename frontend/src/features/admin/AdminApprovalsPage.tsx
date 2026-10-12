@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { Check, X, ShieldCheck, FileText, Download, ExternalLink } from 'lucide-react';
+import { Check, X, ShieldCheck, FileText, Download } from 'lucide-react';
 
 export const AdminApprovalsPage: React.FC = () => {
   const queryClient = useQueryClient();

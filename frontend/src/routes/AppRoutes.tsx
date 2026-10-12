@@ -8,6 +8,14 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { PlatformLoginPage } from '../features/auth/PlatformLoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 
+// Field Seller
+import { FieldLoginPage } from '../features/field/FieldLoginPage';
+import { FieldChangePasswordPage } from '../features/field/FieldChangePasswordPage';
+import { FieldLayout } from '../features/field/FieldLayout';
+import { FieldHomePage } from '../features/field/FieldHomePage';
+import { FieldNewSalePage } from '../features/field/FieldNewSalePage';
+import { FieldSalesPage } from '../features/field/FieldSalesPage';
+
 // Buyer
 import { BrowsePage } from '../features/buyer/BrowsePage';
 import { ProductDetailPage } from '../features/buyer/ProductDetailPage';
@@ -23,6 +31,10 @@ import { SellerProductsPage } from '../features/seller/SellerProductsPage';
 import { ProductFormPage } from '../features/seller/ProductFormPage';
 import { SellerStockPage } from '../features/seller/SellerStockPage';
 import { IncomingOrdersPage } from '../features/seller/IncomingOrdersPage';
+import { FieldSellersListPage } from '../features/seller/FieldSellersListPage';
+import { AddFieldSellerPage } from '../features/seller/AddFieldSellerPage';
+import { FieldSellerDetailPage } from '../features/seller/FieldSellerDetailPage';
+import { FieldAnalyticsPage } from '../features/seller/FieldAnalyticsPage';
 
 // Admin
 import { AdminDashboardPage } from '../features/admin/AdminDashboardPage';
@@ -35,8 +47,9 @@ import { AdminOrdersPage } from '../features/admin/AdminOrdersPage';
 import { useAuth } from '../lib/auth';
 
 const IndexRedirect: React.FC = () => {
-  const { isAuthenticated, activeOrg, isPlatformStaff } = useAuth();
+  const { isAuthenticated, activeOrg, isPlatformStaff, isFieldSeller } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (isFieldSeller) return <Navigate to="/field/home" replace />;
   if (isPlatformStaff) return <Navigate to="/admin/dashboard" replace />;
   if (activeOrg?.canSell) return <Navigate to="/seller/dashboard" replace />;
   return <Navigate to="/browse" replace />;
@@ -47,11 +60,37 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       {/* Public Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/field/login" element={<FieldLoginPage />} />
       <Route path="/platform/login" element={<PlatformLoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/payment/mock/:paymentId" element={<MockPaymentPage />} />
 
-      {/* Authenticated Routes wrapped in Layout */}
+      {/* Field Seller Password Change (Outside Main Layout) */}
+      <Route
+        path="/field/password"
+        element={
+          <ProtectedRoute requireFieldSeller>
+            <FieldChangePasswordPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Field Seller Mobile App Routes (Wrapped in mobile FieldLayout) */}
+      <Route
+        path="/field"
+        element={
+          <ProtectedRoute requireFieldSeller>
+            <FieldLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/field/home" replace />} />
+        <Route path="home" element={<FieldHomePage />} />
+        <Route path="sales/new" element={<FieldNewSalePage />} />
+        <Route path="sales" element={<FieldSalesPage />} />
+      </Route>
+
+      {/* Authenticated Desktop Routes wrapped in Layout */}
       <Route
         path="/"
         element={
@@ -144,6 +183,40 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute requireSeller>
               <IncomingOrdersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Seller Field Routes */}
+        <Route
+          path="seller/field-sellers"
+          element={
+            <ProtectedRoute requireSeller requiredPermission="fieldseller.manage">
+              <FieldSellersListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="seller/field-sellers/new"
+          element={
+            <ProtectedRoute requireSeller requiredPermission="fieldseller.manage">
+              <AddFieldSellerPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="seller/field-sellers/:id"
+          element={
+            <ProtectedRoute requireSeller requiredPermission="fieldseller.manage">
+              <FieldSellerDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="seller/field-analytics"
+          element={
+            <ProtectedRoute requireSeller requiredPermission="fieldanalytics.view">
+              <FieldAnalyticsPage />
             </ProtectedRoute>
           }
         />
