@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import { StatusBadge } from '../../components/StatusBadge';
-import { Calendar, Filter, AlertTriangle } from 'lucide-react';
+import { Calendar, Filter, AlertTriangle, RotateCcw } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 
 interface SaleItem {
@@ -37,14 +37,14 @@ export const FieldSalesPage: React.FC = () => {
     queryKey: ['field-my-sales', fromDate, toDate, statusFilter],
     queryFn: () => {
       const params = new URLSearchParams();
-      if (fromDate) params.append('from', fromDate);
-      if (toDate) params.append('to', toDate);
-      if (statusFilter !== 'ALL') params.append('status', statusFilter);
+      if (fromDate) params.set('from', fromDate);
+      if (toDate) params.set('to', toDate);
+      if (statusFilter !== 'ALL') params.set('status', statusFilter);
       return api.get<SaleRecord[]>(`/field/sales?${params.toString()}`);
     },
   });
 
-  // Group sales by day (formatted date string)
+  // Group sales by day (using Asia/Kathmandu format)
   const groupedSales = useMemo(() => {
     const groups: Record<string, SaleRecord[]> = {};
 
@@ -72,55 +72,56 @@ export const FieldSalesPage: React.FC = () => {
   }, [sales]);
 
   return (
-    <div className="space-y-5">
-      <div className="pb-2 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900 leading-tight">My Sales History</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Sales recorded for <span className="font-semibold text-gray-800">{activeOrg?.orgName}</span>
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-gray-200 gap-2">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">My Sales History</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+            Sales recorded for <span className="font-semibold text-gray-800">{activeOrg?.orgName}</span>
+          </p>
+        </div>
+        <div className="text-xs text-gray-400 font-medium">
+          Total recorded sales: <span className="text-gray-900 font-bold">{sales.length}</span>
+        </div>
       </div>
 
-      {/* Date & Status Filters */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs space-y-3">
-        <div className="flex items-center space-x-2 text-xs font-bold text-gray-700">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <span>Filter sales</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-              From Date
-            </label>
+      {/* Date & Status Filters Toolbar (Responsive Desktop & Mobile) */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Date pickers */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center space-x-2 text-xs font-bold text-gray-700">
+            <Filter className="w-4 h-4 text-gray-400" />
+            <span className="hidden sm:inline">Date:</span>
+          </div>
+          <div className="flex items-center gap-2">
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="w-full px-2.5 py-2 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+              className="px-3 py-1.5 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-          <div>
-            <label className="block text-[11px] font-semibold text-gray-500 mb-1">
-              To Date
-            </label>
+            <span className="text-xs text-gray-400">to</span>
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="w-full px-2.5 py-2 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
+              className="px-3 py-1.5 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 pt-1">
+        {/* Status Pills & Reset */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-gray-700 hidden sm:inline">Status:</span>
           {(['ALL', 'ACTIVE', 'VOIDED'] as const).map((st) => (
             <button
               key={st}
               type="button"
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold min-h-[36px] transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                 statusFilter === st
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-blue-600 text-white shadow-2xs'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -136,9 +137,11 @@ export const FieldSalesPage: React.FC = () => {
                 setToDate('');
                 setStatusFilter('ALL');
               }}
-              className="ml-auto text-xs font-semibold text-gray-400 hover:text-gray-700 min-h-[36px] px-2"
+              className="ml-auto md:ml-2 inline-flex items-center gap-1 text-xs font-semibold text-gray-400 hover:text-gray-700 px-2 py-1 rounded-md transition cursor-pointer"
+              title="Reset filters"
             >
-              Reset
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
             </button>
           )}
         </div>
@@ -146,41 +149,50 @@ export const FieldSalesPage: React.FC = () => {
 
       {/* Sales List Grouped by Day */}
       {isLoading ? (
-        <div className="p-12 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-200">
+        <div className="p-16 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-200">
           Loading sales history...
         </div>
       ) : groupedSales.length === 0 ? (
-        <div className="p-12 text-center text-sm text-gray-500 bg-white rounded-2xl border border-gray-200">
-          No sales found matching your filter criteria.
+        <div className="p-16 text-center text-sm text-gray-500 bg-white rounded-2xl border border-gray-200 space-y-1">
+          <p className="font-semibold text-gray-700">No sales found matching your filter criteria.</p>
+          <p className="text-xs text-gray-400">Try adjusting your date range or status filter.</p>
         </div>
       ) : (
         <div className="space-y-6">
           {groupedSales.map((group) => (
             <div key={group.date} className="space-y-2.5">
               {/* Day Header */}
-              <div className="flex items-center justify-between px-1">
-                <div className="flex items-center space-x-1.5 text-xs font-bold text-gray-700">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center space-x-2 text-xs sm:text-sm font-bold text-gray-800">
+                  <Calendar className="w-4 h-4 text-blue-600" />
                   <span>{group.date}</span>
                 </div>
-                <span className="text-xs font-extrabold text-gray-900">
+                <span className="text-xs sm:text-sm font-black text-gray-900 bg-gray-100 px-3 py-1 rounded-lg">
                   Day Total: {formatMoney(group.totalDayPaisa.toString())}
                 </span>
               </div>
 
-              {/* Day Sales Cards */}
+              {/* Day Sales Cards / Table */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-xs divide-y divide-gray-100 overflow-hidden">
                 {group.items.map((sale) => (
-                  <div key={sale.id} className="p-4 space-y-2 hover:bg-gray-50/60 transition">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="text-base font-bold text-gray-900">
-                          {formatMoney(sale.totalPaisa)}
+                  <div key={sale.id} className="p-4 sm:p-5 space-y-2.5 hover:bg-gray-50/60 transition">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                          <span className={`text-base sm:text-lg font-bold ${
+                            sale.status === 'VOIDED' ? 'line-through text-gray-400' : 'text-gray-900'
+                          }`}>
+                            {formatMoney(sale.totalPaisa)}
+                          </span>
+                          <StatusBadge status={sale.status} />
                         </div>
-                        <div className="text-xs text-gray-500 flex items-center space-x-2 mt-0.5">
-                          <span>{sale.items?.length || 0} items</span>
+
+                        <div className="text-xs text-gray-500 flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-gray-700">
+                            {sale.items?.length || 0} items
+                          </span>
                           <span>•</span>
-                          <span className="font-semibold text-gray-700">{sale.paymentMethod}</span>
+                          <span className="font-semibold text-emerald-700">{sale.paymentMethod}</span>
                           <span>•</span>
                           <span>
                             {new Date(sale.soldAt).toLocaleTimeString([], {
@@ -191,26 +203,32 @@ export const FieldSalesPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <StatusBadge status={sale.status} />
-                    </div>
-
-                    {/* Customer info */}
-                    {sale.customerName && (
-                      <div className="text-xs text-gray-700">
-                        Customer: <span className="font-medium">{sale.customerName}</span>
-                        {sale.customerPhone && <span className="text-gray-400"> ({sale.customerPhone})</span>}
+                      {/* Customer info */}
+                      <div className="text-right text-xs text-gray-600">
+                        <div className="font-semibold text-gray-900">
+                          {sale.customerName || 'Walk-in Customer'}
+                        </div>
+                        {sale.customerPhone && (
+                          <div className="text-gray-400 font-mono mt-0.5">
+                            {sale.customerPhone}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
 
                     {/* Items Snapshot pills */}
                     {sale.items && sale.items.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 pt-1">
+                      <div className="flex flex-wrap gap-2 pt-1">
                         {sale.items.map((item, idx) => (
                           <span
                             key={idx}
-                            className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 rounded-md text-[11px]"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs"
                           >
-                            {item.nameSnapshot} ×{item.qty}
+                            <span className="font-medium text-gray-900">{item.nameSnapshot}</span>
+                            <span className="text-gray-400">×{item.qty}</span>
+                            <span className="font-semibold text-gray-600">
+                              ({formatMoney(BigInt(item.unitPricePaisa) * BigInt(item.qty))})
+                            </span>
                           </span>
                         ))}
                       </div>
@@ -218,7 +236,7 @@ export const FieldSalesPage: React.FC = () => {
 
                     {/* Void reason banner if voided */}
                     {sale.status === 'VOIDED' && sale.voidReason && (
-                      <div className="mt-2 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start space-x-2 text-rose-800 text-xs">
+                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start space-x-2 text-rose-800 text-xs">
                         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                         <div>
                           <span className="font-bold">Sale Voided: </span>
@@ -228,7 +246,7 @@ export const FieldSalesPage: React.FC = () => {
                     )}
 
                     {sale.note && (
-                      <div className="text-[11px] text-gray-400 italic">
+                      <div className="text-xs text-gray-400 italic">
                         Note: {sale.note}
                       </div>
                     )}
