@@ -145,7 +145,7 @@ export const FieldLoginPage: React.FC = () => {
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
               Demo Accounts (Click to Fill)
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -153,9 +153,13 @@ export const FieldLoginPage: React.FC = () => {
                   setPassword('Password123!');
                   setError(null);
                 }}
-                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg border border-gray-200 transition font-medium cursor-pointer"
+                className="px-3.5 py-2.5 text-xs bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-xl border border-gray-200 transition font-medium cursor-pointer text-left flex items-center justify-between"
               >
-                Field 1 (@field1)
+                <div>
+                  <span className="font-semibold block text-gray-900">Ramesh Shrestha (@field1)</span>
+                  <span className="text-[11px] text-gray-500">Himalayan Wholesale Distributors</span>
+                </div>
+                <span className="text-xs text-blue-600 font-semibold shrink-0">Select</span>
               </button>
               <button
                 type="button"
@@ -164,9 +168,13 @@ export const FieldLoginPage: React.FC = () => {
                   setPassword('Password123!');
                   setError(null);
                 }}
-                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg border border-gray-200 transition font-medium cursor-pointer"
+                className="px-3.5 py-2.5 text-xs bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-xl border border-gray-200 transition font-medium cursor-pointer text-left flex items-center justify-between"
               >
-                Field 2 (@field2)
+                <div>
+                  <span className="font-semibold block text-gray-900">Sita Gurung (@field2)</span>
+                  <span className="text-[11px] text-gray-500">Himalayan Wholesale Distributors</span>
+                </div>
+                <span className="text-xs text-blue-600 font-semibold shrink-0">Select</span>
               </button>
             </div>
             <p className="text-[11px] text-gray-400 mt-2">

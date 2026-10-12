@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
+import { useAuth } from '../../lib/auth';
 import {
   Search,
   Plus,
@@ -33,6 +34,7 @@ interface SelectedItem {
 }
 
 export const FieldNewSalePage: React.FC = () => {
+  const { activeOrg } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: products = [], isLoading: loadingProducts } = useQuery<ProductVariant[]>({
@@ -200,7 +202,12 @@ export const FieldNewSalePage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between pb-2 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">Record a new sale</h1>
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 leading-tight">Record a new sale</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Products from <span className="font-semibold text-gray-800">{activeOrg?.orgName}</span>
+          </p>
+        </div>
         {selectedItems.length > 0 && (
           <button
             onClick={handleResetSale}

@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Calendar, Filter, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../lib/auth';
 
 interface SaleItem {
   id: string;
@@ -27,6 +28,7 @@ interface SaleRecord {
 }
 
 export const FieldSalesPage: React.FC = () => {
+  const { activeOrg } = useAuth();
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'VOIDED'>('ALL');
@@ -72,9 +74,9 @@ export const FieldSalesPage: React.FC = () => {
   return (
     <div className="space-y-5">
       <div className="pb-2 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">My Sales History</h1>
+        <h1 className="text-xl font-bold text-gray-900 leading-tight">My Sales History</h1>
         <p className="text-xs text-gray-500 mt-0.5">
-          Review all sales recorded through your device
+          Sales recorded for <span className="font-semibold text-gray-800">{activeOrg?.orgName}</span>
         </p>
       </div>
 

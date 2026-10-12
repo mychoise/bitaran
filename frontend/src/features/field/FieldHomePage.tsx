@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import { StatusBadge } from '../../components/StatusBadge';
-import { PlusCircle, ShoppingBag, Calendar, ArrowRight } from 'lucide-react';
+import { PlusCircle, ShoppingBag, Calendar, ArrowRight, Building2 } from 'lucide-react';
+import { useAuth } from '../../lib/auth';
 
 interface SummaryData {
   todayTotalPaisa: string;
@@ -15,6 +16,7 @@ interface SummaryData {
 }
 
 export const FieldHomePage: React.FC = () => {
+  const { user, activeOrg } = useAuth();
   const { data: summary, isLoading: loadingSummary } = useQuery<SummaryData>({
     queryKey: ['field-summary'],
     queryFn: () => api.get<SummaryData>('/field/me/summary'),
@@ -28,7 +30,32 @@ export const FieldHomePage: React.FC = () => {
   const top5Sales = recentSales.slice(0, 5);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Company Affiliation Banner */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
+        <div className="flex items-center space-x-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-100">
+            <Building2 className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
+              Selling for
+            </span>
+            <span className="text-sm font-bold text-gray-900 tracking-tight block truncate">
+              {activeOrg?.orgName || 'Wholesale Business'}
+            </span>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Active Seller
+          </span>
+          <div className="text-2xs text-gray-400 font-mono mt-0.5">
+            @{user?.username || 'seller'}
+          </div>
+        </div>
+      </div>
+
       {/* Action Button: Large Record a Sale */}
       <div>
         <Link

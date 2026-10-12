@@ -5,7 +5,7 @@ import { APP_NAME } from '../../config/app.config';
 import { useAuth } from '../../lib/auth';
 
 export const FieldLayout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, activeOrg, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -21,28 +21,33 @@ export const FieldLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
       {/* Top Bar */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-xs max-w-md mx-auto w-full">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-base">
-            {APP_NAME.charAt(0)}
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between shadow-xs max-w-md mx-auto w-full">
+        <div className="flex items-center space-x-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-center text-base shrink-0 shadow-xs">
+            {activeOrg?.orgName ? activeOrg.orgName.charAt(0) : APP_NAME.charAt(0)}
           </div>
-          <div>
-            <span className="font-bold text-gray-900 tracking-tight text-base leading-tight block">
-              {APP_NAME}
+          <div className="min-w-0">
+            <span className="font-bold text-gray-900 tracking-tight text-sm leading-tight block truncate">
+              {activeOrg?.orgName || APP_NAME}
             </span>
-            <span className="text-[11px] font-medium text-blue-600 block leading-tight">
-              Field Seller
+            <span className="text-[11px] font-medium text-blue-600 block leading-tight truncate">
+              Field Seller • {APP_NAME}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <span className="text-xs text-gray-600 font-medium truncate max-w-[120px]">
-            {user?.name || user?.username}
-          </span>
+        <div className="flex items-center space-x-2 shrink-0">
+          <div className="text-right">
+            <span className="text-xs text-gray-800 font-semibold block truncate max-w-[100px]">
+              {user?.name || user?.username}
+            </span>
+            <span className="text-[10px] text-gray-400 font-mono block">
+              @{user?.username}
+            </span>
+          </div>
           <button
             onClick={handleLogout}
-            className="p-2 min-h-[48px] min-w-[48px] flex items-center justify-center text-gray-500 hover:text-rose-600 transition rounded-lg"
+            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-rose-600 transition rounded-lg"
             title="Sign out"
             aria-label="Sign out"
           >
