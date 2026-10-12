@@ -15,6 +15,8 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { ShipmentsModule } from './modules/shipments/shipments.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { FieldModule } from './modules/field/field.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { TeamModule } from './modules/team/team.module';
 import { ExpirePendingOrdersService } from './jobs/expire-pending-orders.service';
 import { validate } from './config/env.validation';
 
@@ -28,6 +30,7 @@ import { validate } from './config/env.validation';
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 10 }]),
     ScheduleModule.forRoot(),
     DbModule,
+    AuditModule,
     AuthModule,
     OrgsModule,
     CatalogModule,
@@ -39,6 +42,7 @@ import { validate } from './config/env.validation';
     ShipmentsModule,
     AdminModule,
     FieldModule,
+    TeamModule,
   ],
   providers: [ExpirePendingOrdersService],
 })

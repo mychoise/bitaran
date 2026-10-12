@@ -450,4 +450,50 @@ export class AuthService {
 
     return { accessToken, refreshToken: rawRefreshToken };
   }
+
+  async getMe(userId: string, orgId?: string) {
+    const [user] = await this.db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        username: users.username,
+        phone: users.phone,
+        status: users.status,
+        mustChangePassword: users.mustChangePassword,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const userMemberships = await this.db
+      .select({
+        orgId: memberships.orgId,
+        orgName: organizations.name,
+        roleName: roles.name,
+        permissions: roles.permissions,
+        status: memberships.status,
+      })
+      .from(memberships)
+      .innerJoin(roles, eq(memberships.roleId, roles.id))
+      .innerJoin(organizations, eq(memberships.orgId, organizations.id))
+      .where(eq(memberships.userId, userId));
+
+    const activeMem = orgId
+      ? userMemberships.find((m) => m.orgId === orgId)
+      : userMemberships[0];
+
+    return {
+      user,
+      role: activeMem?.roleName || null,
+      permissions: activeMem?.permissions || [],
+      activeOrgId: activeMem?.orgId || null,
+      activeOrgName: activeMem?.orgName || null,
+      memberships: userMemberships,
+    };
+  }
 }

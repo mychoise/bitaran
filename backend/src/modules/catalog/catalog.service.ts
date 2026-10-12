@@ -20,10 +20,14 @@ import {
   ProductQueryDto,
   CreateVariantDto,
 } from './dto/catalog.dto';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class CatalogService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly auditService: AuditService,
+  ) {}
 
   // ---- Seller-facing ----
 
@@ -110,11 +114,12 @@ export class CatalogService {
   async createProduct(
     sellerOrgId: string,
     dto: CreateProductDto,
+    actorId?: string,
   ): Promise<unknown> {
     await this.ensureApprovedSeller(sellerOrgId);
 
-    return this.db.transaction(async (tx) => {
-      const [product] = await tx
+    const product = await this.db.transaction(async (tx) => {
+      const [newProd] = await tx
         .insert(products)
         .values({
           sellerOrgId,
@@ -127,7 +132,7 @@ export class CatalogService {
 
       if (dto.imageUrl) {
         await tx.insert(productImages).values({
-          productId: product.id,
+          productId: newProd.id,
           url: dto.imageUrl,
           position: 0,
         });
@@ -138,7 +143,7 @@ export class CatalogService {
           .insert(productVariants)
           .values(
             dto.variants.map((v) => ({
-              productId: product.id,
+              productId: newProd.id,
               sku: v.sku,
               unit: v.unit,
               packSize: v.packSize,
@@ -154,14 +159,26 @@ export class CatalogService {
         );
       }
 
-      return product;
+      return newProd;
     });
+
+    await this.auditService.log({
+      actorId,
+      orgId: sellerOrgId,
+      action: 'product.created',
+      entity: 'product',
+      entityId: product.id,
+      meta: { name: product.name },
+    });
+
+    return product;
   }
 
   async updateProduct(
     productId: string,
     sellerOrgId: string,
     dto: UpdateProductDto,
+    actorId?: string,
   ): Promise<unknown> {
     await this.ensureApprovedSeller(sellerOrgId);
 
@@ -200,6 +217,70 @@ export class CatalogService {
       }
     }
 
+    // Handle variant updates & price change auditing
+    if (dto.variants && dto.variants.length > 0) {
+      const existingVariants = await this.db
+        .select()
+        .from(productVariants)
+        .where(eq(productVariants.productId, productId));
+
+      for (const v of dto.variants) {
+        const match = existingVariants.find((ev) => ev.sku === v.sku);
+        if (match) {
+          if (match.pricePaisa !== v.pricePaisa) {
+            await this.auditService.log({
+              actorId,
+              orgId: sellerOrgId,
+              action: 'product.price_changed',
+              entity: 'product_variant',
+              entityId: match.id,
+              meta: {
+                variantId: match.id,
+                sku: match.sku,
+                oldPricePaisa: match.pricePaisa.toString(),
+                newPricePaisa: v.pricePaisa.toString(),
+              },
+            });
+          }
+
+          await this.db
+            .update(productVariants)
+            .set({
+              unit: v.unit,
+              packSize: v.packSize,
+              pricePaisa: v.pricePaisa,
+              minOrderQty: v.minOrderQty,
+              isActive: v.isActive ?? true,
+            })
+            .where(eq(productVariants.id, match.id));
+        } else {
+          const [inserted] = await this.db
+            .insert(productVariants)
+            .values({
+              productId,
+              sku: v.sku,
+              unit: v.unit,
+              packSize: v.packSize,
+              pricePaisa: v.pricePaisa,
+              minOrderQty: v.minOrderQty,
+              isActive: v.isActive ?? true,
+            })
+            .returning();
+
+          await this.db.insert(inventoryItems).values({ variantId: inserted.id });
+        }
+      }
+    }
+
+    await this.auditService.log({
+      actorId,
+      orgId: sellerOrgId,
+      action: 'product.updated',
+      entity: 'product',
+      entityId: productId,
+      meta: { name: updated.name },
+    });
+
     return updated;
   }
 
@@ -207,6 +288,7 @@ export class CatalogService {
     productId: string,
     sellerOrgId: string,
     dto: CreateVariantDto,
+    actorId?: string,
   ): Promise<unknown> {
     await this.ensureApprovedSeller(sellerOrgId);
 
@@ -221,8 +303,8 @@ export class CatalogService {
 
     if (!product) throw new NotFoundException('Product not found');
 
-    return this.db.transaction(async (tx) => {
-      const [variant] = await tx
+    const variant = await this.db.transaction(async (tx) => {
+      const [newVar] = await tx
         .insert(productVariants)
         .values({
           productId,
@@ -235,10 +317,21 @@ export class CatalogService {
         })
         .returning();
 
-      await tx.insert(inventoryItems).values({ variantId: variant.id });
+      await tx.insert(inventoryItems).values({ variantId: newVar.id });
 
-      return variant;
+      return newVar;
     });
+
+    await this.auditService.log({
+      actorId,
+      orgId: sellerOrgId,
+      action: 'product.variant_created',
+      entity: 'product_variant',
+      entityId: variant.id,
+      meta: { sku: variant.sku, pricePaisa: variant.pricePaisa.toString() },
+    });
+
+    return variant;
   }
 
   // ---- Buyer-facing browse ----

@@ -84,6 +84,12 @@ export class UpdateProductDto {
   @IsIn(['DRAFT', 'ACTIVE', 'ARCHIVED'])
   @IsOptional()
   status?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVariantDto)
+  @IsOptional()
+  variants?: CreateVariantDto[];
 }
 
 export class ProductQueryDto {

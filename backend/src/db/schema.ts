@@ -84,6 +84,7 @@ export const subscriptionStatus = pgEnum('subscription_status', [
 export const fieldSellerStatus = pgEnum('field_seller_status', ['ACTIVE', 'DISABLED']);
 export const fieldPaymentMethod = pgEnum('field_payment_method', ['CASH', 'ESEWA', 'KHALTI', 'OTHER']);
 export const fieldSaleStatus = pgEnum('field_sale_status', ['ACTIVE', 'VOIDED']);
+export const membershipStatus = pgEnum('membership_status', ['ACTIVE', 'DISABLED']);
 
 // ---------- Identity & tenancy ----------
 
@@ -145,15 +146,12 @@ export const memberships = pgTable(
   'memberships',
   {
     id: id(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id),
-    orgId: uuid('org_id')
-      .notNull()
-      .references(() => organizations.id),
-    roleId: uuid('role_id')
-      .notNull()
-      .references(() => roles.id),
+    userId: uuid('user_id').notNull().references(() => users.id),
+    orgId: uuid('org_id').notNull().references(() => organizations.id),
+    roleId: uuid('role_id').notNull().references(() => roles.id),
+    status: membershipStatus('status').notNull().default('ACTIVE'),
+    createdByUserId: uuid('created_by_user_id').references(() => users.id),
+    createdAt: createdAt(),
   },
   (t) => [
     uniqueIndex('memberships_user_org_uq').on(t.userId, t.orgId),

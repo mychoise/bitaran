@@ -46,8 +46,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
           Array.isArray(resp['message'])
             ? (resp['message'] as string[]).join('; ')
             : String(resp['message'] ?? message);
+        if (resp['code']) {
+          code = String(resp['code']);
+        } else {
+          code = HttpStatus[status] ?? 'HTTP_ERROR';
+        }
+      } else {
+        code = HttpStatus[status] ?? 'HTTP_ERROR';
       }
-      code = HttpStatus[status] ?? 'HTTP_ERROR';
     } else if (exception instanceof OrderTransitionException) {
       status = HttpStatus.CONFLICT;
       code = exception.code;
@@ -78,8 +84,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    const body: ErrorResponse = {
+    const body = {
       error: { code, message },
+      code,
+      message,
     };
 
     response.status(status).json(body);

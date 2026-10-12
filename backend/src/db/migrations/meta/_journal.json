@@ -15,6 +15,13 @@
       "when": 1791783653244,
       "tag": "0001_cooing_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791795597061,
+      "tag": "0002_kind_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

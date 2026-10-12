@@ -49,38 +49,42 @@ export class SellerFieldController {
   @RequirePermission('fieldseller.manage')
   @Patch('field-sellers/:id')
   async updateFieldSeller(
+    @CurrentUser() user: JwtPayload,
     @CurrentOrg() org: Organization,
     @Param('id') id: string,
     @Body() dto: UpdateFieldSellerDto,
   ) {
-    return this.fieldService.updateFieldSeller(org.id, id, dto);
+    return this.fieldService.updateFieldSeller(org.id, id, dto, user.sub);
   }
 
   @RequirePermission('fieldseller.manage')
   @Post('field-sellers/:id/disable')
   async disableFieldSeller(
+    @CurrentUser() user: JwtPayload,
     @CurrentOrg() org: Organization,
     @Param('id') id: string,
   ) {
-    return this.fieldService.disableFieldSeller(org.id, id);
+    return this.fieldService.disableFieldSeller(org.id, id, user.sub);
   }
 
   @RequirePermission('fieldseller.manage')
   @Post('field-sellers/:id/enable')
   async enableFieldSeller(
+    @CurrentUser() user: JwtPayload,
     @CurrentOrg() org: Organization,
     @Param('id') id: string,
   ) {
-    return this.fieldService.enableFieldSeller(org.id, id);
+    return this.fieldService.enableFieldSeller(org.id, id, user.sub);
   }
 
   @RequirePermission('fieldseller.manage')
   @Post('field-sellers/:id/reset-password')
   async resetPassword(
+    @CurrentUser() user: JwtPayload,
     @CurrentOrg() org: Organization,
     @Param('id') id: string,
   ) {
-    return this.fieldService.resetPassword(org.id, id);
+    return this.fieldService.resetPassword(org.id, id, user.sub);
   }
 
   @RequirePermission('fieldsale.view_all')

@@ -5,7 +5,10 @@ import {
   Body,
   Param,
   Query,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { OrdersService } from './orders.service';
 import { OrderQueryDto, TransitionOrderDto } from './dto/orders.dto';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
@@ -43,13 +46,33 @@ export class OrdersController {
   }
 
   @Post(':id/transition')
-  @RequirePermission('order.accept')
   async transitionOrder(
     @Param('id') id: string,
     @CurrentUser() user: JwtPayload,
     @CurrentOrg() org: Organization,
+    @Req() req: Request & { userPermissions?: string[] },
     @Body() dto: TransitionOrderDto,
   ): Promise<unknown> {
+    const userPermissions = req.userPermissions || [];
+    const statusPermissionMap: Record<string, string> = {
+      CONFIRMED: 'order.accept',
+      REJECTED_REFUND_PENDING: 'order.reject',
+      READY_FOR_PICKUP: 'order.mark_ready',
+      REFUNDED: 'order.mark_refunded',
+    };
+    const required = statusPermissionMap[dto.toStatus];
+    if (required && !userPermissions.includes(required)) {
+      throw new ForbiddenException(`Missing permission: ${required}`);
+    }
+    if (
+      !required &&
+      !userPermissions.some((p) =>
+        ['order.accept', 'order.reject', 'order.mark_ready', 'order.mark_refunded'].includes(p),
+      )
+    ) {
+      throw new ForbiddenException('Missing order transition permission');
+    }
+
     return this.ordersService.transitionOrder(
       id,
       dto.toStatus as Parameters<typeof this.ordersService.transitionOrder>[1],

@@ -20,6 +20,7 @@ import {
   fieldSales,
   fieldSaleItems,
   refreshTokens,
+  auditLogs,
 } from '../../db/schema';
 import { CreateFieldSellerDto } from './dto/create-field-seller.dto';
 import { UpdateFieldSellerDto } from './dto/update-field-seller.dto';
@@ -37,9 +38,14 @@ function generateTemporaryPassword(): string {
   return pass;
 }
 
+import { AuditService } from '../audit/audit.service';
+
 @Injectable()
 export class FieldService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly auditService: AuditService,
+  ) {}
 
   // ----------------------------------------------------
   // FIELD SELLER APP METHODS (scoped to calling field seller)
@@ -379,6 +385,18 @@ export class FieldService {
         })
         .returning();
 
+      await tx.insert(auditLogs).values({
+        actorId: creatorUserId,
+        orgId,
+        action: 'fieldseller.created',
+        entity: 'field_seller',
+        entityId: newFieldSeller.id,
+        meta: {
+          displayName: newFieldSeller.displayName,
+          username: newUser.username,
+        },
+      });
+
       return {
         ...newFieldSeller,
         username: newUser.username,
@@ -577,7 +595,12 @@ export class FieldService {
     };
   }
 
-  async updateFieldSeller(orgId: string, id: string, dto: UpdateFieldSellerDto) {
+  async updateFieldSeller(
+    orgId: string,
+    id: string,
+    dto: UpdateFieldSellerDto,
+    actorId?: string,
+  ) {
     const [seller] = await this.db
       .select()
       .from(fieldSellers)
@@ -611,10 +634,19 @@ export class FieldService {
       }
     });
 
+    await this.auditService.log({
+      actorId,
+      orgId,
+      action: 'fieldseller.updated',
+      entity: 'field_seller',
+      entityId: id,
+      meta: updates,
+    });
+
     return this.getFieldSeller(orgId, id);
   }
 
-  async disableFieldSeller(orgId: string, id: string) {
+  async disableFieldSeller(orgId: string, id: string, actorId?: string) {
     const [seller] = await this.db
       .select()
       .from(fieldSellers)
@@ -647,10 +679,18 @@ export class FieldService {
         );
     });
 
+    await this.auditService.log({
+      actorId,
+      orgId,
+      action: 'fieldseller.disabled',
+      entity: 'field_seller',
+      entityId: id,
+    });
+
     return { message: 'Field seller disabled' };
   }
 
-  async enableFieldSeller(orgId: string, id: string) {
+  async enableFieldSeller(orgId: string, id: string, actorId?: string) {
     const [seller] = await this.db
       .select()
       .from(fieldSellers)
@@ -673,10 +713,18 @@ export class FieldService {
         .where(eq(users.id, seller.userId));
     });
 
+    await this.auditService.log({
+      actorId,
+      orgId,
+      action: 'fieldseller.enabled',
+      entity: 'field_seller',
+      entityId: id,
+    });
+
     return { message: 'Field seller enabled' };
   }
 
-  async resetPassword(orgId: string, id: string) {
+  async resetPassword(orgId: string, id: string, actorId?: string) {
     const [seller] = await this.db
       .select()
       .from(fieldSellers)
@@ -705,6 +753,14 @@ export class FieldService {
             isNull(refreshTokens.revokedAt),
           ),
         );
+    });
+
+    await this.auditService.log({
+      actorId,
+      orgId,
+      action: 'fieldseller.password_reset',
+      entity: 'field_seller',
+      entityId: id,
     });
 
     return { temporaryPassword: tempPassword };
@@ -805,6 +861,18 @@ export class FieldService {
       })
       .where(eq(fieldSales.id, saleId))
       .returning();
+
+    await this.auditService.log({
+      actorId: voidedByUserId,
+      orgId,
+      action: 'fieldsale.voided',
+      entity: 'field_sale',
+      entityId: saleId,
+      meta: {
+        reason: dto.reason.trim(),
+        totalPaisa: sale.totalPaisa.toString(),
+      },
+    });
 
     return {
       ...updated,

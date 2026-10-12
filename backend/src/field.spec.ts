@@ -109,8 +109,10 @@ describe('Bitaran Milestone 8 - Field Sellers Integration Tests', () => {
       .values({
         name: 'OWNER',
         permissions: [
+          'product.create',
           'product.view',
           'product.edit',
+          'stock.adjust',
           'order.view',
           'order.accept',
           'fieldseller.manage',

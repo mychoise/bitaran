@@ -18,6 +18,11 @@ interface RequestWithContext {
   user: JwtPayload;
   activeOrg: Organization;
   userPermissions: string[];
+  activeMembership?: {
+    id: string;
+    roleName: string;
+    status: string;
+  };
   url?: string;
   originalUrl?: string;
 }
@@ -45,6 +50,8 @@ export class OrgContextGuard implements CanActivate {
     // Fetch user memberships with roles and organizations
     const userMemberships = await this.db
       .select({
+        membershipId: memberships.id,
+        membershipStatus: memberships.status,
         orgId: memberships.orgId,
         roleId: memberships.roleId,
         roleName: roles.name,
@@ -63,6 +70,14 @@ export class OrgContextGuard implements CanActivate {
     // Handle FIELD_SELLER role
     const fieldSellerMem = userMemberships.find((m) => m.roleName === 'FIELD_SELLER');
     if (fieldSellerMem) {
+      if (fieldSellerMem.membershipStatus === 'DISABLED') {
+        throw new ForbiddenException({
+          statusCode: 403,
+          message: 'Membership is disabled',
+          code: 'MEMBERSHIP_DISABLED',
+        });
+      }
+
       // Check field_sellers status
       const [fieldSeller] = await this.db
         .select({ status: fieldSellers.status })
@@ -96,6 +111,11 @@ export class OrgContextGuard implements CanActivate {
         canBuy: fieldSellerMem.canBuy,
       };
       request.userPermissions = fieldSellerMem.permissions ?? [];
+      request.activeMembership = {
+        id: fieldSellerMem.membershipId,
+        roleName: fieldSellerMem.roleName,
+        status: fieldSellerMem.membershipStatus,
+      };
       return true;
     }
 
@@ -106,6 +126,13 @@ export class OrgContextGuard implements CanActivate {
       );
 
       if (platformMembership) {
+        if (platformMembership.membershipStatus === 'DISABLED') {
+          throw new ForbiddenException({
+            statusCode: 403,
+            message: 'Membership is disabled',
+            code: 'MEMBERSHIP_DISABLED',
+          });
+        }
         request.activeOrg = {
           id: platformMembership.orgId,
           name: platformMembership.orgName,
@@ -115,6 +142,34 @@ export class OrgContextGuard implements CanActivate {
           canBuy: platformMembership.canBuy,
         };
         request.userPermissions = platformMembership.permissions ?? [];
+        request.activeMembership = {
+          id: platformMembership.membershipId,
+          roleName: platformMembership.roleName,
+          status: platformMembership.membershipStatus,
+        };
+      } else if (userMemberships.length === 1) {
+        const singleMem = userMemberships[0];
+        if (singleMem.membershipStatus === 'DISABLED') {
+          throw new ForbiddenException({
+            statusCode: 403,
+            message: 'Membership is disabled',
+            code: 'MEMBERSHIP_DISABLED',
+          });
+        }
+        request.activeOrg = {
+          id: singleMem.orgId,
+          name: singleMem.orgName,
+          status: singleMem.orgStatus,
+          type: singleMem.orgType,
+          canSell: singleMem.canSell,
+          canBuy: singleMem.canBuy,
+        };
+        request.userPermissions = singleMem.permissions ?? [];
+        request.activeMembership = {
+          id: singleMem.membershipId,
+          roleName: singleMem.roleName,
+          status: singleMem.membershipStatus,
+        };
       }
 
       return true;
@@ -127,6 +182,14 @@ export class OrgContextGuard implements CanActivate {
       throw new ForbiddenException('Not a member of this organization');
     }
 
+    if (membership.membershipStatus === 'DISABLED') {
+      throw new ForbiddenException({
+        statusCode: 403,
+        message: 'Membership is disabled',
+        code: 'MEMBERSHIP_DISABLED',
+      });
+    }
+
     request.activeOrg = {
       id: membership.orgId,
       name: membership.orgName,
@@ -136,6 +199,11 @@ export class OrgContextGuard implements CanActivate {
       canBuy: membership.canBuy,
     };
     request.userPermissions = membership.permissions ?? [];
+    request.activeMembership = {
+      id: membership.membershipId,
+      roleName: membership.roleName,
+      status: membership.membershipStatus,
+    };
 
     return true;
   }

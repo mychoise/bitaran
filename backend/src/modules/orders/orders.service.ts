@@ -39,9 +39,14 @@ const ALLOWED_TRANSITIONS: Record<string, OrderStatusType[]> = {
   IN_DELIVERY: ['DELIVERED'],
 };
 
+import { AuditService } from '../audit/audit.service';
+
 @Injectable()
 export class OrdersService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly auditService: AuditService,
+  ) {}
 
   async listBuyerOrders(
     buyerOrgId: string,
@@ -221,6 +226,24 @@ export class OrdersService {
         actorId,
         note,
       });
+
+      const actionMap: Record<string, string> = {
+        CONFIRMED: 'order.accepted',
+        REJECTED_REFUND_PENDING: 'order.rejected',
+        READY_FOR_PICKUP: 'order.marked_ready',
+        REFUNDED: 'order.marked_refunded',
+      };
+      const auditAction = actionMap[toStatus];
+      if (auditAction) {
+        await this.auditService.log({
+          actorId: actorId === 'system' ? null : actorId,
+          orgId: order.sellerOrgId,
+          action: auditAction,
+          entity: 'order',
+          entityId: orderId,
+          meta: { toStatus, note },
+        });
+      }
 
       return updated;
     });

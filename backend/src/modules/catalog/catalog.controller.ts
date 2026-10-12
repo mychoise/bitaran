@@ -18,6 +18,7 @@ import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { Organization } from '../orgs/orgs.types';
 import { Public } from '../../common/decorators/public.decorator';
 import { RequirePermission } from '../../common/decorators/require-permission.decorator';
+import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator';
 
 @Controller('catalog')
 export class CatalogController {
@@ -46,12 +47,13 @@ export class CatalogController {
   }
 
   @Post(['products', 'seller/products'])
-  @RequirePermission('product.edit')
+  @RequirePermission('product.create')
   async createProduct(
     @CurrentOrg() org: Organization,
+    @CurrentUser() user: JwtPayload,
     @Body() dto: CreateProductDto,
   ): Promise<unknown> {
-    return this.catalogService.createProduct(org.id, dto);
+    return this.catalogService.createProduct(org.id, dto, user.sub);
   }
 
   @Put(['products/:id', 'seller/products/:id'])
@@ -59,9 +61,10 @@ export class CatalogController {
   async updateProduct(
     @Param('id') id: string,
     @CurrentOrg() org: Organization,
+    @CurrentUser() user: JwtPayload,
     @Body() dto: UpdateProductDto,
   ): Promise<unknown> {
-    return this.catalogService.updateProduct(id, org.id, dto);
+    return this.catalogService.updateProduct(id, org.id, dto, user.sub);
   }
 
   @Post(['products/:id/variants', 'seller/products/:id/variants'])
@@ -69,9 +72,10 @@ export class CatalogController {
   async addVariant(
     @Param('id') id: string,
     @CurrentOrg() org: Organization,
+    @CurrentUser() user: JwtPayload,
     @Body() dto: CreateVariantDto,
   ): Promise<unknown> {
-    return this.catalogService.addVariant(id, org.id, dto);
+    return this.catalogService.addVariant(id, org.id, dto, user.sub);
   }
 
   // ---- Public browse & product detail ----

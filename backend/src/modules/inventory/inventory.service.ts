@@ -13,9 +13,14 @@ import {
   products,
 } from '../../db/schema';
 
+import { AuditService } from '../audit/audit.service';
+
 @Injectable()
 export class InventoryService {
-  constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
+  constructor(
+    @Inject(DRIZZLE) private readonly db: DrizzleDB,
+    private readonly auditService: AuditService,
+  ) {}
 
   async listStock(sellerOrgId: string): Promise<unknown[]> {
     return this.db
@@ -38,6 +43,7 @@ export class InventoryService {
     variantId: string,
     sellerOrgId: string,
     delta: number,
+    actorId?: string,
   ): Promise<unknown> {
     // Verify variant belongs to seller
     const variant = await this.db
@@ -55,7 +61,15 @@ export class InventoryService {
 
     if (!variant) throw new NotFoundException('Variant not found');
 
-    return this.db.transaction(async (tx) => {
+    const [currentItem] = await this.db
+      .select({ qtyOnHand: inventoryItems.qtyOnHand })
+      .from(inventoryItems)
+      .where(eq(inventoryItems.variantId, variantId))
+      .limit(1);
+
+    const qtyBefore = currentItem?.qtyOnHand ?? 0;
+
+    const result = await this.db.transaction(async (tx) => {
       const [updated] = await tx
         .update(inventoryItems)
         .set({
@@ -84,5 +98,23 @@ export class InventoryService {
 
       return updated;
     });
+
+    const qtyAfter = result.qtyOnHand;
+
+    await this.auditService.log({
+      actorId,
+      orgId: sellerOrgId,
+      action: 'stock.adjusted',
+      entity: 'inventory',
+      entityId: variantId,
+      meta: {
+        qtyBefore,
+        qtyAfter,
+        delta,
+        reason: 'ADJUSTMENT',
+      },
+    });
+
+    return result;
   }
 }

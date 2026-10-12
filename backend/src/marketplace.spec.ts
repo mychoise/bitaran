@@ -101,7 +101,18 @@ describe('Bitaran Marketplace Integration Tests', () => {
       .insert(roles)
       .values({
         name: 'OWNER',
-        permissions: ['product.view', 'product.edit', 'order.view', 'order.accept'],
+        permissions: [
+          'product.create',
+          'product.view',
+          'product.edit',
+          'stock.adjust',
+          'order.view',
+          'order.accept',
+          'order.reject',
+          'order.mark_ready',
+          'order.mark_refunded',
+          'checkout.place',
+        ],
       })
       .returning();
 

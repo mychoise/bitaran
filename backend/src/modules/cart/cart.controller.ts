@@ -12,17 +12,20 @@ import { CartService } from './cart.service';
 import { UpsertCartItemDto } from './dto/cart.dto';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { Organization } from '../orgs/orgs.types';
+import { RequirePermission } from '../../common/decorators/require-permission.decorator';
 
 @Controller('cart')
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
+  @RequirePermission('checkout.place')
   async getCart(@CurrentOrg() org: Organization): Promise<unknown> {
     return this.cartService.getCart(org.id);
   }
 
   @Post('items')
+  @RequirePermission('checkout.place')
   async upsertItem(
     @CurrentOrg() org: Organization,
     @Body() dto: UpsertCartItemDto,

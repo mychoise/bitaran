@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
   HttpCode,
@@ -17,11 +18,21 @@ import {
 } from './dto/auth.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, JwtPayload } from '../../common/decorators/current-user.decorator';
+import { CurrentOrg } from '../../common/decorators/current-org.decorator';
+import { Organization } from '../orgs/orgs.types';
 import { LoginThrottlerGuard } from './guards/login-throttler.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('me')
+  async getMe(
+    @CurrentUser() user: JwtPayload,
+    @CurrentOrg() org?: Organization,
+  ) {
+    return this.authService.getMe(user.sub, org?.id);
+  }
 
   @Public()
   @Post('register')

@@ -19,6 +19,7 @@ import {
   fieldSellers,
   fieldSales,
   fieldSaleItems,
+  auditLogs,
 } from './schema';
 
 dotenv.config();
@@ -73,19 +74,52 @@ async function seed(): Promise<void> {
       name: 'OWNER',
       permissions: [
         'product.view',
+        'product.create',
         'product.edit',
+        'stock.adjust',
         'order.view',
         'order.accept',
+        'order.reject',
+        'order.mark_ready',
+        'order.mark_refunded',
         'fieldseller.manage',
         'fieldsale.view_all',
         'fieldsale.void',
         'fieldanalytics.view',
+        'report.view',
+        'team.manage_staff',
+        'team.manage_managers',
+        'audit.view',
+        'checkout.place',
+        'gateway.manage',
+        'billing.manage',
+        'org.edit',
+      ],
+    },
+    {
+      name: 'MANAGER',
+      permissions: [
+        'product.view',
+        'product.create',
+        'product.edit',
+        'stock.adjust',
+        'order.view',
+        'order.accept',
+        'order.reject',
+        'order.mark_ready',
+        'fieldseller.manage',
+        'fieldsale.view_all',
+        'fieldanalytics.view',
+        'report.view',
+        'team.manage_staff',
       ],
     },
     {
       name: 'STAFF',
       permissions: [
         'product.view',
+        'product.edit',
+        'stock.adjust',
         'order.view',
       ],
     },
@@ -1034,6 +1068,133 @@ async function seed(): Promise<void> {
         }
       }
     }
+  }
+
+  // 5. Seed Manager and Staff for seller1
+  console.log('Seeding manager and staff for seller1...');
+  const managerRoleId = roleMap.get('MANAGER')!;
+  const staffRoleId = roleMap.get('STAFF')!;
+
+  // Manager 1
+  let [manager1User] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, 'manager1@demo.test'))
+    .limit(1);
+
+  if (!manager1User) {
+    [manager1User] = await db
+      .insert(users)
+      .values({
+        name: 'Manager One',
+        email: 'manager1@demo.test',
+        passwordHash,
+        mustChangePassword: false,
+        status: 'ACTIVE',
+      })
+      .returning();
+
+    await db.insert(memberships).values({
+      userId: manager1User.id,
+      orgId: seller1.orgId,
+      roleId: managerRoleId,
+      status: 'ACTIVE',
+      createdByUserId: seller1.userId,
+    });
+  }
+
+  // Staff 1
+  let [staff1User] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, 'staff1@demo.test'))
+    .limit(1);
+
+  if (!staff1User) {
+    [staff1User] = await db
+      .insert(users)
+      .values({
+        name: 'Staff One',
+        email: 'staff1@demo.test',
+        passwordHash,
+        mustChangePassword: false,
+        status: 'ACTIVE',
+      })
+      .returning();
+
+    await db.insert(memberships).values({
+      userId: staff1User.id,
+      orgId: seller1.orgId,
+      roleId: staffRoleId,
+      status: 'ACTIVE',
+      createdByUserId: manager1User.id,
+    });
+  }
+
+  // Seed sample audit rows for Activity screen
+  console.log('Seeding sample audit logs...');
+  const existingAudit = await db
+    .select()
+    .from(auditLogs)
+    .where(eq(auditLogs.orgId, seller1.orgId))
+    .limit(1);
+
+  if (existingAudit.length === 0 && seller1Variants.length > 0) {
+    const sampleVariant = seller1Variants[0];
+    await db.insert(auditLogs).values([
+      {
+        actorId: seller1.userId,
+        orgId: seller1.orgId,
+        action: 'team.member_created',
+        entity: 'membership',
+        meta: {
+          name: 'Manager One',
+          email: 'manager1@demo.test',
+          role: 'MANAGER',
+        },
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      },
+      {
+        actorId: manager1User.id,
+        orgId: seller1.orgId,
+        action: 'team.member_created',
+        entity: 'membership',
+        meta: {
+          name: 'Staff One',
+          email: 'staff1@demo.test',
+          role: 'STAFF',
+        },
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+      },
+      {
+        actorId: manager1User.id,
+        orgId: seller1.orgId,
+        action: 'product.price_changed',
+        entity: 'product_variant',
+        entityId: sampleVariant.variantId,
+        meta: {
+          variantId: sampleVariant.variantId,
+          sku: sampleVariant.sku,
+          oldPricePaisa: '10000',
+          newPricePaisa: sampleVariant.unitPricePaisa.toString(),
+        },
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      },
+      {
+        actorId: staff1User.id,
+        orgId: seller1.orgId,
+        action: 'stock.adjusted',
+        entity: 'inventory',
+        entityId: sampleVariant.variantId,
+        meta: {
+          qtyBefore: 50,
+          qtyAfter: 75,
+          delta: 25,
+          reason: 'ADJUSTMENT',
+        },
+        createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+      },
+    ]);
   }
 
   console.log('✅ Database seed completed successfully!');
