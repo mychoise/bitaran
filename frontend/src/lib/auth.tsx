@@ -59,6 +59,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [activeOrg, activeOrgId]);
 
+  useEffect(() => {
+    if (user) {
+      refreshUserData();
+    }
+  }, []);
+
   const login = (data: {
     user: User;
     tokens: { accessToken: string; refreshToken: string };
@@ -100,10 +106,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUserData = async () => {
     try {
-      const data = await api.get<{ memberships: Membership[] }>('/orgs/my');
-      if (data && data.memberships) {
-        setMemberships(data.memberships);
-        localStorage.setItem('bitaran_memberships', JSON.stringify(data.memberships));
+      const data = await api.get<Membership[] | { memberships: Membership[] }>('/orgs/mine');
+      const list = Array.isArray(data) ? data : data?.memberships;
+      if (list && Array.isArray(list) && list.length > 0) {
+        setMemberships(list);
+        localStorage.setItem('bitaran_memberships', JSON.stringify(list));
       }
     } catch {
       // Silently fail if offline or not logged in

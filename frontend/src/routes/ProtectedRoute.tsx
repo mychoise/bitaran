@@ -107,8 +107,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Permission check
-  if (requiredPermission && !activeOrg?.permissions?.includes(requiredPermission)) {
+  // Permission check (Owners inherently possess full business permissions)
+  const isOwner = activeOrg?.roleName === 'OWNER';
+  if (requiredPermission && !isOwner && !activeOrg?.permissions?.includes(requiredPermission)) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <div className="bg-white p-8 rounded-xl border border-gray-200 text-center max-w-md shadow-xs">

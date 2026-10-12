@@ -116,13 +116,13 @@ export const Sidebar: React.FC = () => {
               <Inbox className="w-4 h-4" />
               <span>Incoming orders</span>
             </NavLink>
-            {activeOrg?.permissions?.includes('fieldseller.manage') && (
+            {(activeOrg?.roleName === 'OWNER' || activeOrg?.permissions?.includes('fieldseller.manage')) && (
               <NavLink to="/seller/field-sellers" className={navClass}>
                 <Users className="w-4 h-4" />
                 <span>Field sellers</span>
               </NavLink>
             )}
-            {activeOrg?.permissions?.includes('fieldanalytics.view') && (
+            {(activeOrg?.roleName === 'OWNER' || activeOrg?.permissions?.includes('fieldanalytics.view')) && (
               <NavLink to="/seller/field-analytics" className={navClass}>
                 <BarChart3 className="w-4 h-4" />
                 <span>Field analytics</span>

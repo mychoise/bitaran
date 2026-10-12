@@ -4,7 +4,10 @@
  * No floating point math on money.
  */
 
-export function formatMoney(paisa: number | string | bigint): string {
+export function formatMoney(paisa: number | string | bigint | null | undefined): string {
+  if (paisa === null || paisa === undefined || paisa === '') {
+    return 'Rs 0.00';
+  }
   const p = BigInt(paisa.toString());
   const isNegative = p < 0n;
   const absP = isNegative ? -p : p;

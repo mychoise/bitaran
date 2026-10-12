@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
@@ -78,29 +78,29 @@ export const FieldAnalyticsPage: React.FC = () => {
   const [customTo, setCustomTo] = useState('');
   const [selectedSellerId, setSelectedSellerId] = useState<string>('ALL');
 
-  // Compute date range
-  const getDateRange = () => {
+  // Stable date range calculation
+  const { from, to } = useMemo(() => {
     const now = new Date();
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
     if (rangePreset === '7d') {
-      const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      return { from: from.toISOString(), to: now.toISOString() };
+      const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6, 0, 0, 0, 0);
+      return { from: fromDate.toISOString(), to: endOfDay.toISOString() };
     }
     if (rangePreset === '30d') {
-      const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      return { from: from.toISOString(), to: now.toISOString() };
+      const fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29, 0, 0, 0, 0);
+      return { from: fromDate.toISOString(), to: endOfDay.toISOString() };
     }
     if (rangePreset === 'month') {
-      const from = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: from.toISOString(), to: now.toISOString() };
+      const fromDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      return { from: fromDate.toISOString(), to: endOfDay.toISOString() };
     }
     // custom
     return {
-      from: customFrom ? new Date(customFrom).toISOString() : undefined,
+      from: customFrom ? new Date(customFrom + 'T00:00:00.000Z').toISOString() : undefined,
       to: customTo ? new Date(customTo + 'T23:59:59.999Z').toISOString() : undefined,
     };
-  };
-
-  const { from, to } = getDateRange();
+  }, [rangePreset, customFrom, customTo]);
 
   // 1. Fetch Sellers for Filter
   const { data: sellers = [] } = useQuery<FieldSellerSummary[]>({
@@ -109,8 +109,8 @@ export const FieldAnalyticsPage: React.FC = () => {
   });
 
   // 2. Fetch Analytics
-  const { data: analytics, isLoading, error } = useQuery<FieldAnalyticsResponse>({
-    queryKey: ['seller-field-analytics', from, to, selectedSellerId],
+  const { data: analytics, isLoading, error, refetch } = useQuery<FieldAnalyticsResponse>({
+    queryKey: ['seller-field-analytics', rangePreset, customFrom, customTo, selectedSellerId],
     queryFn: () => {
       const params = new URLSearchParams();
       if (from) params.set('from', from);
@@ -122,16 +122,16 @@ export const FieldAnalyticsPage: React.FC = () => {
 
   // Prepare chart data
   const chartData = (analytics?.byDay || []).map((d) => ({
-    date: d.date.slice(5),
-    fullDate: d.date,
-    rupees: Number(BigInt(d.revenue) / 100n),
-    revenue: d.revenue,
-    salesCount: d.salesCount,
+    date: (d.date || '').slice(5),
+    fullDate: d.date || '',
+    rupees: Number(BigInt(d.revenue || '0') / 100n),
+    revenue: d.revenue || '0',
+    salesCount: d.salesCount || 0,
   }));
 
   // Payment method totals for percentage calculation
   const totalPaymentPaisa = (analytics?.byPaymentMethod || []).reduce(
-    (sum, pm) => sum + BigInt(pm.revenue),
+    (sum, pm) => sum + BigInt(pm?.revenue || '0'),
     0n,
   );
 
@@ -240,9 +240,25 @@ export const FieldAnalyticsPage: React.FC = () => {
       </div>
 
       {isLoading ? (
-        <div className="p-16 text-center text-sm text-gray-500">Loading analytics data...</div>
+        <div className="bg-white p-16 rounded-xl border border-gray-200 text-center shadow-xs">
+          <div className="animate-spin inline-block w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full mb-3" />
+          <p className="text-sm font-medium text-gray-700">Loading analytics data...</p>
+          <p className="text-xs text-gray-400 mt-1">Aggregating field sales, revenue and product movements</p>
+        </div>
       ) : error || !analytics ? (
-        <div className="p-12 text-center text-sm text-rose-600">Failed to load analytics data.</div>
+        <div className="bg-white p-12 rounded-xl border border-rose-200 text-center shadow-xs">
+          <p className="text-sm font-semibold text-rose-600">Failed to load field sales analytics</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {error instanceof Error ? error.message : 'An unexpected error occurred while fetching analytics.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs cursor-pointer transition-colors"
+          >
+            Retry
+          </button>
+        </div>
       ) : (
         <>
           {/* Totals Tiles */}
@@ -313,7 +329,7 @@ export const FieldAnalyticsPage: React.FC = () => {
               </div>
             ) : (
               <div className="h-72 w-full pt-2">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                     <XAxis
@@ -449,7 +465,7 @@ export const FieldAnalyticsPage: React.FC = () => {
                     </div>
                   ) : (
                     analytics.byPaymentMethod.map((pm) => {
-                      const pmRev = BigInt(pm.revenue);
+                      const pmRev = BigInt(pm?.revenue || '0');
                       const pct =
                         totalPaymentPaisa > 0n
                           ? Number((pmRev * 100n) / totalPaymentPaisa)

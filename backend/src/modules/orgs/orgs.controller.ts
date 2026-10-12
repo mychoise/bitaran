@@ -19,7 +19,7 @@ import { Organization } from './orgs.types';
 export class OrgsController {
   constructor(private readonly orgsService: OrgsService) {}
 
-  @Get('mine')
+  @Get(['mine', 'my'])
   async getMyOrgs(
     @CurrentUser() user: JwtPayload,
   ): Promise<unknown[]> {
