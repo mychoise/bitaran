@@ -147,8 +147,11 @@ export const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-            <Link to="/platform/login" className="text-xs text-gray-400 hover:text-gray-600">
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
+            <Link to="/field/login" className="font-medium text-emerald-600 hover:text-emerald-700">
+              Field seller? Sign in here &rarr;
+            </Link>
+            <Link to="/platform/login" className="text-gray-400 hover:text-gray-600">
               Platform staff sign in &rarr;
             </Link>
           </div>

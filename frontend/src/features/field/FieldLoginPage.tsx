@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { api } from '../../lib/api';
 import { APP_NAME } from '../../config/app.config';
@@ -133,12 +133,52 @@ export const FieldLoginPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-xl shadow-xs text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 min-h-[48px] transition"
+                className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-xl shadow-xs text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 min-h-[48px] transition cursor-pointer"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>
+
+          {/* Quick Demo Fill Buttons */}
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+              Demo Accounts (Click to Fill)
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('field1');
+                  setPassword('Password123!');
+                  setError(null);
+                }}
+                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg border border-gray-200 transition font-medium cursor-pointer"
+              >
+                Field 1 (@field1)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('field2');
+                  setPassword('Password123!');
+                  setError(null);
+                }}
+                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg border border-gray-200 transition font-medium cursor-pointer"
+              >
+                Field 2 (@field2)
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2">
+              Default password: <code className="bg-gray-100 px-1 py-0.5 rounded text-gray-700 font-mono">Password123!</code>
+            </p>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+            <Link to="/login" className="text-xs text-gray-500 hover:text-gray-800">
+              &larr; Wholesaler & dealer sign in
+            </Link>
+          </div>
         </div>
       </div>
     </div>
