@@ -16,6 +16,9 @@ import {
   productImages,
   inventoryItems,
   stockMovements,
+  fieldSellers,
+  fieldSales,
+  fieldSaleItems,
 } from './schema';
 
 dotenv.config();
@@ -73,6 +76,10 @@ async function seed(): Promise<void> {
         'product.edit',
         'order.view',
         'order.accept',
+        'fieldseller.manage',
+        'fieldsale.view_all',
+        'fieldsale.void',
+        'fieldanalytics.view',
       ],
     },
     {
@@ -80,6 +87,14 @@ async function seed(): Promise<void> {
       permissions: [
         'product.view',
         'order.view',
+      ],
+    },
+    {
+      name: 'FIELD_SELLER',
+      permissions: [
+        'fieldsale.create',
+        'fieldsale.view_own',
+        'fieldcatalog.view',
       ],
     },
   ];
@@ -836,6 +851,190 @@ async function seed(): Promise<void> {
     documentData: samplePanCert,
     documentMimeType: 'image/svg+xml',
   });
+
+  // 12. Field Sellers for Seller 1 (Himalayan Wholesale Distributors)
+  console.log('Seeding Field Sellers for Seller 1...');
+  const fieldSellerConfigs = [
+    { username: 'field1', displayName: 'Field Seller One', phone: '9841999111' },
+    { username: 'field2', displayName: 'Field Seller Two', phone: '9841999222' },
+  ];
+
+  const seller1Variants = await db
+    .select({
+      variantId: productVariants.id,
+      productName: products.name,
+      sku: productVariants.sku,
+      unitPricePaisa: productVariants.pricePaisa,
+    })
+    .from(productVariants)
+    .innerJoin(products, eq(productVariants.productId, products.id))
+    .where(eq(products.sellerOrgId, seller1.orgId));
+
+  const paymentMethods: Array<'CASH' | 'ESEWA' | 'KHALTI' | 'OTHER'> = [
+    'CASH',
+    'ESEWA',
+    'KHALTI',
+    'CASH',
+    'ESEWA',
+    'OTHER',
+    'CASH',
+    'KHALTI',
+    'ESEWA',
+    'CASH',
+  ];
+
+  const customers = [
+    { name: 'Hari Shrestha', phone: '9851011111' },
+    { name: 'Gita Sharma', phone: '9851022222' },
+    { name: 'Rajan Thapa', phone: '9851033333' },
+    { name: 'Sita KC', phone: '9851044444' },
+    { name: 'Bikash Tamang', phone: '9851055555' },
+    { name: 'Deepak Rai', phone: '9851066666' },
+    { name: 'Maya Gurung', phone: '9851077777' },
+    { name: 'Pooja Koirala', phone: '9851088888' },
+    { name: 'Nabin Basnet', phone: '9851099999' },
+    { name: 'Kamal Adhikari', phone: '9851000000' },
+  ];
+
+  const dayOffsets = [13, 11, 9, 8, 7, 5, 4, 3, 1, 0];
+
+  for (let sIdx = 0; sIdx < fieldSellerConfigs.length; sIdx++) {
+    const fsc = fieldSellerConfigs[sIdx];
+    let userRow = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, fsc.username))
+      .limit(1)
+      .then((r) => r[0]);
+
+    if (!userRow) {
+      const [insertedUser] = await db
+        .insert(users)
+        .values({
+          name: fsc.displayName,
+          username: fsc.username,
+          phone: fsc.phone,
+          passwordHash,
+          mustChangePassword: false,
+          status: 'ACTIVE',
+        })
+        .returning();
+      userRow = insertedUser;
+    }
+
+    const existingMem = await db
+      .select()
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.userId, userRow.id),
+          eq(memberships.orgId, seller1.orgId),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0]);
+
+    if (!existingMem) {
+      await db.insert(memberships).values({
+        userId: userRow.id,
+        orgId: seller1.orgId,
+        roleId: roleMap.get('FIELD_SELLER')!,
+      });
+    }
+
+    let sellerProfile = await db
+      .select()
+      .from(fieldSellers)
+      .where(eq(fieldSellers.userId, userRow.id))
+      .limit(1)
+      .then((r) => r[0]);
+
+    if (!sellerProfile) {
+      const [insertedProfile] = await db
+        .insert(fieldSellers)
+        .values({
+          userId: userRow.id,
+          orgId: seller1.orgId,
+          displayName: fsc.displayName,
+          phone: fsc.phone,
+          status: 'ACTIVE',
+          createdByUserId: seller1.userId,
+        })
+        .returning();
+      sellerProfile = insertedProfile;
+    }
+
+    // Seed sales if none exist
+    const existingSales = await db
+      .select({ id: fieldSales.id })
+      .from(fieldSales)
+      .where(eq(fieldSales.fieldSellerId, sellerProfile.id))
+      .limit(1);
+
+    if (existingSales.length === 0 && seller1Variants.length > 0) {
+      console.log(`Seeding 10 sales for ${fsc.username}...`);
+      for (let i = 0; i < 10; i++) {
+        const isVoided = i === 3; // 4th sale is voided
+        const dayOffset = dayOffsets[i];
+        const soldAt = new Date(Date.now() - dayOffset * 24 * 60 * 60 * 1000);
+        const paymentMethod = paymentMethods[i % paymentMethods.length];
+        const cust = customers[(i + sIdx * 5) % customers.length];
+
+        // Choose 1 or 2 items
+        const itemVariants = [
+          seller1Variants[(i + sIdx) % seller1Variants.length],
+        ];
+        if (i % 2 === 1 && seller1Variants.length > 1) {
+          itemVariants.push(
+            seller1Variants[(i + sIdx + 1) % seller1Variants.length],
+          );
+        }
+
+        let totalPaisaBigInt = 0n;
+        const lineItems = itemVariants.map((iv, itemIdx) => {
+          const qty = 1 + ((i + itemIdx) % 3);
+          const lineTotal = BigInt(iv.unitPricePaisa) * BigInt(qty);
+          totalPaisaBigInt += lineTotal;
+          return {
+            variantId: iv.variantId,
+            nameSnapshot: iv.productName,
+            skuSnapshot: iv.sku,
+            unitPricePaisa: iv.unitPricePaisa,
+            qty,
+          };
+        });
+
+        const [createdSale] = await db
+          .insert(fieldSales)
+          .values({
+            orgId: seller1.orgId,
+            fieldSellerId: sellerProfile.id,
+            customerName: cust.name,
+            customerPhone: cust.phone,
+            paymentMethod,
+            totalPaisa: totalPaisaBigInt,
+            status: isVoided ? 'VOIDED' : 'ACTIVE',
+            voidReason: isVoided ? 'Customer canceled order upon delivery' : null,
+            voidedByUserId: isVoided ? seller1.userId : null,
+            voidedAt: isVoided ? soldAt : null,
+            note: `Field sale #${i + 1}`,
+            soldAt,
+          })
+          .returning();
+
+        for (const li of lineItems) {
+          await db.insert(fieldSaleItems).values({
+            saleId: createdSale.id,
+            variantId: li.variantId,
+            nameSnapshot: li.nameSnapshot,
+            skuSnapshot: li.skuSnapshot,
+            unitPricePaisa: li.unitPricePaisa,
+            qty: li.qty,
+          });
+        }
+      }
+    }
+  }
 
   console.log('✅ Database seed completed successfully!');
   await pool.end();

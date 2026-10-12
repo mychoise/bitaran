@@ -6,9 +6,9 @@ import {
   Inject,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { DRIZZLE, DrizzleDB } from '../../db/db.module';
-import { memberships, organizations, roles } from '../../db/schema';
+import { memberships, organizations, roles, fieldSellers } from '../../db/schema';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { JwtPayload } from '../decorators/current-user.decorator';
 import type { Organization } from '../../modules/orgs/orgs.types';
@@ -18,6 +18,8 @@ interface RequestWithContext {
   user: JwtPayload;
   activeOrg: Organization;
   userPermissions: string[];
+  url?: string;
+  originalUrl?: string;
 }
 
 @Injectable()
@@ -40,30 +42,68 @@ export class OrgContextGuard implements CanActivate {
 
     if (!user) return true; // JwtAuthGuard already handled this
 
+    // Fetch user memberships with roles and organizations
+    const userMemberships = await this.db
+      .select({
+        orgId: memberships.orgId,
+        roleId: memberships.roleId,
+        roleName: roles.name,
+        permissions: roles.permissions,
+        orgName: organizations.name,
+        orgStatus: organizations.status,
+        orgType: organizations.type,
+        canSell: organizations.canSell,
+        canBuy: organizations.canBuy,
+      })
+      .from(memberships)
+      .innerJoin(roles, eq(memberships.roleId, roles.id))
+      .innerJoin(organizations, eq(memberships.orgId, organizations.id))
+      .where(eq(memberships.userId, user.sub));
+
+    // Handle FIELD_SELLER role
+    const fieldSellerMem = userMemberships.find((m) => m.roleName === 'FIELD_SELLER');
+    if (fieldSellerMem) {
+      // Check field_sellers status
+      const [fieldSeller] = await this.db
+        .select({ status: fieldSellers.status })
+        .from(fieldSellers)
+        .where(eq(fieldSellers.userId, user.sub))
+        .limit(1);
+
+      if (fieldSeller && fieldSeller.status === 'DISABLED') {
+        throw new ForbiddenException('Field seller account is disabled');
+      }
+
+      // Restrict access to buyer, seller, admin routes
+      const rawUrl = request.originalUrl || request.url || '';
+      const cleanPath = rawUrl.replace(/^\/api\/v1/, '').split('?')[0];
+      if (
+        cleanPath.startsWith('/seller') ||
+        cleanPath.startsWith('/admin') ||
+        cleanPath.startsWith('/cart') ||
+        cleanPath.startsWith('/checkout') ||
+        cleanPath.startsWith('/orders')
+      ) {
+        throw new ForbiddenException('Field sellers cannot access buyer, seller, or admin routes');
+      }
+
+      request.activeOrg = {
+        id: fieldSellerMem.orgId,
+        name: fieldSellerMem.orgName,
+        status: fieldSellerMem.orgStatus,
+        type: fieldSellerMem.orgType,
+        canSell: fieldSellerMem.canSell,
+        canBuy: fieldSellerMem.canBuy,
+      };
+      request.userPermissions = fieldSellerMem.permissions ?? [];
+      return true;
+    }
+
     if (!orgId) {
       // Check if user has a PLATFORM org membership to populate permissions for platform staff
-      const platformMembership = await this.db
-        .select({
-          orgId: memberships.orgId,
-          roleId: memberships.roleId,
-          permissions: roles.permissions,
-          orgName: organizations.name,
-          orgStatus: organizations.status,
-          orgType: organizations.type,
-          canSell: organizations.canSell,
-          canBuy: organizations.canBuy,
-        })
-        .from(memberships)
-        .innerJoin(roles, eq(memberships.roleId, roles.id))
-        .innerJoin(organizations, eq(memberships.orgId, organizations.id))
-        .where(
-          and(
-            eq(memberships.userId, user.sub),
-            eq(organizations.type, 'PLATFORM'),
-          ),
-        )
-        .limit(1)
-        .then((rows) => rows[0]);
+      const platformMembership = userMemberships.find(
+        (m) => m.orgType === 'PLATFORM',
+      );
 
       if (platformMembership) {
         request.activeOrg = {
@@ -81,25 +121,7 @@ export class OrgContextGuard implements CanActivate {
     }
 
     // Validate membership
-    const membership = await this.db
-      .select({
-        orgId: memberships.orgId,
-        roleId: memberships.roleId,
-        permissions: roles.permissions,
-        orgName: organizations.name,
-        orgStatus: organizations.status,
-        orgType: organizations.type,
-        canSell: organizations.canSell,
-        canBuy: organizations.canBuy,
-      })
-      .from(memberships)
-      .innerJoin(roles, eq(memberships.roleId, roles.id))
-      .innerJoin(organizations, eq(memberships.orgId, organizations.id))
-      .where(
-        and(eq(memberships.userId, user.sub), eq(memberships.orgId, orgId)),
-      )
-      .limit(1)
-      .then((rows) => rows[0]);
+    const membership = userMemberships.find((m) => m.orgId === orgId);
 
     if (!membership) {
       throw new ForbiddenException('Not a member of this organization');

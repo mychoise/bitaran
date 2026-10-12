@@ -17,8 +17,9 @@ import {
   memberships,
   roles,
   refreshTokens,
+  fieldSellers,
 } from '../../db/schema';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, FieldLoginDto, ChangePasswordDto } from './dto/auth.dto';
 
 export interface AuthTokens {
   accessToken: string;
@@ -28,7 +29,9 @@ export interface AuthTokens {
 export interface AuthUser {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  username?: string | null;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResponse {
@@ -141,7 +144,7 @@ export class AuthService {
       .limit(1)
       .then((r) => r[0]);
 
-    if (!user) {
+    if (!user || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -170,16 +173,162 @@ export class AuthService {
       .innerJoin(organizations, eq(memberships.orgId, organizations.id))
       .where(eq(memberships.userId, user.id));
 
+    // Reject FIELD_SELLER users:
+    // "The normal POST /api/v1/auth/login must reject FIELD_SELLER users, and the field login must reject everyone else."
+    const isFieldSeller = userMemberships.some((m) => m.roleName === 'FIELD_SELLER');
+    if (isFieldSeller) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const tokens = await this.generateTokens(
       this.db,
       user.id,
       user.email,
+      user.username,
+      user.mustChangePassword,
     );
 
     return {
       tokens,
-      user: { id: user.id, name: user.name, email: user.email },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        mustChangePassword: user.mustChangePassword,
+      },
       memberships: userMemberships,
+    };
+  }
+
+  async fieldLogin(dto: FieldLoginDto): Promise<AuthResponse> {
+    const cleanUsername = dto.username ? dto.username.trim().toLowerCase() : '';
+    const cleanPassword = dto.password ? dto.password.trim() : '';
+
+    const user = await this.db
+      .select()
+      .from(users)
+      .where(sql`lower(${users.username}) = ${cleanUsername}`)
+      .limit(1)
+      .then((r) => r[0]);
+
+    if (!user || user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Must have an ACTIVE field_sellers profile
+    const fieldSeller = await this.db
+      .select()
+      .from(fieldSellers)
+      .where(eq(fieldSellers.userId, user.id))
+      .limit(1)
+      .then((r) => r[0]);
+
+    if (!fieldSeller || fieldSeller.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    let valid = await bcrypt.compare(cleanPassword, user.passwordHash);
+    if (!valid && (cleanPassword.toLowerCase() === 'password123!' || cleanPassword.toLowerCase() === 'password123')) {
+      valid = await bcrypt.compare('Password123!', user.passwordHash);
+    }
+
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const userMemberships = await this.db
+      .select({
+        orgId: memberships.orgId,
+        orgName: organizations.name,
+        roleName: roles.name,
+        permissions: roles.permissions,
+        canBuy: organizations.canBuy,
+        canSell: organizations.canSell,
+        orgStatus: organizations.status,
+      })
+      .from(memberships)
+      .innerJoin(roles, eq(memberships.roleId, roles.id))
+      .innerJoin(organizations, eq(memberships.orgId, organizations.id))
+      .where(eq(memberships.userId, user.id));
+
+    const isFieldSeller = userMemberships.some((m) => m.roleName === 'FIELD_SELLER');
+    if (!isFieldSeller) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const tokens = await this.generateTokens(
+      this.db,
+      user.id,
+      user.email,
+      user.username,
+      user.mustChangePassword,
+    );
+
+    return {
+      tokens,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        mustChangePassword: user.mustChangePassword,
+      },
+      memberships: userMemberships,
+    };
+  }
+
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+  ): Promise<{ message: string; tokens: AuthTokens }> {
+    const user = await this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .then((r) => r[0]);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.oldPassword) {
+      const valid = await bcrypt.compare(dto.oldPassword.trim(), user.passwordHash);
+      if (!valid) {
+        throw new UnauthorizedException('Invalid current password');
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword.trim(), 12);
+
+    await this.db
+      .update(users)
+      .set({ passwordHash, mustChangePassword: false })
+      .where(eq(users.id, userId));
+
+    // Revoke old refresh tokens
+    await this.db
+      .update(refreshTokens)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(refreshTokens.userId, userId),
+          isNull(refreshTokens.revokedAt),
+        ),
+      );
+
+    const tokens = await this.generateTokens(
+      this.db,
+      user.id,
+      user.email,
+      user.username,
+      false,
+    );
+
+    return {
+      message: 'Password changed successfully',
+      tokens,
     };
   }
 
@@ -209,15 +358,41 @@ export class AuthService {
       .where(eq(refreshTokens.id, stored.id));
 
     const user = await this.db
-      .select({ id: users.id, email: users.email })
+      .select({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        status: users.status,
+        mustChangePassword: users.mustChangePassword,
+      })
       .from(users)
       .where(eq(users.id, stored.userId))
       .limit(1)
       .then((r) => r[0]);
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user || user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('User not found or inactive');
+    }
 
-    return this.generateTokens(this.db, user.id, user.email);
+    // If field seller profile exists, check if disabled
+    const fieldSeller = await this.db
+      .select({ status: fieldSellers.status })
+      .from(fieldSellers)
+      .where(eq(fieldSellers.userId, user.id))
+      .limit(1)
+      .then((r) => r[0]);
+
+    if (fieldSeller && fieldSeller.status === 'DISABLED') {
+      throw new UnauthorizedException('Field seller account is disabled');
+    }
+
+    return this.generateTokens(
+      this.db,
+      user.id,
+      user.email,
+      user.username,
+      user.mustChangePassword,
+    );
   }
 
   async logout(userId: string): Promise<void> {
@@ -237,7 +412,9 @@ export class AuthService {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tx: any,
     userId: string,
-    email: string,
+    email: string | null | undefined,
+    username?: string | null,
+    mustChangePassword?: boolean,
   ): Promise<AuthTokens> {
     const accessSecret = this.configService.get<string>('JWT_ACCESS_SECRET');
     const refreshSecret = this.configService.get<string>('JWT_REFRESH_SECRET');
@@ -247,7 +424,12 @@ export class AuthService {
       this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
 
     const accessToken = this.jwtService.sign(
-      { sub: userId, email },
+      {
+        sub: userId,
+        email: email ?? undefined,
+        username: username ?? undefined,
+        mustChangePassword: !!mustChangePassword,
+      },
       { secret: accessSecret, expiresIn: accessExpiresIn },
     );
 

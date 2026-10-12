@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -27,7 +28,7 @@ export class JwtAuthGuard implements CanActivate {
 
     const request = context
       .switchToHttp()
-      .getRequest<{ headers: Record<string, string>; user: JwtPayload }>();
+      .getRequest<{ headers: Record<string, string>; user: JwtPayload; url?: string; originalUrl?: string }>();
     const authHeader = request.headers['authorization'];
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('Missing or invalid Authorization header');
@@ -38,8 +39,20 @@ export class JwtAuthGuard implements CanActivate {
       const secret = this.configService.get<string>('JWT_ACCESS_SECRET');
       const payload = this.jwtService.verify<JwtPayload>(token, { secret });
       request.user = payload;
+
+      if (payload.mustChangePassword) {
+        const rawUrl = request.originalUrl || request.url || '';
+        const cleanPath = rawUrl.replace(/^\/api\/v1/, '').split('?')[0];
+        if (cleanPath !== '/auth/password') {
+          throw new ForbiddenException('Password change required before accessing other endpoints');
+        }
+      }
+
       return true;
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof ForbiddenException) {
+        throw err;
+      }
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

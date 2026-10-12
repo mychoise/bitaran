@@ -82,3 +82,25 @@ export class RefreshTokenDto {
   @IsString()
   refreshToken!: string;
 }
+
+export class FieldLoginDto {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsString()
+  username!: string;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  password!: string;
+}
+
+export class ChangePasswordDto {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsOptional()
+  oldPassword?: string;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
+}

@@ -81,18 +81,27 @@ export const subscriptionStatus = pgEnum('subscription_status', [
   'PAST_DUE',
   'SUSPENDED',
 ]);
+export const fieldSellerStatus = pgEnum('field_seller_status', ['ACTIVE', 'DISABLED']);
+export const fieldPaymentMethod = pgEnum('field_payment_method', ['CASH', 'ESEWA', 'KHALTI', 'OTHER']);
+export const fieldSaleStatus = pgEnum('field_sale_status', ['ACTIVE', 'VOIDED']);
 
 // ---------- Identity & tenancy ----------
 
-export const users = pgTable('users', {
-  id: id(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  phone: text('phone').unique(),
-  passwordHash: text('password_hash').notNull(),
-  status: text('status').notNull().default('ACTIVE'),
-  createdAt: createdAt(),
-});
+export const users = pgTable(
+  'users',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    email: text('email').unique(), // nullable: field sellers sign in with a username
+    username: text('username').unique(),
+    phone: text('phone').unique(),
+    passwordHash: text('password_hash').notNull(),
+    mustChangePassword: boolean('must_change_password').notNull().default(false),
+    status: text('status').notNull().default('ACTIVE'),
+    createdAt: createdAt(),
+  },
+  (t) => [check('users_login_identifier_chk', sql`${t.email} IS NOT NULL OR ${t.username} IS NOT NULL`)],
+);
 
 export const refreshTokens = pgTable(
   'refresh_tokens',
@@ -668,3 +677,60 @@ export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
   order: one(orders, { fields: [shipments.orderId], references: [orders.id] }),
   events: many(shipmentEvents),
 }));
+
+// ---------- Field sellers (moving sellers employed by a seller business) ----------
+// Field sales are NOT marketplace orders: no buyer business, no gateway payment, no stock effect in v1.
+
+export const fieldSellers = pgTable(
+  'field_sellers',
+  {
+    id: id(),
+    userId: uuid('user_id').notNull().unique().references(() => users.id),
+    orgId: uuid('org_id').notNull().references(() => organizations.id),
+    displayName: text('display_name').notNull(),
+    phone: text('phone'),
+    status: fieldSellerStatus('status').notNull().default('ACTIVE'),
+    createdByUserId: uuid('created_by_user_id').notNull().references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index('field_sellers_org_idx').on(t.orgId)],
+);
+
+export const fieldSales = pgTable(
+  'field_sales',
+  {
+    id: id(),
+    orgId: uuid('org_id').notNull().references(() => organizations.id),
+    fieldSellerId: uuid('field_seller_id').notNull().references(() => fieldSellers.id),
+    customerName: text('customer_name'),
+    customerPhone: text('customer_phone'),
+    paymentMethod: fieldPaymentMethod('payment_method').notNull().default('CASH'),
+    totalPaisa: paisa('total_paisa').notNull(),
+    status: fieldSaleStatus('status').notNull().default('ACTIVE'),
+    voidReason: text('void_reason'),
+    voidedByUserId: uuid('voided_by_user_id').references(() => users.id),
+    voidedAt: timestamp('voided_at', { withTimezone: true }),
+    note: text('note'),
+    soldAt: timestamp('sold_at', { withTimezone: true }).notNull().defaultNow(), // server time only
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('field_sales_org_sold_idx').on(t.orgId, t.soldAt),
+    index('field_sales_seller_sold_idx').on(t.fieldSellerId, t.soldAt),
+    check('field_sales_void_reason_chk', sql`${t.status} <> 'VOIDED' OR ${t.voidReason} IS NOT NULL`),
+  ],
+);
+
+export const fieldSaleItems = pgTable(
+  'field_sale_items',
+  {
+    id: id(),
+    saleId: uuid('sale_id').notNull().references(() => fieldSales.id),
+    variantId: uuid('variant_id').notNull().references(() => productVariants.id),
+    nameSnapshot: text('name_snapshot').notNull(),
+    skuSnapshot: text('sku_snapshot').notNull(),
+    unitPricePaisa: integer('unit_price_paisa').notNull(), // snapshotted from the catalog by the server
+    qty: integer('qty').notNull(),
+  },
+  (t) => [index('field_sale_items_sale_idx').on(t.saleId), check('field_sale_items_qty_chk', sql`${t.qty} > 0`)],
+);
