@@ -9,6 +9,8 @@ import { useAuth } from '../../lib/auth';
 export const SellerProductsPage: React.FC = () => {
   const { activeOrg } = useAuth();
   const isApproved = activeOrg?.orgStatus === 'APPROVED';
+  const isOwner = activeOrg?.roleName === 'OWNER';
+  const canCreateProduct = isOwner || activeOrg?.permissions?.includes('product.create');
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['seller-products', activeOrg?.orgId],
@@ -38,23 +40,25 @@ export const SellerProductsPage: React.FC = () => {
           </p>
         </div>
 
-        {isApproved ? (
-          <Link
-            to="/seller/products/new"
-            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 shadow-sm transition"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add product</span>
-          </Link>
-        ) : (
-          <button
-            disabled
-            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-bold text-gray-400 bg-gray-100 cursor-not-allowed border border-gray-200"
-            title="Approval required to list products"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add product (Locked)</span>
-          </button>
+        {canCreateProduct && (
+          isApproved ? (
+            <Link
+              to="/seller/products/new"
+              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 shadow-sm transition"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add product</span>
+            </Link>
+          ) : (
+            <button
+              disabled
+              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-bold text-gray-400 bg-gray-100 cursor-not-allowed border border-gray-200"
+              title="Approval required to list products"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add product (Locked)</span>
+            </button>
+          )
         )}
       </div>
 

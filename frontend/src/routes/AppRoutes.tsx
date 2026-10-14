@@ -7,6 +7,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { LoginPage } from '../features/auth/LoginPage';
 import { PlatformLoginPage } from '../features/auth/PlatformLoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
+import { ChangePasswordPage } from '../features/auth/ChangePasswordPage';
 
 // Field Seller
 import { FieldLoginPage } from '../features/field/FieldLoginPage';
@@ -35,6 +36,9 @@ import { FieldSellersListPage } from '../features/seller/FieldSellersListPage';
 import { AddFieldSellerPage } from '../features/seller/AddFieldSellerPage';
 import { FieldSellerDetailPage } from '../features/seller/FieldSellerDetailPage';
 import { FieldAnalyticsPage } from '../features/seller/FieldAnalyticsPage';
+import { TeamPage } from '../features/seller/TeamPage';
+import { AddTeamMemberPage } from '../features/seller/AddTeamMemberPage';
+import { ActivityPage } from '../features/seller/ActivityPage';
 
 // Admin
 import { AdminDashboardPage } from '../features/admin/AdminDashboardPage';
@@ -51,7 +55,12 @@ const IndexRedirect: React.FC = () => {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isFieldSeller) return <Navigate to="/field/home" replace />;
   if (isPlatformStaff) return <Navigate to="/admin/dashboard" replace />;
-  if (activeOrg?.canSell) return <Navigate to="/seller/dashboard" replace />;
+  if (activeOrg?.canSell) {
+    if (activeOrg.roleName === 'OWNER' || activeOrg.permissions?.includes('report.view')) {
+      return <Navigate to="/seller/dashboard" replace />;
+    }
+    return <Navigate to="/seller/products" replace />;
+  }
   return <Navigate to="/browse" replace />;
 };
 
@@ -71,6 +80,16 @@ export const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute requireFieldSeller>
             <FieldChangePasswordPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Desktop User Password Change (Outside Main Layout) */}
+      <Route
+        path="/change-password"
+        element={
+          <ProtectedRoute>
+            <ChangePasswordPage />
           </ProtectedRoute>
         }
       />
@@ -141,7 +160,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="seller/dashboard"
           element={
-            <ProtectedRoute requireSeller>
+            <ProtectedRoute requireSeller requiredPermission="report.view">
               <SellerDashboardPage />
             </ProtectedRoute>
           }
@@ -157,7 +176,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="seller/products/new"
           element={
-            <ProtectedRoute requireSeller>
+            <ProtectedRoute requireSeller requiredPermission="product.create">
               <ProductFormPage />
             </ProtectedRoute>
           }
@@ -217,6 +236,32 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute requireSeller requiredPermission="fieldanalytics.view">
               <FieldAnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Seller Team & Activity Routes */}
+        <Route
+          path="seller/team"
+          element={
+            <ProtectedRoute requireSeller requiredPermission="team.manage_staff">
+              <TeamPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="seller/team/new"
+          element={
+            <ProtectedRoute requireSeller requiredPermission="team.manage_staff">
+              <AddTeamMemberPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="seller/activity"
+          element={
+            <ProtectedRoute requireSeller requiredPermission="audit.view">
+              <ActivityPage />
             </ProtectedRoute>
           }
         />

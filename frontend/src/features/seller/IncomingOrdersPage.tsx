@@ -12,6 +12,11 @@ export const IncomingOrdersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>('');
 
+  const isOwner = activeOrg?.roleName === 'OWNER';
+  const canAccept = isOwner || activeOrg?.permissions?.includes('order.accept');
+  const canReject = isOwner || activeOrg?.permissions?.includes('order.reject');
+  const canRefund = isOwner || activeOrg?.permissions?.includes('order.mark_refunded');
+
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['seller-orders', activeOrg?.orgId, statusFilter],
     queryFn: () =>
@@ -105,38 +110,42 @@ export const IncomingOrdersPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        {order.status === 'PAID' && (
+                        {order.status === 'PAID' && (canAccept || canReject) && (
                           <>
-                            <button
-                              onClick={() =>
-                                transitionMutation.mutate({
-                                  orderId: order.id,
-                                  toStatus: 'CONFIRMED',
-                                })
-                              }
-                              disabled={transitionMutation.isPending}
-                              className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow-xs transition"
-                              title="Accept this order"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() =>
-                                transitionMutation.mutate({
-                                  orderId: order.id,
-                                  toStatus: 'REJECTED_REFUND_PENDING',
-                                })
-                              }
-                              disabled={transitionMutation.isPending}
-                              className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold shadow-xs transition"
-                              title="Reject and queue refund"
-                            >
-                              Reject
-                            </button>
+                            {canAccept && (
+                              <button
+                                onClick={() =>
+                                  transitionMutation.mutate({
+                                    orderId: order.id,
+                                    toStatus: 'CONFIRMED',
+                                  })
+                                }
+                                disabled={transitionMutation.isPending}
+                                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow-xs transition"
+                                title="Accept this order"
+                              >
+                                Accept
+                              </button>
+                            )}
+                            {canReject && (
+                              <button
+                                onClick={() =>
+                                  transitionMutation.mutate({
+                                    orderId: order.id,
+                                    toStatus: 'REJECTED_REFUND_PENDING',
+                                  })
+                                }
+                                disabled={transitionMutation.isPending}
+                                className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold shadow-xs transition"
+                                title="Reject and queue refund"
+                              >
+                                Reject
+                              </button>
+                            )}
                           </>
                         )}
 
-                        {order.status === 'REJECTED_REFUND_PENDING' && (
+                        {order.status === 'REJECTED_REFUND_PENDING' && canRefund && (
                           <button
                             onClick={() =>
                               transitionMutation.mutate({

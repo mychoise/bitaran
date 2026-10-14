@@ -33,8 +33,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Forced password change check
-  if (user?.mustChangePassword && location.pathname !== '/field/password') {
-    return <Navigate to="/field/password" replace />;
+  if (user?.mustChangePassword) {
+    if (isFieldSeller && location.pathname !== '/field/password') {
+      return <Navigate to="/field/password" replace />;
+    }
+    if (!isFieldSeller && location.pathname !== '/change-password') {
+      return <Navigate to="/change-password" replace />;
+    }
   }
 
   // Field seller specific check

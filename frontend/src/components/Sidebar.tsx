@@ -17,6 +17,8 @@ import {
   ClipboardList,
   Users,
   BarChart3,
+  UserCog,
+  History,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -100,10 +102,12 @@ export const Sidebar: React.FC = () => {
             Seller
           </div>
           <nav className="space-y-1">
-            <NavLink to="/seller/dashboard" className={navClass}>
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard</span>
-            </NavLink>
+            {(activeOrg?.roleName === 'OWNER' || activeOrg?.permissions?.includes('report.view')) && (
+              <NavLink to="/seller/dashboard" className={navClass}>
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Dashboard</span>
+              </NavLink>
+            )}
             <NavLink to="/seller/products" className={navClass}>
               <Boxes className="w-4 h-4" />
               <span>Products</span>
@@ -126,6 +130,20 @@ export const Sidebar: React.FC = () => {
               <NavLink to="/seller/field-analytics" className={navClass}>
                 <BarChart3 className="w-4 h-4" />
                 <span>Field analytics</span>
+              </NavLink>
+            )}
+            {(activeOrg?.roleName === 'OWNER' ||
+              activeOrg?.permissions?.includes('team.manage_staff') ||
+              activeOrg?.permissions?.includes('team.manage_managers')) && (
+              <NavLink to="/seller/team" className={navClass}>
+                <UserCog className="w-4 h-4" />
+                <span>Team</span>
+              </NavLink>
+            )}
+            {(activeOrg?.roleName === 'OWNER' || activeOrg?.permissions?.includes('audit.view')) && (
+              <NavLink to="/seller/activity" className={navClass}>
+                <History className="w-4 h-4" />
+                <span>Activity</span>
               </NavLink>
             )}
           </nav>

@@ -269,4 +269,81 @@ This numbered walkthrough guides a reviewer or client step-by-step through the c
    - **Payment Methods Split:** Distribution between Cash, eSewa, Khalti, and Other with percentage progress bars.
    - **Top 10 Products:** Highest moving catalog items by units sold.
 
+---
+
+### Step 16: Manager Role, Team Hierarchy, Permissions & Activity Log (Milestone 9)
+
+#### 1. Owner Manages Team and Creates a Manager
+1. Log in as wholesale business owner:
+   - **Email:** `seller1@demo.test` (Himalayan Wholesale Distributors)
+   - **Password:** `Password123!`
+2. In the sidebar, click **Team** (`/seller/team`).
+3. Notice the team member table displaying:
+   - **Seller One** (`seller1@demo.test`) with pill `OWNER` and status badge `Active`.
+   - Seeded **Manager One** (`manager1@demo.test`) with pill `MANAGER`.
+   - Seeded **Staff One** (`staff1@demo.test`) with pill `STAFF`.
+4. Click the green **"Add member"** button (`/seller/team/new`).
+5. Notice the role selector shows both **Manager** and **Staff** options (because an Owner can create both).
+6. Enter details:
+   - **Full Name:** `Arun Karki`
+   - **Email:** `arun.manager@demo.test`
+   - **Role:** Select `Manager`
+7. Click **"Create Member"**.
+8. Notice the temporary password generated in the highlighted golden card with the **"Copy password"** button.
+
+#### 2. Test Forced Password Change on Login
+1. Log out or open an incognito window.
+2. Sign in as `arun.manager@demo.test` with the copied temporary password.
+3. Because `mustChangePassword` is active, the app automatically navigates to `/change-password` and blocks access to other routes until the password is changed.
+4. Enter current password and a new secure password (e.g., `NewManagerPass123!`), then click **"Change Password"**.
+5. You are redirected straight into the seller dashboard as Manager!
+
+#### 3. Manager Daily Operations: Catalog, Stock, and Orders
+1. Sign in as Manager:
+   - **Email:** `manager1@demo.test`
+   - **Password:** `Password123!`
+2. **Product Management:**
+   - In the sidebar, navigate to **Products** (`/seller/products`).
+   - Notice the **"Add product"** button is present and clickable (`product.create`).
+   - Click **"Edit"** on a product (e.g., *Basmati Rice Premium*) and change the price from Rs 2,800.00 to Rs 2,900.00 (`product.edit`).
+3. **Inventory Management:**
+   - Navigate to **Inventory** (`/seller/inventory`).
+   - Click **"Adjust Stock"** on any variant, select `RECEIPT`, enter `+50`, and save (`stock.adjust`).
+4. **Order Management:**
+   - Navigate to **Incoming orders** (`/seller/orders`).
+   - Click **"Confirm order"** on a pending order (`order.accept`).
+
+#### 4. Manager Permission Boundaries & Hierarchy Enforcement
+1. **Refund Protection:**
+   - While still on **Incoming orders**, notice that for any order in `REJECTED_REFUND_PENDING` state, the **"Mark refunded"** button is **hidden** (managers do not have `order.mark_refunded`). Any direct API attempt is blocked with 403.
+2. **Activity Log Isolation:**
+   - Notice that the **Activity** tab is **hidden** in the sidebar (only owners have `audit.view`). Directly navigating to `/seller/activity` is blocked.
+3. **Team Creation Boundary:**
+   - Navigate to **Team** (`/seller/team`) and click **"Add member"** (`/seller/team/new`).
+   - Notice that the role selector **only shows Staff**. Managers cannot create other Managers or Owners.
+4. **Hierarchy Action Restrictions:**
+   - On the Team list, notice that the Manager can only click **"Reset PW"** or **"Disable"** for **Staff members**. The Owner and other Managers have their action buttons hidden or disabled (`canManage` enforcement).
+
+#### 5. Manager Creates a Staff Account
+1. On the Add Team Member page (`/seller/team/new`), create a new staff account:
+   - **Full Name:** `Gita Sharma`
+   - **Email:** `gita.staff@demo.test`
+   - **Role:** `Staff` (pre-selected and locked)
+2. Click **"Create Member"** and note the generated temporary password.
+
+#### 6. Owner Inspects the Activity Audit Log
+1. Log out and sign back in as the business owner:
+   - **Email:** `seller1@demo.test`
+   - **Password:** `Password123!`
+2. In the sidebar, click **Activity** (`/seller/activity`).
+3. Observe the comprehensive immutable audit log:
+   - **Catalog Price Update:** Shows the exact price change on Basmati Rice from Rs 2,800.00 to Rs 2,900.00 by `manager1@demo.test`.
+   - **Team Member Created:** Shows the creation of `arun.manager@demo.test` (Manager) by `seller1@demo.test`, and `gita.staff@demo.test` (Staff) by `manager1@demo.test`.
+   - **Inventory Adjustment:** Shows the stock receipt of `+50` units.
+   - **Order Acceptance:** Shows the order status confirmation.
+4. Test the **Action Filters**: Toggle between "Catalog / Price Changes", "Team & Members", "Inventory Adjustments", and "All Actions".
+5. Notice that passwords and sensitive credentials are **never logged or visible**.
+
+---
+
 **End of demo.**

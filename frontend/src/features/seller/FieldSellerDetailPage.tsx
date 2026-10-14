@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import { StatusBadge } from '../../components/StatusBadge';
+import { useAuth } from '../../lib/auth';
 import {
   ResponsiveContainer,
   BarChart,
@@ -87,6 +88,9 @@ interface FieldSale {
 export const FieldSellerDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const { activeOrg } = useAuth();
+  const isOwner = activeOrg?.roleName === 'OWNER';
+  const canVoidSale = isOwner || activeOrg?.permissions?.includes('fieldsale.void');
 
   const [activeTab, setActiveTab] = useState<'overview' | 'sales' | 'account'>('overview');
 
@@ -842,7 +846,7 @@ export const FieldSellerDetailPage: React.FC = () => {
 
             {/* Actions in Modal */}
             <div className="flex items-center justify-between pt-2">
-              {selectedSale.status === 'ACTIVE' ? (
+              {selectedSale.status === 'ACTIVE' && canVoidSale ? (
                 <button
                   type="button"
                   onClick={() => {

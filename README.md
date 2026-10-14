@@ -92,7 +92,9 @@ All seeded demo accounts use the standard password: `Password123!`
 |---|---|---|---|
 | **Super Admin** | `superadmin@demo.test` | `Password123!` | Platform Super Administrator |
 | **Admin** | `admin@demo.test` | `Password123!` | Platform Staff Administrator |
-| **Seller 1** | `seller1@demo.test` | `Password123!` | Himalayan Wholesale Distributors (Grains, Dal, Sugar, Salt) |
+| **Seller 1** | `seller1@demo.test` | `Password123!` | Himalayan Wholesale Distributors (Owner: Grains, Dal, Sugar, Salt) |
+| **Seller 1 Manager** | `manager1@demo.test` | `Password123!` | Himalayan Wholesale Distributors (Manager: Operations Admin) |
+| **Seller 1 Staff** | `staff1@demo.test` | `Password123!` | Himalayan Wholesale Distributors (Staff: Warehouse & Catalog) |
 | **Seller 2** | `seller2@demo.test` | `Password123!` | Everest Beverages & Snacks (Wai Wai, Juices, Coffee, Tea) |
 | **Seller 3** | `seller3@demo.test` | `Password123!` | Valley Hardware Supplies (Cement, TMT Steel, LED Lights, Paints) |
 | **Buyer Dealer 1** | `buyer1@demo.test` / `dealer1@demo.test` | `Password123!` | Kathmandu Valley Retail Mart |
@@ -166,6 +168,17 @@ All seeded demo accounts use the standard password: `Password123!`
 - `POST /api/v1/field/sales` - Record a new field sale (catalog-computed server pricing)
 - `GET  /api/v1/field/sales` - Paginated own sales history (newest first)
 
+### Team Management (Milestone 9)
+- `GET   /api/v1/seller/team` - List all members with role, status, creator, and join date (`team.manage`)
+- `POST  /api/v1/seller/team` - Create a new team member (Owner creates Manager/Staff; Manager creates Staff; returns temporary password once)
+- `POST  /api/v1/seller/team/:userId/disable` - Disable member and revoke active refresh tokens (hierarchy-enforced)
+- `POST  /api/v1/seller/team/:userId/enable` - Re-enable member account (hierarchy-enforced)
+- `POST  /api/v1/seller/team/:userId/reset-password` - Reset temporary password (returns once; hierarchy-enforced)
+- `PATCH /api/v1/seller/team/:userId/role` - Promote or demote member between MANAGER and STAFF (Owner only)
+
+### Activity Audit Log (Milestone 9)
+- `GET   /api/v1/seller/activity` - Filterable seller activity log (price changes, stock adjustments, order transitions, team changes, field sellers; Owner only: `audit.view`)
+
 ### Owner Field Seller Management & Analytics
 - `POST /api/v1/seller/field-sellers` - Create field seller account (returns temporary password once)
 - `GET  /api/v1/seller/field-sellers` - List field sellers with today, month, and all-time totals
@@ -217,26 +230,60 @@ All seeded demo accounts use the standard password: `Password123!`
 
 ---
 
-## 5. Roles & Permissions (Milestone 8)
+## 5. Roles, Permissions & Team Hierarchy (Milestone 9)
 
-| Role | Permissions | Description |
-|---|---|---|
-| **SUPER_ADMIN** / **ADMIN** | `admin.*` | Platform administrators managing approvals and shipments |
-| **OWNER** | `fieldseller.manage`, `fieldsale.view_all`, `fieldsale.void`, `fieldanalytics.view`, plus standard seller permissions | Wholesaler business owner |
-| **STAFF** | Standard seller permissions | Wholesaler business staff (no field seller management by default) |
-| **FIELD_SELLER** | `fieldsale.create`, `fieldsale.view_own`, `fieldcatalog.view` | Mobile representative selling products on the road |
+### Role Hierarchy
+Within a seller business organization, members belong to a strict hierarchy:
+$$\text{OWNER (Rank 3)} > \text{MANAGER (Rank 2)} > \text{STAFF (Rank 1)}$$
+
+- **Field Sellers (`FIELD_SELLER`)** are independent mobile sales representatives outside this operational ladder.
+- **Platform Admins (`SUPER_ADMIN` / `ADMIN`)** administer platform-level approvals and logistics.
+
+### Hierarchy Enforcement Rules (`canManage`)
+1. **Strict Superiority:** A user can only create, disable, enable, or reset passwords for members ranked **strictly below** their own role (`actorRank > targetRank`).
+   - `OWNER` can manage `MANAGER` and `STAFF`.
+   - `MANAGER` can only manage `STAFF`.
+   - `STAFF` cannot manage any team members.
+2. **Owner Inviolability:** Nobody can disable, demote, or reset passwords for an `OWNER`. No API creates a second `OWNER` (ownership is tied to the business registrant).
+3. **Self-Action Forbidden:** A user cannot disable themselves or modify their own role.
+4. **Owner-Only Role Changes:** Only an `OWNER` can promote or demote members between `MANAGER` and `STAFF`.
+5. **Immediate Invalidation:** Disabling a member immediately revokes their active refresh tokens. Any subsequent request with that organization context is blocked by `OrgContextGuard` with HTTP 403 and error code `MEMBERSHIP_DISABLED`.
+
+### Permissions Matrix
+
+| Permission | Description | OWNER | MANAGER | STAFF | FIELD_SELLER |
+|---|---|:---:|:---:|:---:|:---:|
+| `team.manage` | View team, create lower-ranked members, disable/enable, reset PW | Yes | Yes | No | No |
+| `team.role_change` | Promote / demote members between Manager and Staff | Yes | No | No | No |
+| `audit.view` | View full organization activity audit log | Yes | No | No | No |
+| `product.create` | Create new products and variants | Yes | Yes | No | No |
+| `product.edit` | Update product info, prices, and variant details | Yes | Yes | No | No |
+| `stock.adjust` | Adjust warehouse inventory levels | Yes | Yes | Yes | No |
+| `order.view` | View incoming customer and dealer orders | Yes | Yes | Yes | No |
+| `order.accept` | Confirm orders (`CONFIRMED`, `READY_FOR_PICKUP`) | Yes | Yes | Yes | No |
+| `order.reject` | Reject order with refund pending | Yes | Yes | Yes | No |
+| `order.mark_refunded`| Complete customer refund (`REFUNDED`) | Yes | No | No | No |
+| `fieldseller.manage` | Create, disable, and reset field sellers | Yes | Yes | No | No |
+| `fieldsale.view_all` | View sales recorded across all field reps | Yes | Yes | No | No |
+| `fieldsale.void` | Void a field sale with mandatory audit reason | Yes | No | No | No |
+| `fieldanalytics.view`| View field seller analytics and leaderboard | Yes | Yes | No | No |
+| `report.view` | View seller analytics dashboard | Yes | Yes | No | No |
+| `payment_creds.manage`| Manage bank details, payment credentials | Yes | No | No | No |
+| `checkout.place` | Place marketplace orders (buyer role only) | No | No | No | No |
+| `fieldsale.create` | Record new retail field sales on mobile | No | No | No | Yes |
+| `fieldsale.view_own` | View own field sale history on mobile | No | No | No | Yes |
 
 ---
 
 ## 6. Temporary Password Behavior
 
-When an owner creates a new field seller account or resets an existing field seller's password:
+When an owner or manager creates a new team member or field seller account, or resets an existing account password:
 1. The server generates a random 12-character temporary password meeting complexity requirements (uppercase, lowercase, digits, symbols).
 2. The password is hashed using `bcrypt` (12 salt rounds) and saved to the database.
 3. `must_change_password = true` is set on the user record.
 4. The temporary password is returned **strictly once** in the API JSON response (`temporaryPassword`).
 5. The temporary password is **never logged** in console logs or database audit records.
-6. Until the user changes their password via `POST /api/v1/auth/password`, `JwtAuthGuard` blocks all other endpoints with an HTTP 403 / redirect to password change screen.
+6. Until the user changes their password via `POST /api/v1/auth/password`, `JwtAuthGuard` blocks all other endpoints with an HTTP 403 / redirect to the change password screen (`/change-password` or `/field/password`).
 
 ---
 
@@ -251,7 +298,20 @@ The following capabilities are deliberately omitted from this version:
 
 ---
 
-## 8. What is Mocked or Stubbed
+## 8. Manager role: not included
+
+The following capabilities are deliberately omitted from the Manager role implementation:
+1. **Custom per-person permissions:** Permissions are tied directly to the fixed roles (`OWNER`, `MANAGER`, `STAFF`). Granular per-user permission customization is out of scope.
+2. **Approval workflows:** Managers do not require owner sign-off for day-to-day operations (products, stock, order acceptance, field sellers).
+3. **Ownership transfer or multi-owner businesses:** Exactly one owner exists per business (the user who registered the business). Ownership cannot be transferred or shared.
+4. **Email / SMS invitations:** Accounts are created directly by superiors with a temporary password shown once.
+5. **Two-factor authentication (2FA):** Multi-factor authentication is out of scope.
+6. **Activity log CSV export:** The activity log is viewed interactively via the UI; file export is not included.
+7. **Password reset via email link:** Passwords must be reset by a higher-ranked team member or owner.
+
+---
+
+## 9. What is Mocked or Stubbed
 
 As specified in the prototype requirements, the following components are simulated or stubbed for client demonstration:
 
@@ -268,7 +328,7 @@ As specified in the prototype requirements, the following components are simulat
 
 ---
 
-## 9. Assumptions & Engineering Decisions
+## 10. Assumptions & Engineering Decisions
 
 1. **Self-Purchasing Restriction:** An organization is blocked at both cart addition and checkout from purchasing its own products.
 2. **Platform Admin Tenancy:** Platform admins belonging to `PLATFORM` organization are granted administrative permissions without requiring an `X-Org-Id` header for platform routes.
