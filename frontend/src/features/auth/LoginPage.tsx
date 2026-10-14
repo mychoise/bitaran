@@ -11,14 +11,21 @@ interface LoginForm {
 }
 
 export const LoginPage: React.FC = () => {
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginForm>();
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginForm>({
+    defaultValues: {
+      email: 'manager1@demo.test',
+      password: 'Password123!',
+    },
+  });
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const demoAccounts = [
-    { label: 'Seller 1 (Himalayan)', email: 'seller1@demo.test', role: 'Wholesaler' },
+    { label: 'Manager (Himalayan)', email: 'manager1@demo.test', role: 'Manager' },
+    { label: 'Seller 1 (Owner)', email: 'seller1@demo.test', role: 'Owner' },
+    { label: 'Staff (Himalayan)', email: 'staff1@demo.test', role: 'Staff' },
     { label: 'Seller 2 (Everest)', email: 'seller2@demo.test', role: 'Wholesaler' },
     { label: 'Buyer 1 (Kathmandu Mart)', email: 'buyer1@demo.test', role: 'Dealer' },
     { label: 'Dealer 1 (Kathmandu Mart)', email: 'dealer1@demo.test', role: 'Dealer' },
@@ -42,12 +49,21 @@ export const LoginPage: React.FC = () => {
       });
       login(res);
 
+      if (res.user?.mustChangePassword) {
+        navigate('/change-password');
+        return;
+      }
+
       // Check if user has buyer or seller org
       const firstOrg = res.memberships?.[0];
       if (firstOrg?.roleName === 'ADMIN' || firstOrg?.roleName === 'SUPER_ADMIN') {
         navigate('/admin/dashboard');
       } else if (firstOrg?.canSell) {
-        navigate('/seller/dashboard');
+        if (firstOrg.roleName === 'STAFF' && !firstOrg.permissions?.includes('report.view')) {
+          navigate('/seller/products');
+        } else {
+          navigate('/seller/dashboard');
+        }
       } else {
         navigate('/browse');
       }
@@ -82,7 +98,7 @@ export const LoginPage: React.FC = () => {
               <input
                 id="email"
                 type="email"
-                placeholder="seller1@demo.test"
+                placeholder="manager1@demo.test"
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
                 {...register('email', { required: 'Email is required' })}
               />
