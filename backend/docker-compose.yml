@@ -1,0 +1,72 @@
+# The API and Postgres, for a local trial or a single-server deployment.
+#
+#   JWT_SECRET=$(openssl rand -hex 32) docker compose up --build
+#
+# Variables come from the shell or from a .env file next to this one (Compose
+# reads it for ${...} substitution only). The `migrate` service applies
+# migrations, then exits; the API starts only once it has succeeded.
+# Seed demo data once, if wanted:
+#   docker compose run --rm api node dist/database/seed/run-seed.js
+
+name: asva-wholesale
+
+x-app-env: &app-env
+  NODE_ENV: ${NODE_ENV:-production}
+  DATABASE_URL: postgresql://asva:${POSTGRES_PASSWORD:-asva}@db:5432/asva_wholesale
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (at least 32 characters)}
+  JWT_EXPIRY: ${JWT_EXPIRY:-1d}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  CORS_ORIGINS: ${CORS_ORIGINS:-}
+  TRUST_PROXY: ${TRUST_PROXY:-false}
+  STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+  CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+  CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+  CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: asva
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-asva}
+      POSTGRES_DB: asva_wholesale
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Local access only, on 5433 so it does not clash with a Postgres
+    # already running on this machine.
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asva -d asva_wholesale"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    build: .
+    image: asva-wholesale-backend:local
+    command: ["node", "dist/database/migrate.js"]
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    image: asva-wholesale-backend:local
+    environment: *app-env
+    ports:
+      - "${API_PORT:-3000}:3000"
+    volumes:
+      # Only used with STORAGE_DRIVER=local.
+      - uploads:/app/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  uploads:

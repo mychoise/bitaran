@@ -1,0 +1,30 @@
+CREATE UNIQUE INDEX "idx_users_one_owner_per_business" ON "users" USING btree ("business_id") WHERE "users"."role" = 'owner';--> statement-breakpoint
+ALTER TABLE "businesses" ADD CONSTRAINT "businesses_pan_number_format" CHECK ("businesses"."pan_number" ~ '^[0-9]{9}$');--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_price_paisa_nonneg" CHECK ("products"."price_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_carton_price_paisa_nonneg" CHECK ("products"."carton_price_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_mrp_paisa_nonneg" CHECK ("products"."mrp_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_cost_price_paisa_nonneg" CHECK ("products"."cost_price_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_stock_quantity_nonneg" CHECK ("products"."stock_quantity" >= 0);--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_units_per_carton_positive" CHECK ("products"."units_per_carton" > 0);--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_low_stock_alert_nonneg" CHECK ("products"."low_stock_alert" >= 0);--> statement-breakpoint
+ALTER TABLE "retail_clients" ADD CONSTRAINT "retail_clients_pan_number_format" CHECK ("retail_clients"."pan_number" ~ '^[0-9]{9}$');--> statement-breakpoint
+ALTER TABLE "retail_clients" ADD CONSTRAINT "retail_clients_credit_limit_paisa_nonneg" CHECK ("retail_clients"."credit_limit_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "day_plan_stock" ADD CONSTRAINT "day_plan_stock_quantity_issued_nonneg" CHECK ("day_plan_stock"."quantity_issued" >= 0);--> statement-breakpoint
+ALTER TABLE "day_plan_stock" ADD CONSTRAINT "day_plan_stock_quantity_returned_nonneg" CHECK ("day_plan_stock"."quantity_returned" >= 0);--> statement-breakpoint
+ALTER TABLE "day_plan_stock" ADD CONSTRAINT "day_plan_stock_quantity_counted_nonneg" CHECK ("day_plan_stock"."quantity_counted" >= 0);--> statement-breakpoint
+ALTER TABLE "day_plans" ADD CONSTRAINT "day_plans_cash_handed_over_paisa_nonneg" CHECK ("day_plans"."cash_handed_over_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "invoice_counters" ADD CONSTRAINT "invoice_counters_last_number_nonneg" CHECK ("invoice_counters"."last_number" >= 0);--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_amount_paisa_positive" CHECK ("payments"."amount_paisa" > 0);--> statement-breakpoint
+ALTER TABLE "sale_items" ADD CONSTRAINT "sale_items_quantity_positive" CHECK ("sale_items"."quantity" > 0);--> statement-breakpoint
+ALTER TABLE "sale_items" ADD CONSTRAINT "sale_items_unit_price_paisa_nonneg" CHECK ("sale_items"."unit_price_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "sale_items" ADD CONSTRAINT "sale_items_line_total_paisa_nonneg" CHECK ("sale_items"."line_total_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "sales" ADD CONSTRAINT "sales_invoice_number_positive" CHECK ("sales"."invoice_number" > 0);--> statement-breakpoint
+ALTER TABLE "sales" ADD CONSTRAINT "sales_discount_paisa_nonneg" CHECK ("sales"."discount_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "sales" ADD CONSTRAINT "sales_total_paisa_nonneg" CHECK ("sales"."total_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "expenses" ADD CONSTRAINT "expenses_amount_paisa_positive" CHECK ("expenses"."amount_paisa" > 0);--> statement-breakpoint
+ALTER TABLE "sale_return_items" ADD CONSTRAINT "sale_return_items_quantity_positive" CHECK ("sale_return_items"."quantity" > 0);--> statement-breakpoint
+ALTER TABLE "sale_return_items" ADD CONSTRAINT "sale_return_items_unit_price_paisa_nonneg" CHECK ("sale_return_items"."unit_price_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "sale_return_items" ADD CONSTRAINT "sale_return_items_line_total_paisa_nonneg" CHECK ("sale_return_items"."line_total_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "sale_returns" ADD CONSTRAINT "sale_returns_total_paisa_nonneg" CHECK ("sale_returns"."total_paisa" >= 0);--> statement-breakpoint
+ALTER TABLE "stock_write_offs" ADD CONSTRAINT "stock_write_offs_quantity_positive" CHECK ("stock_write_offs"."quantity" > 0);--> statement-breakpoint
+ALTER TABLE "stock_write_offs" ADD CONSTRAINT "stock_write_offs_cost_value_paisa_nonneg" CHECK ("stock_write_offs"."cost_value_paisa" >= 0);

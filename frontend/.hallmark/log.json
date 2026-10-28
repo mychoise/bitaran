@@ -1,0 +1,37 @@
+[
+ {
+  "prompt": "Bitaran marketing site for Nepali wholesalers, Home page",
+  "shape": "Narrative Workflow",
+  "theme": "coral",
+  "axes": "light/grotesk-sans/warm",
+  "hero": "Settled",
+  "nav": "slab",
+  "footer": "statement",
+  "imagery": "the product built (6 samples), library 1, muted",
+  "photos": [
+   "VitorJubini_MercadoDaVilaRubim_Vitoria_ES_(39182859020)_(square_crop).jpg"
+  ],
+  "entry": "none",
+  "fingerprint": "settled/desk-stationery/narrative-day/table/steps/ink-band",
+  "sections": [
+   "hero",
+   "trusted-strip",
+   "grid",
+   "split-rows",
+   "narrative-workflow",
+   "table",
+   "steps",
+   "stories",
+   "faq-rows",
+   "band"
+  ],
+  "signature": "salesman route on the phone beside a paid invoice and a pending cheque on the desk",
+  "waived": [
+   "8",
+   "47b",
+   "77"
+  ],
+  "date": "2026-10-28",
+  "mode": "build"
+ }
+]

@@ -1,0 +1,212 @@
+/* Hallmark · shape: Narrative Workflow · genre: modern-minimal · theme: Coral (deal 1/3, seed marketing-route-sales-software-wholesalers-5146·6e3c2631·2026-10-28·r0) · job: sign up (request a demo) · draw: e8012f
+ * hero: Settled · nav: slab · footer: statement · imagery: the product built (6 samples), library 1, muted · signature: the salesman's route on his phone, laid on the desk beside a paid invoice and a pending cheque
+ * axes: light/grotesk-sans/warm · posture: restrained · contrast: pass · fold: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the brief fixes the section list (trusted strip, features grid, steps, stories, FAQ, closing band); varied it with a narrative day story told in three different documents and a table for devices */
+/* Hallmark · waive 8 · the brief lists every Home section in order · trusted strip, six-feature grid, three steps, FAQ and a closing call to action are the owner's spec for this wholesale site */
+/* Hallmark · waive 47b · one phone bezel, the route screen inside · the salesman's phone screen is the product's main view and the brief asks for it */
+/* Hallmark · waive 77 · one band, the customer strip of four placeholders · the owner asked for a trusted-by strip with marked placeholders until real wholesale customers agree to be named */
+/* Hallmark · dismissed 59 · the owner's brief names ten Home sections; each is kept short and the bands alternate paper */
+/* Hallmark · dismissed F25 · the desk of invoice and cheque is desktop-only by the brief's desktop-first rule; phones still get the route screen */
+/* Hallmark · dismissed 58 · 94 words around the features grid: the owner's brief asks for six features, each cut to a title and one short line */
+/* Hallmark · dismissed F4 · .btn-card is Coral's cotton card control, not a filled primary; .btn-ink is the one primary */
+
+@import "tailwindcss";
+@import "./tokens.css";
+@import "./base.css" layer(base);
+
+/* Layout tokens as Tailwind utilities: px-gutter, py-section, gap-x-columns, max-w-page. */
+@theme inline {
+  --spacing-gutter: var(--gutter);
+  --spacing-columns: var(--gap-columns);
+  --spacing-section-s: var(--section-gap-s);
+  --spacing-section: var(--section-gap);
+  --spacing-section-l: var(--section-gap-l);
+  --container-page: var(--container);
+}
+
+/* Replaces Tailwind's breakpoint container with the one capped, centred page container. */
+@utility container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* Things Tailwind cannot express: layered paper backgrounds, multi-part shadows, pressed type. */
+@layer components {
+  .desk {
+    background-color: var(--color-desk);
+    background-image: radial-gradient(90% 120% at 0% 30%, var(--color-cotton), transparent 62%), var(--tex-desk);
+  }
+
+  .hero-screen {
+    min-height: calc(100svh - 4.5rem);
+  }
+
+  .stock {
+    background-color: var(--color-cotton);
+    background-image: linear-gradient(100deg, var(--color-cotton), transparent 45%), var(--tex-cotton);
+    color: var(--color-print);
+    box-shadow: var(--edge-stock), var(--cast-stock);
+  }
+
+  .phone {
+    box-shadow: var(--cast-stock-lift);
+  }
+
+  /* The one settled state, pressed into the paper in coral. */
+  .pressed {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-paid);
+    padding: var(--space-2xs) var(--space-sm);
+    border: 2px solid currentColor;
+    border-radius: var(--radius-input);
+    transform: rotate(-8deg);
+    text-shadow: 0.5px 1px 0 oklch(var(--lit) / 0.7), -0.5px -0.5px 0 oklch(var(--shade) / 0.3);
+    opacity: 0.92;
+  }
+
+  /* Stand-ins for the photos the salesman takes: a cheque, a shopfront. */
+  .cheque-thumb {
+    background: linear-gradient(170deg, var(--color-paper-2), var(--color-paper-3));
+    box-shadow: inset 0 0 0 1px var(--color-rule-2);
+  }
+  .visit-photo {
+    background:
+      linear-gradient(180deg, transparent 55%, oklch(var(--shade) / 0.25)),
+      repeating-linear-gradient(90deg, var(--color-paper-3) 0 18%, var(--color-rule) 18% 20%);
+    box-shadow: inset 0 0 0 1px var(--color-rule-2);
+  }
+
+  /* Letterpress buttons: cotton card, or ink board for the primary. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    min-height: 48px;
+    padding: 0 var(--space-lg);
+    border: 0;
+    border-radius: var(--radius-stock);
+    font-family: var(--font-body);
+    font-size: var(--text-md);
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform var(--dur-micro) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+  .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+  .btn-card {
+    background-color: var(--color-cotton);
+    background-image: var(--tex-cotton);
+    color: var(--color-print);
+    text-shadow: 0.5px 0.75px 0 var(--color-cotton);
+    box-shadow: var(--edge-stock), var(--cast-stock);
+  }
+  .btn-card:hover { box-shadow: var(--edge-stock), var(--cast-stock-lift); }
+
+  .btn-ink {
+    background: var(--color-board);
+    color: var(--color-board-type);
+    text-shadow: 0 -0.75px 0 var(--color-ink);
+    box-shadow: var(--cast-stock);
+  }
+  .btn-ink:hover { background: var(--color-ink-2); box-shadow: var(--cast-stock-lift); }
+
+  /* On the dark board the focus ring switches to light ink to keep its contrast. */
+  .on-board :focus-visible { outline-color: var(--color-board-type); }
+
+  .wordmark {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 600;
+    letter-spacing: var(--tracking-display);
+    color: var(--color-ink);
+  }
+
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 var(--space-sm);
+    white-space: nowrap;
+    border-radius: var(--radius-input);
+    color: var(--color-ink);
+    text-decoration: none;
+    transition: background-color var(--dur-short) var(--ease-out);
+  }
+  .nav-link:hover { background-color: var(--color-paper-3); }
+  .nav-link-current { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.4em; text-decoration-color: var(--color-accent-2); }
+
+  .text-link {
+    color: var(--color-ink);
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-color: var(--color-rule-2);
+    transition: text-decoration-color var(--dur-short) var(--ease-out);
+  }
+  .text-link:hover { text-decoration-color: var(--color-accent-2); }
+
+  .footer-link {
+    color: var(--color-ink-2);
+    text-decoration: none;
+  }
+  .footer-link:hover { color: var(--color-ink); text-decoration: underline; text-decoration-color: var(--color-accent-2); }
+
+  .footer-statement {
+    font-family: var(--font-display);
+    font-size: var(--text-display-s);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: var(--tracking-display);
+    text-wrap: balance;
+  }
+
+  /* A fact we do not have yet: dashed, muted, obviously blank. */
+  .fill {
+    display: inline-block;
+    padding: var(--space-2xs) var(--space-xs);
+    border: 1px dashed var(--color-muted);
+    border-radius: var(--radius-input);
+    background: var(--color-paper);
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    line-height: 1.4;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  /* FAQ rows: the plus turns to a cross when open. */
+  .faq-toggle { color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  /* The whole row opens the answer: the button's hit area stretches over it. */
+  .faq-toggle::after { content: ""; position: absolute; inset: 0; }
+  .faq-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  .faq-row:has(.faq-toggle:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-input); }
+  .faq-mark { transition: transform var(--dur-short) var(--ease-out); }
+  .faq-toggle[aria-expanded="true"] .faq-mark { transform: rotate(45deg); }
+
+  .skip {
+    position: absolute;
+    left: var(--space-md);
+    top: calc(-1 * var(--space-3xl));
+    z-index: var(--z-toast);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--color-ink);
+    color: var(--color-paper);
+  }
+  .skip:focus-visible { top: var(--space-md); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn, .btn:hover, .btn:active { transform: none; transition: none; }
+    .faq-mark, .nav-link, .text-link { transition: none; }
+  }
+}
