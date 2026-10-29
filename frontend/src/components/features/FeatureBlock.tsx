@@ -53,7 +53,7 @@ export function FeatureBlock({ feature: f }: { feature: Feature }) {
             <Facts who={f.who} saves={f.saves} />
           </div>
         </div>
-        <div className="mt-16">{figure}</div>
+        <div data-reveal className="mt-16">{figure}</div>
       </article>
     );
   }
@@ -70,7 +70,7 @@ export function FeatureBlock({ feature: f }: { feature: Feature }) {
         <p className="mt-5 text-lg text-ink-2">{f.body}</p>
         <Facts who={f.who} saves={f.saves} />
       </div>
-      <div className={visualLeft ? "min-w-0 lg:order-1 lg:col-span-7" : "min-w-0 lg:col-span-7 lg:col-start-6"}>
+      <div data-reveal className={visualLeft ? "min-w-0 lg:order-1 lg:col-span-7" : "min-w-0 lg:col-span-7 lg:col-start-6"}>
         {figure}
       </div>
     </article>

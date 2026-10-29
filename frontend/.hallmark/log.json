@@ -1,5 +1,41 @@
 [
  {
+  "prompt": "Bitaran inner pages: features, services, how it works, pricing, contact, legal drafts",
+  "shape": "Feature Stack (static) and Banner inner pages",
+  "theme": "coral",
+  "axes": "light/grotesk-sans/warm",
+  "hero": "Banner",
+  "nav": "slab",
+  "footer": "statement",
+  "imagery": "the product built (14 samples), library 1 plus Commons 1, muted",
+  "photos": [
+   "Stacked_up_maize_sacks.jpg"
+  ],
+  "entry": "none",
+  "fingerprint": "banner/index-hero/feature-rotation/rows/steps/flow-diagram/form",
+  "sections": [
+   "index-hero",
+   "feature-groups",
+   "rows",
+   "steps",
+   "pinned-timeline",
+   "grid",
+   "flow-diagram",
+   "form",
+   "faq-rows",
+   "band"
+  ],
+  "signature": "each feature with its own paper sample; the money and stock flow drawn as a calculation",
+  "waived": [
+   "79",
+   "44c",
+   "59",
+   "78"
+  ],
+  "date": "2026-10-29",
+  "mode": "build"
+ },
+ {
   "prompt": "Bitaran marketing site for Nepali wholesalers, Home page",
   "shape": "Narrative Workflow",
   "theme": "coral",

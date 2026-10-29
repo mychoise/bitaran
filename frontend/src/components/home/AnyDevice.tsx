@@ -36,7 +36,7 @@ export function AnyDevice() {
               <th scope="col" className="pb-3 font-medium">What they do</th>
             </tr>
           </thead>
-          <tbody className="max-md:block">
+          <tbody data-reveal="stagger" className="max-md:block">
             {rows.map((r) => (
               <tr key={r.device} className="border-b border-rule-2 align-top max-md:grid max-md:gap-1 max-md:py-4">
                 <th scope="row" className="py-6 text-title font-semibold max-md:py-0">{r.device}</th>

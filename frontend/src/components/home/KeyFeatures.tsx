@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const features = [
-  { title: "Routes in order", line: "Today's shops on his phone, in visiting order." },
+  { title: "Routes in order", line: "Today's shops on his phone, in order." },
   { title: "Udharo with limits", line: "Limits, balances, due dates. Overdue shops stand out." },
   { title: "Cheques that wait", line: "Photo required. Pending until a manager confirms." },
   { title: "Visits you can check", line: "A time-stamped photo, checked against location." },
@@ -20,9 +20,9 @@ export function KeyFeatures() {
             Every feature, in detail
           </Link>
         </div>
-        <ul className="m-0 mt-16 grid list-none grid-cols-1 gap-x-columns p-0 md:grid-cols-2 lg:grid-cols-3">
+        <ul data-reveal="stagger" className="m-0 mt-16 grid list-none grid-cols-1 gap-x-columns p-0 md:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
-            <li key={f.title} className="border-t-2 border-ink pt-6 pb-14">
+            <li key={f.title} className="draw-rule pt-6 pb-14">
               <h3>{f.title}</h3>
               <p className="mt-3 max-w-xs text-lg text-ink-2">{f.line}</p>
             </li>

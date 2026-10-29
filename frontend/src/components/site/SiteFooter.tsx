@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { config } from "@/config";
 import { legalNav } from "@/lib/nav";
-import { NeedsConfirmation, Placeholder } from "@/components/ui/Placeholder";
+import { NeedsConfirmation } from "@/components/ui/Placeholder";
+import { sampleContact } from "@/content/samples";
 
 const productLinks = [
   { href: "/features#routes", label: "Routes and daily plans" },
@@ -52,7 +53,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t-2 border-ink bg-paper-2 pt-section-s pb-12">
       <div className="container">
-        <p className="footer-statement max-w-4xl">
+        <p data-reveal className="footer-statement max-w-4xl">
           {config.productName} keeps the route, the udharo and the evening count in one place.
         </p>
         <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -65,16 +66,19 @@ export function SiteFooter() {
                 {config.salesEmail ? (
                   <a href={`mailto:${config.salesEmail}`} className="footer-link">{config.salesEmail}</a>
                 ) : (
-                  <Placeholder label="sales email" />
+                  <span data-sample className="text-ink-2">{sampleContact.salesEmail}</span>
                 )}
               </li>
               <li>
                 {config.phone ? (
                   <a href={`tel:${config.phone.replace(/\s/g, "")}`} className="footer-link">{config.phone}</a>
                 ) : (
-                  <Placeholder label="phone / WhatsApp" />
+                  <span data-sample className="text-ink-2">{sampleContact.phone}</span>
                 )}
               </li>
+              {!config.salesEmail || !config.phone ? (
+                <li className="text-sm text-muted">Sample contact details</li>
+              ) : null}
               <li className="text-ink-2">
                 <NeedsConfirmation>Serving wholesalers across Nepal</NeedsConfirmation>
               </li>

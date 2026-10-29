@@ -8,7 +8,7 @@ import { NavLinks } from "./NavLinks";
 /** The slab: one heavy full-width bar, sticky, with the wordmark, the pages, Login and the main button. */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b-2 border-ink bg-paper-2">
+    <header className="site-header sticky top-0 z-30 border-b-2 border-ink bg-paper-2">
       <div className="container relative flex h-18 items-center justify-between gap-6">
         <Link href="/" aria-label={`${config.productName}, home`} className="wordmark no-underline">
           {config.productName}

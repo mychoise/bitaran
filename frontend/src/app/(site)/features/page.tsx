@@ -15,7 +15,7 @@ export default function FeaturesPage() {
     <>
       {/* Index hero: the page's contents are its visual. */}
       <section aria-labelledby="features-page-title" className="desk hero-screen flex items-center py-16">
-        <div className="container">
+        <div className="hero-text container">
           <h1 id="features-page-title" className="text-display">Every feature, and what it saves you</h1>
           <p className="lead mt-6 text-ink-2">
             Twelve features in four groups, each with who uses it.

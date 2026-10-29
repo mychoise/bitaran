@@ -8,8 +8,8 @@ export const config = {
   productName: "Bitaran",
   /** Public address of this marketing site, used for canonical URLs, Open Graph and the sitemap. */
   siteUrl: read(process.env.NEXT_PUBLIC_SITE_URL, "https://bitaran.example.com").replace(/\/$/, ""),
-  /** The app's login page. The Login button links here. */
-  appUrl: read(process.env.NEXT_PUBLIC_APP_URL, "https://app.bitaran.example.com/login"),
+  /** Where the Login button goes: this site's login chooser by default. */
+  appUrl: read(process.env.NEXT_PUBLIC_APP_URL, "/login"),
   /** Where "Request a demo" goes. Defaults to this site's contact page. */
   demoUrl: read(process.env.NEXT_PUBLIC_DEMO_URL, "/contact"),
   /** Form endpoint. Empty means the contact form falls back to email and WhatsApp. */

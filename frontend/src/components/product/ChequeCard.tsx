@@ -22,11 +22,11 @@ export function ChequeCard({ className = "" }: { className?: string }) {
             <span className="h-1 w-5 rounded-pill bg-rule-2" />
           </span>
         </div>
-        <dl className="m-0 flex min-w-0 flex-1 flex-col gap-1 text-xs">
+        <dl className="m-0 flex min-w-0 flex-1 flex-col gap-1.5 text-xs">
           {facts.map((f) => (
-            <div key={f.label} className="flex justify-between gap-2">
+            <div key={f.label}>
               <dt className="text-muted">{f.label}</dt>
-              <dd className={`m-0 truncate ${f.mono ? "font-outlier" : ""}`}>{f.value}</dd>
+              <dd className={`m-0 ${f.mono ? "font-outlier" : ""}`}>{f.value}</dd>
             </div>
           ))}
         </dl>

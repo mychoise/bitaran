@@ -35,14 +35,14 @@ export function PaymentsQueue({ className = "" }: { className?: string }) {
             </tr>
           </thead>
           <tbody>
-            {payments.map((p) => (
+            {payments.map((p, i) => (
               <tr key={p.shop} className="border-t border-rule align-top">
                 <th scope="row" className="py-2.5 pl-1 text-left font-medium">{p.shop}</th>
                 <td className="py-2.5">{p.kind}</td>
                 <td className="py-2.5 text-xs">{p.proof}</td>
                 <td className="py-2.5 text-right font-outlier">{p.rs}</td>
                 <td className="py-2.5 pr-1 text-right">
-                  <Status tone={p.status.tone}>{p.status.label}</Status>
+                  <Status tone={p.status.tone} pop={i + 1}>{p.status.label}</Status>
                   <span className="mt-1 block text-xs text-muted">{p.effect}</span>
                 </td>
               </tr>

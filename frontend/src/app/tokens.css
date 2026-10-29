@@ -24,6 +24,15 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --color-error: oklch(52% 0.19 27);
   --color-success: oklch(50% 0.12 150);
+  /* App additions (docs/design-language.md 8.1, 8.8): status and chart colours. */
+  --color-warning: oklch(52% 0.11 70);
+  --color-error-soft: oklch(95% 0.03 27);
+  --color-success-soft: oklch(95% 0.03 150);
+  --color-warning-soft: oklch(95% 0.04 80);
+  --color-chart-1: oklch(58% 0.15 32);
+  --color-chart-2: oklch(53% 0.115 220);
+  --color-chart-3: oklch(64% 0.13 75);
+  --color-chart-4: oklch(50% 0.13 320);
   --color-paper: oklch(97% 0.006 55);
   --color-paper-2: oklch(94.5% 0.007 55);
   --color-paper-3: oklch(91.5% 0.009 55);

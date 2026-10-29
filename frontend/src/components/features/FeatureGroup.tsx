@@ -24,6 +24,7 @@ export function FeatureGroup({ group: g, index }: { group: Group; index: number 
           </div>
           {g.photo ? (
             <figure
+              data-reveal="photo"
               data-slot={`group-${g.id}`}
               data-alt={g.photo.slotAlt}
               className="relative m-0 aspect-16/9 overflow-hidden lg:min-h-80 rounded-card lg:col-span-6"

@@ -12,7 +12,7 @@ export function Hero() {
   return (
     <section aria-labelledby="hero-title" className="desk hero-screen flex items-center py-16">
       <div className="container grid grid-cols-1 items-center gap-16 lg:grid-cols-12">
-        <div className="lg:col-span-6">
+        <div className="hero-text lg:col-span-6">
           <h1 id="hero-title">Know what every salesman sold today.</h1>
           <p className="lead mt-6 text-ink-2">
             Routes, udharo, cheques and the evening stock count for wholesalers supplying pasals.
@@ -28,15 +28,15 @@ export function Hero() {
           data-slot="hero"
           data-kind="product"
           data-alt="Salesman's route screen on a phone, beside an invoice and a pending cheque"
-          className="relative m-0 overflow-visible bg-transparent bg-none max-lg:hidden lg:col-span-6 lg:h-150"
+          className="hero-desk relative m-0 overflow-visible bg-transparent bg-none max-lg:hidden lg:col-span-6 lg:h-150"
         >
-          <Invoice className="absolute top-2 -left-4 -rotate-2" />
-          <ChequeCard className="absolute bottom-10 -left-2 rotate-1" />
-          <RouteScreen className="absolute top-0 right-0" />
+          <Invoice className="desk-settle absolute top-2 -left-4 -rotate-2" />
+          <ChequeCard className="desk-settle desk-settle-2 absolute bottom-10 -left-2 rotate-1" />
+          <RouteScreen className="desk-settle desk-settle-3 absolute top-0 right-0" />
           <figcaption className="absolute bottom-0 -left-4 text-sm text-muted">Sample data</figcaption>
         </figure>
         {/* Narrow screens: the phone alone, in the flow. */}
-        <figure className="m-0 lg:hidden">
+        <figure className="hero-desk m-0 lg:hidden">
           <RouteScreen className="mx-auto" />
           <figcaption className="mt-4 text-center text-sm text-muted">Sample data</figcaption>
         </figure>

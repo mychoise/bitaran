@@ -42,7 +42,7 @@ export function ReconcileSheet({ className = "" }: { className?: string }) {
                   <td className="py-2.5 text-right font-outlier">{r.returned}</td>
                   <td className="py-2.5 pr-1 text-right">
                     {short > 0 ? (
-                      <span className="rounded-input border border-print px-2 font-outlier font-semibold">{short} short</span>
+                      <span data-pop="3" className="inline-block rounded-input border border-print px-2 font-outlier font-semibold">{short} short</span>
                     ) : (
                       <span className="font-outlier text-muted">0</span>
                     )}

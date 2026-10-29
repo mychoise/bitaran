@@ -70,7 +70,7 @@ export function DayStory() {
                   {s.more.label}
                 </Link>
               </div>
-              <div className="min-w-0 lg:col-span-8">{s.visual}</div>
+              <div data-reveal className="min-w-0 lg:col-span-8">{s.visual}</div>
             </li>
           ))}
         </ol>

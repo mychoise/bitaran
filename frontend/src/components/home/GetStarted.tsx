@@ -26,9 +26,9 @@ export function GetStarted() {
             Full setup guide
           </Link>
         </div>
-        <ol className="steps m-0 mt-16 grid list-none gap-x-columns gap-y-12 p-0 md:grid-cols-3">
+        <ol data-reveal="stagger" className="steps m-0 mt-16 grid list-none gap-x-columns gap-y-12 p-0 md:grid-cols-3">
           {steps.map((s, i) => (
-            <li key={s.title} className="border-t-2 border-ink pt-6">
+            <li key={s.title} className="draw-rule pt-6">
               <span className="block font-outlier text-display-s leading-none text-ink" aria-hidden="true">
                 {i + 1}
               </span>

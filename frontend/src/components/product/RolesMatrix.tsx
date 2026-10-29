@@ -13,10 +13,10 @@ const rows: { what: string; access: Access[] }[] = [
   { what: "Cost prices", access: ["yes", "yes", "no", "no"] },
 ];
 
-function Cell({ a }: { a: Access }) {
+function Cell({ a, row }: { a: Access; row: number }) {
   if (a === "yes")
     return (
-      <span className="inline-flex size-6 items-center justify-center rounded-pill bg-ink text-cotton">
+      <span data-pop={row} className="inline-flex size-6 items-center justify-center rounded-pill bg-ink text-cotton">
         <CheckIcon className="size-4" />
         <span className="sr-only">Yes</span>
       </span>
@@ -45,12 +45,12 @@ export function RolesMatrix({ className = "" }: { className?: string }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row, r) => (
               <tr key={row.what} className="border-b border-rule">
                 <th scope="row" className="py-2.5 pr-4 text-left font-medium">{row.what}</th>
                 {row.access.map((a, i) => (
                   <td key={roles[i]} className="py-2.5 text-center">
-                    <Cell a={a} />
+                    <Cell a={a} row={r + 1} />
                   </td>
                 ))}
               </tr>

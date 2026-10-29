@@ -13,7 +13,7 @@ export function CashCheck({ className = "" }: { className?: string }) {
     <div className={`stock w-full max-w-sm rounded-stock p-6 ${className}`.trim()}>
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold">Cash check</p>
-        <Status>Rs 450 short</Status>
+        <Status pop={3}>Rs 450 short</Status>
       </div>
       <dl className="m-0 mt-4 flex flex-col text-sm">
         {lines.map((l) => (

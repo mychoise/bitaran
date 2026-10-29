@@ -49,7 +49,7 @@ export function Invoice({ className = "", paid = true }: { className?: string; p
       </table>
       <p className="mt-4 text-xs text-muted">Cash, collected by Example Salesman</p>
       {paid ? (
-        <span className="pressed absolute bottom-11 left-24 text-3xl">Paid</span>
+        <span data-pop="4" className="pressed absolute bottom-11 left-24 text-3xl">Paid</span>
       ) : null}
     </div>
   );

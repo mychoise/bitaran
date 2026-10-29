@@ -22,7 +22,7 @@ export function VisitReview({ className = "" }: { className?: string }) {
     <div className={`stock w-full max-w-3xl rounded-stock p-8 ${className}`.trim()}>
       <SheetHeader label="Visit photos, 14 Kartik 2083" title="Example Salesman" aside="2 need a look" />
       <ul className="m-0 mt-2 flex list-none flex-col p-0">
-        {visits.map((v) => (
+        {visits.map((v, i) => (
           <li key={v.shop} className="grid grid-cols-1 gap-4 border-b border-rule py-4 sm:grid-cols-6 sm:items-center">
             <div className="visit-photo flex h-16 items-end rounded-input p-1.5 sm:col-span-1" aria-hidden="true">
               <span className="rounded-input bg-board px-1 font-outlier text-xs text-board-type">{v.stamp}</span>
@@ -40,7 +40,7 @@ export function VisitReview({ className = "" }: { className?: string }) {
               <p className="mt-1 text-xs">{v.note}</p>
             </div>
             <div className="sm:col-span-2 sm:text-right">
-              <Status tone={v.status.tone}>{v.status.label}</Status>
+              <Status tone={v.status.tone} pop={i + 1}>{v.status.label}</Status>
             </div>
           </li>
         ))}

@@ -15,6 +15,7 @@ export function BuiltForNepal() {
     <section aria-labelledby="nepal-title" className="bg-paper-2 py-section-s">
       <div className="container grid grid-cols-1 items-center gap-16 lg:grid-cols-12">
         <figure
+          data-reveal="photo"
           data-slot="goods"
           data-alt="Goods in bulk at a Nepali wholesaler: sacks, cartons or a loaded delivery"
           className="relative m-0 aspect-4/5 min-h-110 overflow-hidden rounded-card max-lg:hidden lg:col-span-5"
@@ -31,7 +32,7 @@ export function BuiltForNepal() {
         <div className="lg:col-span-6 lg:col-start-7">
           <h2 id="nepal-title">Made for how wholesale works in Nepal</h2>
           <p className="lead mt-6 text-ink-2">The words your team already uses, in the order they already work.</p>
-          <dl className="m-0 mt-12">
+          <dl data-reveal="stagger" className="m-0 mt-12">
             {points.map((p) => (
               <div key={p.term} className="grid gap-2 border-t border-rule-2 py-5 sm:grid-cols-5 sm:gap-6">
                 <dt className="text-title font-semibold sm:col-span-2">{p.term}</dt>

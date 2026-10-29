@@ -2,14 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { config } from "@/config";
-import { OrganizationJsonLd } from "@/components/site/OrganizationJsonLd";
-import { SiteFooter } from "@/components/site/SiteFooter";
-import { SiteHeader } from "@/components/site/SiteHeader";
-import { WhatsAppButton } from "@/components/site/WhatsAppButton";
 import "./globals.css";
-
-// Every route must render to static HTML at build time.
-export const ensureStatic = "navigation";
 
 const generalSans = localFont({
   variable: "--font-general-sans",
@@ -53,16 +46,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${generalSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${generalSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body>
+        {/* Marks that scripting runs, before first paint, so reveal styles never hide content when it does not. */}
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
         <a className="skip" href="#main">
           Skip to content
         </a>
-        <SiteHeader />
-        <main id="main">{children}</main>
-        <SiteFooter />
-        <WhatsAppButton />
-        <OrganizationJsonLd />
+        {children}
       </body>
     </html>
   );

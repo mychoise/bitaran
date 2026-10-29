@@ -24,12 +24,12 @@ export function ReturnsSheet({ className = "" }: { className?: string }) {
             </tr>
           </thead>
           <tbody>
-            {returns.map((r) => (
+            {returns.map((r, i) => (
               <tr key={r.from + r.item} className="border-t border-rule">
                 <th scope="row" className="py-2.5 pl-1 text-left font-medium">{r.from}</th>
                 <td className="py-2.5">{r.item}</td>
                 <td className="py-2.5 text-right font-outlier">{r.qty}</td>
-                <td className="py-2.5 pl-4"><Status>{r.reason}</Status></td>
+                <td className="py-2.5 pl-4"><Status pop={i + 1}>{r.reason}</Status></td>
                 <td className="py-2.5 pr-1 text-right font-outlier">{r.credit || <span className="font-body text-xs text-muted">Written off</span>}</td>
               </tr>
             ))}

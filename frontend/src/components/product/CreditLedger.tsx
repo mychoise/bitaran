@@ -26,20 +26,20 @@ export function CreditLedger({ className = "" }: { className?: string }) {
               </tr>
             </thead>
             <tbody>
-              {shops.map((s) => (
+              {shops.map((s, i) => (
                 <tr key={s.shop} className={`border-t border-rule ${s.overdue ? "bg-paper-2" : ""}`}>
                   <th scope="row" className="py-2.5 pl-1 text-left font-medium">{s.shop}</th>
                   <td className="py-2.5 text-right font-outlier">{s.limit}</td>
                   <td className="py-2.5 text-right font-outlier">{s.balance}</td>
                   <td className="py-2.5 text-right">{s.due}</td>
-                  <td className="py-2.5 pr-1 text-right">{s.overdue ? <Status>{s.overdue}</Status> : <span className="text-muted">No</span>}</td>
+                  <td className="py-2.5 pr-1 text-right">{s.overdue ? <Status pop={i + 1}>{s.overdue}</Status> : <span className="text-muted">No</span>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-      <div role="note" className="stock mt-6 max-w-md rounded-stock p-5 sm:ml-auto">
+      <div role="note" data-pop="5" className="stock mt-6 max-w-md rounded-stock p-5 sm:ml-auto">
         <p className="text-sm font-semibold">Sale blocked: over the credit limit</p>
         <p className="mt-2 text-xs">
           Example Store owes Rs 8,200 of its Rs 10,000 limit. Today&apos;s sale of Rs 4,100 would take it to Rs 12,300.

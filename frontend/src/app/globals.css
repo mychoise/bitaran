@@ -8,6 +8,10 @@
 /* Hallmark · dismissed 59 · the owner's brief names ten Home sections; each is kept short and the bands alternate paper */
 /* Hallmark · dismissed F25 · the desk of invoice and cheque is desktop-only by the brief's desktop-first rule; phones still get the route screen */
 /* Hallmark · dismissed 58 · 94 words around the features grid: the owner's brief asks for six features, each cut to a title and one short line */
+/* Hallmark · waive 79 · inner pages open on a short Banner header, the next section's own padding below it · Services, How it works, Pricing, Contact and the legal drafts lead with their content, not a full-screen hero */
+/* Hallmark · waive 44c · Banner posture on inner pages and the legal drafts · the owner's first screen on these pages is the headline plus the start of the page's content */
+/* Hallmark · waive 59 · the Privacy and Terms drafts are Long Document pages whose sections part by 40px · short legal text read top to bottom */
+/* Hallmark · waive 78 · Privacy and Terms are Long Document pages with inline section heads · legal drafts, not marketing sections */
 /* Hallmark · dismissed F4 · .btn-card is Coral's cotton card control, not a filled primary; .btn-ink is the one primary */
 
 @import "tailwindcss";
@@ -139,12 +143,23 @@
     padding: 0 var(--space-sm);
     white-space: nowrap;
     border-radius: var(--radius-input);
+    position: relative;
     color: var(--color-ink);
     text-decoration: none;
-    transition: background-color var(--dur-short) var(--ease-out);
   }
-  .nav-link:hover { background-color: var(--color-paper-3); }
-  .nav-link-current { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.4em; text-decoration-color: var(--color-accent-2); }
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    left: var(--space-sm);
+    right: var(--space-sm);
+    bottom: var(--space-xs);
+    height: 2px;
+    background: var(--color-accent-2);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--dur-short) var(--ease-out);
+  }
+  .nav-link:hover::after, .nav-link-current::after { transform: scaleX(1); }
 
   .text-link {
     color: var(--color-ink);
@@ -194,6 +209,34 @@
   .faq-mark { transition: transform var(--dur-short) var(--ease-out); }
   .faq-toggle[aria-expanded="true"] .faq-mark { transform: rotate(45deg); }
 
+  /* Form fields: constant border, the focus ring is an outline, an error swaps the border colour only. */
+  .field { outline: 2px solid transparent; outline-offset: -3px; }
+  .field:focus-visible { outline-color: var(--color-focus); }
+  .field[aria-invalid="true"] { border-color: var(--color-error); }
+  .field:disabled { opacity: 0.55; cursor: not-allowed; }
+  .field::placeholder { color: var(--color-muted); }
+
+  .draw-rule { position: relative; }
+  .draw-rule::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: var(--color-ink);
+    transform-origin: left center;
+  }
+
+  /* Show/hide password: a quiet text button inside the field. */
+  .pw-toggle { background: none; border: 0; cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out); }
+  .pw-toggle:hover { background: var(--color-paper-2); }
+  .pw-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 0; }
+
+  /* Login chooser cards: a cotton card that lifts like a letterpress control. */
+  .choice { color: var(--color-print); transition: transform var(--dur-micro) var(--ease-out), box-shadow var(--dur-short) var(--ease-out); }
+  .choice:hover { transform: translateY(-1px); box-shadow: var(--edge-stock), var(--cast-stock-lift); }
+  .choice:active { transform: translateY(1px); }
+  .choice:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+
   .skip {
     position: absolute;
     left: var(--space-md);
@@ -207,6 +250,111 @@
 
   @media (prefers-reduced-motion: reduce) {
     .btn, .btn:hover, .btn:active { transform: none; transition: none; }
-    .faq-mark, .nav-link, .text-link { transition: none; }
+    .faq-mark, .nav-link::after, .text-link { transition: none; }
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Motion. Transform, opacity and clip only (individual translate and scale, so
+   the stationery's rotate stays put). Everything is visible without it: load
+   effects are self-contained CSS animations, and scroll effects hide content
+   only under html.js, with a fail-safe. With reduced motion none of this runs.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  /* Page heroes: the headline settles, then the line and the actions. */
+  .hero-text > * { animation: rise 640ms var(--ease-out) both; }
+  .hero-text > h1 { animation-name: rise-only; }
+  .hero-text > :nth-child(2) { animation-delay: 90ms; }
+  .hero-text > :nth-child(3) { animation-delay: 180ms; }
+  .hero-text > :nth-child(4) { animation-delay: 270ms; }
+
+  /* Hero desks: the stationery settles, then the stamp presses and the ticks land. */
+  .hero-desk .desk-settle { animation: desk-settle 700ms var(--ease-out) both; }
+  .hero-desk .desk-settle-2 { animation-delay: 140ms; }
+  .hero-desk .desk-settle-3 { animation-delay: 280ms; }
+  .hero-desk .pressed { animation: stamp-press 260ms var(--ease-out) 1050ms both; }
+  .hero-desk .tick-list .tick { animation: tick-in 220ms var(--ease-out) both; animation-delay: 900ms; }
+  .hero-desk .tick-list li:nth-child(2) .tick { animation-delay: 1010ms; }
+  .hero-desk .tick-list li:nth-child(3) .tick { animation-delay: 1120ms; }
+  .hero-desk .tick-list li:nth-child(4) .tick { animation-delay: 1230ms; }
+
+  /* The floating WhatsApp button rises in once the page has settled. */
+  .wa-float { animation: rise 500ms var(--ease-out) 1600ms both; }
+
+  /* Header: a soft shade appears under the bar once the page scrolls (where supported). */
+  @supports (animation-timeline: scroll()) {
+    .site-header::after {
+      content: "";
+      position: absolute;
+      inset: 100% 0 auto 0;
+      height: var(--space-sm);
+      background: linear-gradient(oklch(var(--shade) / 0.14), transparent);
+      pointer-events: none;
+      opacity: 0;
+      animation: shade-in linear both;
+      animation-timeline: scroll();
+      animation-range: 0 96px;
+    }
+  }
+
+  /* Scroll reveal: an element, or each child of a stagger group, rises 12px into place. */
+  .js [data-reveal]:not([data-reveal="stagger"]):not([data-reveal="photo"]),
+  .js [data-reveal="stagger"] > * {
+    transition: opacity var(--dur-long) var(--ease-out), translate var(--dur-long) var(--ease-out);
+  }
+  .js [data-reveal]:not([data-reveal="stagger"]):not([data-reveal="photo"]):not(.is-in),
+  .js [data-reveal="stagger"]:not(.is-in) > * {
+    opacity: 0;
+    translate: 0 12px;
+    animation: reveal-failsafe 1ms linear 4s forwards;
+  }
+  .js [data-reveal="stagger"] > :nth-child(2) { transition-delay: 60ms; }
+  .js [data-reveal="stagger"] > :nth-child(3) { transition-delay: 120ms; }
+  .js [data-reveal="stagger"] > :nth-child(4) { transition-delay: 180ms; }
+  .js [data-reveal="stagger"] > :nth-child(5) { transition-delay: 240ms; }
+  .js [data-reveal="stagger"] > :nth-child(n + 6) { transition-delay: 300ms; }
+
+  /* Photographs uncover from the top, like a print coming out. */
+  .js [data-reveal="photo"] { transition: clip-path 900ms var(--ease-out); }
+  .js [data-reveal="photo"]:not(.is-in) {
+    clip-path: inset(0 0 100% 0);
+    animation: reveal-failsafe-clip 1ms linear 4s forwards;
+  }
+
+  /* Ink rules draw across as their item arrives. */
+  .js .draw-rule::before { transition: transform 700ms var(--ease-out) 120ms; }
+  .js [data-reveal="stagger"]:not(.is-in) > .draw-rule::before,
+  .js [data-reveal].draw-rule:not(.is-in)::before { transform: scaleX(0); }
+
+  /* Inside a sample, the outcome pops in once the sample has arrived: status chips, the
+     shortage, the stamp, the blocked sale, the roles ticks, the flow boxes in order. */
+  .js [data-reveal]:not(.is-in) [data-pop] {
+    opacity: 0;
+    animation: reveal-failsafe 1ms linear 4s forwards;
+  }
+  .js [data-reveal].is-in [data-pop] { animation: pop 320ms var(--ease-out) 300ms both; }
+  .js [data-reveal].is-in [data-pop="2"] { animation-delay: 410ms; }
+  .js [data-reveal].is-in [data-pop="3"] { animation-delay: 520ms; }
+  .js [data-reveal].is-in [data-pop="4"] { animation-delay: 630ms; }
+  .js [data-reveal].is-in [data-pop="5"] { animation-delay: 740ms; }
+  .js [data-reveal].is-in [data-pop="6"] { animation-delay: 850ms; }
+  .js [data-reveal].is-in [data-pop="7"] { animation-delay: 960ms; }
+  .js [data-reveal].is-in [data-pop="8"] { animation-delay: 1070ms; }
+  .js [data-reveal].is-in [data-pop="9"] { animation-delay: 1180ms; }
+
+  /* Small state changes. */
+  .faq-panel:not([hidden]) { animation: fade-down var(--dur-short) var(--ease-out); }
+  #mobile-menu:not([hidden]) { animation: fade-down var(--dur-short) var(--ease-out); }
+  [aria-live] > * { animation: fade-down var(--dur-short) var(--ease-out); }
+}
+
+@keyframes rise { from { opacity: 0; translate: 0 14px; } }
+@keyframes rise-only { from { translate: 0 18px; } }
+@keyframes desk-settle { from { opacity: 0; translate: -10px 18px; } }
+@keyframes stamp-press { from { opacity: 0; scale: 1.5; } }
+@keyframes tick-in { from { opacity: 0; scale: 0.4; } }
+@keyframes pop { from { opacity: 0; scale: 0.7; } }
+@keyframes fade-down { from { opacity: 0; translate: 0 -6px; } }
+@keyframes shade-in { to { opacity: 1; } }
+@keyframes reveal-failsafe { to { opacity: 1; translate: 0 0; } }
+@keyframes reveal-failsafe-clip { to { clip-path: inset(0); } }

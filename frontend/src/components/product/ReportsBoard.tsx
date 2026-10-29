@@ -76,10 +76,10 @@ export function ReportsBoard({ className = "" }: { className?: string }) {
       <div className="md:col-span-2">
         <Panel title="Low stock">
           <ul className="m-0 flex list-none flex-col p-0 text-sm">
-            {lowStock.map((p) => (
+            {lowStock.map((p, i) => (
               <li key={p.item} className="flex items-center justify-between gap-2 border-t border-rule py-2">
                 {p.item}
-                <Status>{p.left} left</Status>
+                <Status pop={i + 2}>{p.left} left</Status>
               </li>
             ))}
           </ul>

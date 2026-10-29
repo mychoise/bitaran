@@ -15,7 +15,7 @@ export function WhatsAppButton() {
     </>
   );
   return (
-    <div className="fixed right-6 bottom-6 z-20">
+    <div className="wa-float fixed right-6 bottom-6 z-20">
       {href ? (
         <a href={href} className="btn btn-ink" rel="noopener" target="_blank">
           {content}

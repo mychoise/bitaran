@@ -28,7 +28,7 @@ export function RouteScreen({ className = "" }: { className?: string }) {
         <span>Shop</span>
         <span>Owes, Rs</span>
       </div>
-      <ol className="m-0 flex list-none flex-col p-0">
+      <ol className="tick-list m-0 flex list-none flex-col p-0">
         {stops.map((s, i) => (
           <li
             key={s.shop}
@@ -41,7 +41,7 @@ export function RouteScreen({ className = "" }: { className?: string }) {
             </span>
             <span className="shrink-0 font-outlier text-xs">{s.owes}</span>
             {s.visited ? (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-pill bg-ink text-cotton">
+              <span className="tick flex size-5 shrink-0 items-center justify-center rounded-pill bg-ink text-cotton">
                 <CheckIcon className="size-3.5" />
                 <span className="sr-only">Visited</span>
               </span>

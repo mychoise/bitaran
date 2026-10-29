@@ -17,7 +17,7 @@ export function InvoiceRegister({ className = "" }: { className?: string }) {
         <caption className="sr-only">Invoices in number order</caption>
         <thead>
           <tr className="text-left text-xs text-muted">
-            <th scope="col" className="py-1.5 font-medium">No.</th>
+            <th scope="col" className="py-1.5 pr-3 font-medium">No.</th>
             <th scope="col" className="py-1.5 font-medium">Shop</th>
             <th scope="col" className="py-1.5 text-right font-medium">Rs</th>
             <th scope="col" className="py-1.5 text-right font-medium">State</th>
@@ -26,11 +26,11 @@ export function InvoiceRegister({ className = "" }: { className?: string }) {
         <tbody>
           {rows.map((r) => (
             <tr key={r.no} className="border-t border-rule">
-              <th scope="row" className="py-2 text-left font-outlier font-normal">{r.no}</th>
+              <th scope="row" className="py-2 pr-3 text-left font-outlier font-normal">{r.no}</th>
               <td className={`py-2 ${r.state === "Cancelled" ? "text-muted line-through" : ""}`}>{r.shop}</td>
               <td className={`py-2 text-right font-outlier ${r.state === "Cancelled" ? "text-muted line-through" : ""}`}>{r.rs}</td>
               <td className="py-2 text-right">
-                {r.state === "Cancelled" ? <Status tone="stop">Cancelled</Status> : <span className="text-xs">{r.state}</span>}
+                {r.state === "Cancelled" ? <Status tone="stop" pop={2}>Cancelled</Status> : <span className="text-xs">{r.state}</span>}
               </td>
             </tr>
           ))}

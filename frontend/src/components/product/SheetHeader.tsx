@@ -13,8 +13,11 @@ export function SheetHeader({ label, title, aside }: { label: string; title: str
   );
 }
 
-/** A status chip: ink outline for open states, filled ink for settled ones. */
-export function Status({ children, tone = "open" }: { children: ReactNode; tone?: "open" | "done" | "stop" }) {
+/**
+ * A status chip: ink outline for open states, filled ink for settled ones.
+ * `pop` is the order it pops in when its sample scrolls into view (see globals.css).
+ */
+export function Status({ children, tone = "open", pop }: { children: ReactNode; tone?: "open" | "done" | "stop"; pop?: number }) {
   const cls =
     tone === "done"
       ? "bg-ink text-cotton border-ink"
@@ -22,7 +25,7 @@ export function Status({ children, tone = "open" }: { children: ReactNode; tone?
         ? "border-print border-dashed"
         : "border-print";
   return (
-    <span className={`inline-block rounded-input border px-2 text-xs font-medium whitespace-nowrap ${cls}`}>
+    <span data-pop={pop} className={`inline-block rounded-input border px-2 text-xs font-medium whitespace-nowrap ${cls}`}>
       {children}
     </span>
   );

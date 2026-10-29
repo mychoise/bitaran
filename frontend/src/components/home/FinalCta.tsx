@@ -2,7 +2,7 @@ import { config, whatsappHref } from "@/config";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
 /** The board: the one ink band, closing on the page's job, a demo request. */
-export function FinalCta() {
+export function FinalCta({ demoHref = config.demoUrl }: { demoHref?: string }) {
   const wa = whatsappHref(`Hello, I would like a demo of ${config.productName}.`);
   return (
     <section aria-labelledby="cta-title" className="on-board bg-board py-section-s text-board-type">
@@ -14,7 +14,7 @@ export function FinalCta() {
           </p>
         </div>
         <div className="flex flex-wrap gap-4 lg:col-span-5 lg:justify-end">
-          <ButtonLink href={config.demoUrl} variant="card">
+          <ButtonLink href={demoHref} variant="card">
             Request a demo
           </ButtonLink>
           <ButtonLink href={wa ?? "/contact#whatsapp"} variant="card">
