@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { notifyError } from '../../lib/notify';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Building2, Ban, RotateCcw } from 'lucide-react';
 
@@ -24,7 +25,7 @@ export const AdminBusinessesPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
     },
     onError: (err: any) => {
-      alert(err.message || 'Status update failed');
+      notifyError(err.message || 'Status update failed');
     },
   });
 
@@ -46,7 +47,7 @@ export const AdminBusinessesPage: React.FC = () => {
             id="business-status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">All statuses</option>
             <option value="APPROVED">Approved</option>

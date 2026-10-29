@@ -77,7 +77,30 @@ export class CatalogService {
       .from(productImages)
       .where(eq(productImages.productId, productId));
 
-    return { ...product, variants, images };
+    const sellerName = await this.db
+      .select({ name: organizations.name })
+      .from(organizations)
+      .where(eq(organizations.id, product.sellerOrgId))
+      .limit(1)
+      .then((r) => r[0]?.name ?? null);
+
+    const categoryName = product.categoryId
+      ? await this.db
+          .select({ name: categories.name })
+          .from(categories)
+          .where(eq(categories.id, product.categoryId))
+          .limit(1)
+          .then((r) => r[0]?.name ?? null)
+      : null;
+
+    return {
+      ...product,
+      variants,
+      images,
+      sellerName,
+      categoryName,
+      imageUrl: images[0]?.url ?? null,
+    };
   }
 
   private async ensureApprovedSeller(sellerOrgId: string): Promise<void> {

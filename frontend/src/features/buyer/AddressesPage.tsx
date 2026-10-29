@@ -144,7 +144,7 @@ export const AddressesPage: React.FC = () => {
                 <label className="block text-xs font-medium text-gray-700">Label (e.g. Main Outlet)</label>
                 <input
                   type="text"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   {...register('label', { required: 'Label is required' })}
                 />
               </div>
@@ -154,7 +154,7 @@ export const AddressesPage: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Street, Ward, Landmark"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   {...register('line1', { required: 'Street line is required' })}
                 />
               </div>
@@ -164,7 +164,7 @@ export const AddressesPage: React.FC = () => {
                   <label className="block text-xs font-medium text-gray-700">City</label>
                   <input
                     type="text"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     {...register('city', { required: 'City is required' })}
                   />
                 </div>
@@ -172,7 +172,7 @@ export const AddressesPage: React.FC = () => {
                   <label className="block text-xs font-medium text-gray-700">District</label>
                   <input
                     type="text"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     {...register('district', { required: 'District is required' })}
                   />
                 </div>
@@ -183,7 +183,7 @@ export const AddressesPage: React.FC = () => {
                 <input
                   type="text"
                   placeholder="98XXXXXXXX"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   {...register('phone', { required: 'Contact phone is required' })}
                 />
               </div>
@@ -192,7 +192,7 @@ export const AddressesPage: React.FC = () => {
                 <input
                   type="checkbox"
                   id="isDefault"
-                  className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                   {...register('isDefault')}
                 />
                 <label htmlFor="isDefault" className="text-xs text-gray-700 cursor-pointer">
@@ -203,7 +203,7 @@ export const AddressesPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full py-2.5 px-4 rounded-lg bg-gray-900 hover:bg-gray-800 text-white font-semibold text-sm shadow-sm transition disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm transition disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save address'}
               </button>

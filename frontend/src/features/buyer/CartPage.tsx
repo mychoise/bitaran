@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
-import { Trash2, Plus, Minus, ArrowRight, Store, ShieldAlert } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, Store, ShieldAlert, ImageOff } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 
 interface CartGroup {
@@ -68,7 +68,7 @@ export const CartPage: React.FC = () => {
       await api.post('/cart/items', { variantId, qty: newQty });
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     } catch (err: any) {
-      alert(err.message || 'Failed to update quantity');
+      setCheckoutError(err.message || 'Failed to update quantity');
     }
   };
 
@@ -78,7 +78,7 @@ export const CartPage: React.FC = () => {
       await api.delete(`/cart/items/${variantId}`);
       queryClient.invalidateQueries({ queryKey: ['cart'] });
     } catch (err: any) {
-      alert(err.message || 'Failed to remove item');
+      setCheckoutError(err.message || 'Failed to remove item');
     }
   };
 
@@ -138,7 +138,7 @@ export const CartPage: React.FC = () => {
         </p>
         <Link
           to="/browse"
-          className="mt-6 inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800"
+          className="mt-6 inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700"
         >
           Browse catalog &rarr;
         </Link>
@@ -201,8 +201,8 @@ export const CartPage: React.FC = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
-                              IMG
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <ImageOff className="w-5 h-5" aria-hidden="true" />
                             </div>
                           )}
                         </div>
@@ -265,7 +265,7 @@ export const CartPage: React.FC = () => {
         </div>
 
         {/* Right 1 Col: Checkout Panel */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
             <h2 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-3">
               Order Summary
@@ -294,7 +294,7 @@ export const CartPage: React.FC = () => {
                   id="address-select"
                   value={selectedAddressId}
                   onChange={(e) => setSelectedAddressId(e.target.value)}
-                  className="w-full text-sm bg-gray-50 border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full text-sm bg-gray-50 border border-gray-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   {addresses.map((a: any) => (
                     <option key={a.id} value={a.id}>
@@ -386,7 +386,7 @@ export const CartPage: React.FC = () => {
             <button
               onClick={handleCheckout}
               disabled={checkingOut || addresses.length === 0 || !isApproved}
-              className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-50 transition flex items-center justify-center space-x-2"
+              className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition flex items-center justify-center space-x-2"
             >
               <span>
                 {checkingOut

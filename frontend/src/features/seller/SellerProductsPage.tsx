@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { StatusBadge } from '../../components/StatusBadge';
-import { Plus, Edit, Boxes, ShieldAlert } from 'lucide-react';
+import { Plus, Edit, Boxes, ShieldAlert, ImageOff } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 
 export const SellerProductsPage: React.FC = () => {
@@ -41,7 +41,7 @@ export const SellerProductsPage: React.FC = () => {
         {isApproved ? (
           <Link
             to="/seller/products/new"
-            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 shadow-sm transition"
+            className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition"
           >
             <Plus className="w-4 h-4" />
             <span>Add product</span>
@@ -73,7 +73,7 @@ export const SellerProductsPage: React.FC = () => {
             {isApproved && (
               <Link
                 to="/seller/products/new"
-                className="mt-4 inline-flex items-center space-x-1.5 px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-semibold"
+                className="mt-4 inline-flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add your first product</span>
@@ -105,8 +105,8 @@ export const SellerProductsPage: React.FC = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
-                              IMG
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <ImageOff className="w-4 h-4" aria-hidden="true" />
                             </div>
                           )}
                         </div>

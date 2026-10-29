@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
+import { notifyError } from '../../lib/notify';
 import { formatMoney } from '../../lib/money';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useAuth } from '../../lib/auth';
@@ -28,7 +29,7 @@ export const IncomingOrdersPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['seller-orders'] });
     },
     onError: (err: any) => {
-      alert(err.message || 'Action failed');
+      notifyError(err.message || 'Action failed');
     },
   });
 
@@ -50,7 +51,7 @@ export const IncomingOrdersPage: React.FC = () => {
             id="incoming-status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">All statuses</option>
             <option value="PAYMENT_PENDING">Payment pending</option>
@@ -145,7 +146,7 @@ export const IncomingOrdersPage: React.FC = () => {
                               })
                             }
                             disabled={transitionMutation.isPending}
-                            className="px-2.5 py-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded text-xs font-semibold shadow-xs transition flex items-center space-x-1"
+                            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold shadow-xs transition flex items-center space-x-1"
                           >
                             <RefreshCw className="w-3 h-3" />
                             <span>Mark refunded</span>

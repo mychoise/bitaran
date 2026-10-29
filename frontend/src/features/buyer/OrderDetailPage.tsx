@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { notifyError } from '../../lib/notify';
 import { formatMoney } from '../../lib/money';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useAuth } from '../../lib/auth';
@@ -42,7 +43,7 @@ export const OrderDetailPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['order', id] });
     },
     onError: (err: any) => {
-      alert(err.message || 'Transition failed');
+      notifyError(err.message || 'Transition failed');
     },
   });
 
@@ -123,7 +124,7 @@ export const OrderDetailPage: React.FC = () => {
                 <button
                   onClick={() => transitionMutation.mutate('REFUNDED')}
                   disabled={transitionMutation.isPending}
-                  className="inline-flex items-center space-x-1.5 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg text-sm font-bold shadow-sm transition"
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-sm transition"
                 >
                   <RefreshCw className="w-4 h-4" />
                   <span>Mark refunded</span>

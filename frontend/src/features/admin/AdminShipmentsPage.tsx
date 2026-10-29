@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { notifyError } from '../../lib/notify';
 import { Truck, Check } from 'lucide-react';
 
 export const AdminShipmentsPage: React.FC = () => {
@@ -38,7 +39,7 @@ export const AdminShipmentsPage: React.FC = () => {
       setTimeout(() => setUpdatedId(null), 2000);
     },
     onError: (err: any) => {
-      alert(err.message || 'Failed to update shipment');
+      notifyError(err.message || 'Failed to update shipment');
     },
   });
 
@@ -125,7 +126,7 @@ export const AdminShipmentsPage: React.FC = () => {
                               [shipment.id]: e.target.value,
                             }))
                           }
-                          className="w-36 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-gray-900"
+                          className="w-36 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-1 focus:ring-indigo-500"
                         />
                       </td>
 
@@ -138,7 +139,7 @@ export const AdminShipmentsPage: React.FC = () => {
                               [shipment.id]: e.target.value,
                             }))
                           }
-                          className="px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-gray-900"
+                          className="px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-medium focus:ring-1 focus:ring-indigo-500"
                         >
                           <option value="PICKUP_PENDING">Pickup pending</option>
                           <option value="PICKED_UP">Picked up</option>
@@ -155,7 +156,7 @@ export const AdminShipmentsPage: React.FC = () => {
                           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition inline-flex items-center space-x-1 ${
                             updatedId === shipment.id
                               ? 'bg-emerald-600 text-white'
-                              : 'bg-gray-900 hover:bg-gray-800 text-white'
+                              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                           }`}
                         >
                           {updatedId === shipment.id ? (

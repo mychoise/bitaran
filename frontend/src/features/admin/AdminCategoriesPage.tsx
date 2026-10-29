@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { notifyError } from '../../lib/notify';
 import { Trash2, FolderTree } from 'lucide-react';
 
 export const AdminCategoriesPage: React.FC = () => {
@@ -39,7 +40,7 @@ export const AdminCategoriesPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
     onError: (err: any) => {
-      alert(err.message || 'Cannot delete category in use');
+      notifyError(err.message || 'Cannot delete category in use');
     },
   });
 
@@ -156,7 +157,7 @@ export const AdminCategoriesPage: React.FC = () => {
                 placeholder="e.g. Edible Oils & Spices"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-gray-900"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-indigo-500"
                 required
               />
             </div>
@@ -166,7 +167,7 @@ export const AdminCategoriesPage: React.FC = () => {
               <select
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-gray-900"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">None (Top-level)</option>
                 {categories
@@ -192,7 +193,7 @@ export const AdminCategoriesPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={saveMutation.isPending}
-                className={`py-2 px-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold text-xs rounded-lg transition disabled:opacity-50 ${
+                className={`py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition disabled:opacity-50 ${
                   editId ? 'w-1/2' : 'w-full'
                 }`}
               >

@@ -125,12 +125,14 @@ export const AdminDashboardPage: React.FC = () => {
                       {org.canBuy && org.canSell ? 'Buyer & Seller' : org.canSell ? 'Seller' : 'Buyer'}
                     </td>
                     <td className="px-6 py-3.5 text-xs text-gray-500">
-                      {new Date(org.createdAt).toLocaleDateString()}
+                      {org.createdAt && !Number.isNaN(new Date(org.createdAt).getTime())
+                        ? new Date(org.createdAt).toLocaleDateString()
+                        : '—'}
                     </td>
                     <td className="px-6 py-3.5 text-right">
                       <Link
                         to="/admin/approvals"
-                        className="px-3 py-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded text-xs font-semibold"
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold"
                       >
                         Review
                       </Link>

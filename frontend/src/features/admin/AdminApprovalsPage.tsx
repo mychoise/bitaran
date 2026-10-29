@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { Check, X, ShieldCheck, FileText, Download, ExternalLink } from 'lucide-react';
+import { notifyError } from '../../lib/notify';
+import { Check, X, ShieldCheck, FileText, Download } from 'lucide-react';
 
 export const AdminApprovalsPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -22,7 +23,7 @@ export const AdminApprovalsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
     },
     onError: (err: any) => {
-      alert(err.message || 'Status update failed');
+      notifyError(err.message || 'Status update failed');
     },
   });
 

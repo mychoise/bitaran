@@ -11,6 +11,9 @@ function serializeBigInt(value: unknown): unknown {
   if (typeof value === 'bigint') {
     return value.toString();
   }
+  if (value instanceof Date) {
+    return value;
+  }
   if (Array.isArray(value)) {
     return value.map(serializeBigInt);
   }

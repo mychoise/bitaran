@@ -155,7 +155,7 @@ export const RegisterPage: React.FC = () => {
                 <input
                   id="name"
                   type="text"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                   {...register('name', { required: 'Name is required' })}
                 />
                 {errors.name && (
@@ -171,7 +171,7 @@ export const RegisterPage: React.FC = () => {
                   id="phone"
                   type="text"
                   placeholder="98XXXXXXXX"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                   {...register('phone', { required: 'Phone is required' })}
                 />
                 {errors.phone && (
@@ -188,7 +188,7 @@ export const RegisterPage: React.FC = () => {
                 <input
                   id="email"
                   type="email"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                   {...register('email', { required: 'Email is required' })}
                 />
                 {errors.email && (
@@ -203,7 +203,7 @@ export const RegisterPage: React.FC = () => {
                 <input
                   id="password"
                   type="password"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                   {...register('password', {
                     required: 'Password is required',
                     minLength: { value: 6, message: 'Minimum 6 characters' },
@@ -223,7 +223,7 @@ export const RegisterPage: React.FC = () => {
                 <input
                   id="businessName"
                   type="text"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                   {...register('businessName', { required: 'Business name is required' })}
                 />
                 {errors.businessName && (
@@ -239,7 +239,7 @@ export const RegisterPage: React.FC = () => {
                   id="panNumber"
                   type="text"
                   placeholder="9-digit PAN"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                   {...register('panNumber', { required: 'PAN is required' })}
                 />
                 {errors.panNumber && (
@@ -257,7 +257,7 @@ export const RegisterPage: React.FC = () => {
                 <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     {...register('canBuy')}
                   />
                   <span>Buy products (Dealer)</span>
@@ -265,7 +265,7 @@ export const RegisterPage: React.FC = () => {
                 <label className="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     {...register('canSell')}
                   />
                   <span>Sell products (Wholesaler)</span>
@@ -314,7 +314,7 @@ export const RegisterPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 transition"
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition"
             >
               {loading ? 'Submitting...' : 'Submit for approval'}
             </button>

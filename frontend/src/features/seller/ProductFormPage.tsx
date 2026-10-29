@@ -3,7 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { rupeesToPaisa, paisaToRupees } from '../../lib/money';
-import { Plus, Trash2, ArrowLeft, Save } from 'lucide-react';
+import { useAuth } from '../../lib/auth';
+import { Plus, Trash2, ArrowLeft, Save, ShieldAlert } from 'lucide-react';
 
 interface VariantInput {
   id?: string;
@@ -19,6 +20,8 @@ export const ProductFormPage: React.FC = () => {
   const isEdit = !!id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { activeOrg } = useAuth();
+  const isApproved = activeOrg?.orgStatus === 'APPROVED';
 
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -183,7 +186,7 @@ export const ProductFormPage: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Basmati Rice 25kg Sack"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 required
               />
             </div>
@@ -195,7 +198,7 @@ export const ProductFormPage: React.FC = () => {
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="">Select a category</option>
                 {categories.map((c: any) => (
@@ -216,7 +219,7 @@ export const ProductFormPage: React.FC = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Provide wholesale specifications, packaging notes, storage instructions..."
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900 min-h-[80px]"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 min-h-[80px]"
             />
           </div>
 
@@ -230,7 +233,7 @@ export const ProductFormPage: React.FC = () => {
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://images.unsplash.com/..."
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
@@ -241,7 +244,7 @@ export const ProductFormPage: React.FC = () => {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as 'DRAFT' | 'ACTIVE')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-900"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
                 <option value="ACTIVE">Active (Available for purchase)</option>
                 <option value="DRAFT">Draft (Hidden)</option>
@@ -290,7 +293,7 @@ export const ProductFormPage: React.FC = () => {
                           value={v.sku}
                           onChange={(e) => updateVariantRow(idx, 'sku', e.target.value)}
                           placeholder="e.g. RICE-25KG"
-                          className="w-full px-2 py-1 border border-gray-300 rounded font-mono text-xs focus:ring-1 focus:ring-gray-900"
+                          className="w-full px-2 py-1 border border-gray-300 rounded font-mono text-xs focus:ring-1 focus:ring-indigo-500"
                           required
                         />
                       </td>
@@ -300,7 +303,7 @@ export const ProductFormPage: React.FC = () => {
                           value={v.unit}
                           onChange={(e) => updateVariantRow(idx, 'unit', e.target.value)}
                           placeholder="piece, sack, carton..."
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-gray-900"
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-indigo-500"
                           required
                         />
                       </td>
@@ -369,7 +372,7 @@ export const ProductFormPage: React.FC = () => {
             <button
               type="submit"
               disabled={saving || !isApproved}
-              className="inline-flex items-center space-x-1.5 px-5 py-2 text-sm font-bold text-white bg-gray-900 hover:bg-gray-800 rounded-lg shadow-sm transition disabled:opacity-50"
+              className="inline-flex items-center space-x-1.5 px-5 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               <span>{saving ? 'Saving...' : !isApproved ? 'Pending Approval' : 'Save product'}</span>

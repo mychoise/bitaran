@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import { formatMoney } from '../../lib/money';
 import { useAuth } from '../../lib/auth';
-import { ArrowLeft, Check, Plus, Store, Tag, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Check, Plus, Store, Tag, ShieldAlert, ImageOff, AlertCircle, X } from 'lucide-react';
 
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +12,8 @@ export const ProductDetailPage: React.FC = () => {
   const isPendingApproval = !!activeOrg && activeOrg.orgStatus !== 'APPROVED';
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [addedItem, setAddedItem] = useState<string | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [notice, setNotice] = useState<{ kind: 'error' | 'warning'; text: string } | null>(null);
 
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
@@ -51,17 +53,21 @@ export const ProductDetailPage: React.FC = () => {
 
   const handleAddToCart = async (variantId: string, minOrderQty: number) => {
     if (isPendingApproval) {
-      alert('Your business account is pending approval. You cannot place orders until verified by an administrator.');
+      setNotice({
+        kind: 'warning',
+        text: 'Your business account is pending approval. You cannot place orders until it is verified by an administrator.',
+      });
       return;
     }
 
     const qty = quantities[variantId] ?? minOrderQty;
     try {
+      setNotice(null);
       await api.post('/cart/items', { variantId, qty });
       setAddedItem(variantId);
       setTimeout(() => setAddedItem(null), 2000);
     } catch (err: any) {
-      alert(err.message || 'Failed to add item to cart');
+      setNotice({ kind: 'error', text: err.message || 'Failed to add item to cart' });
     }
   };
 
@@ -79,6 +85,27 @@ export const ProductDetailPage: React.FC = () => {
         </div>
       )}
 
+      {notice && (
+        <div
+          role="alert"
+          className={`p-3 pr-2 rounded-xl border flex items-start gap-3 text-sm ${
+            notice.kind === 'error'
+              ? 'bg-rose-50 border-rose-200 text-rose-800'
+              : 'bg-amber-50 border-amber-200 text-amber-900'
+          }`}
+        >
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" aria-hidden="true" />
+          <p className="flex-1">{notice.text}</p>
+          <button
+            onClick={() => setNotice(null)}
+            aria-label="Dismiss message"
+            className="p-1.5 rounded-lg hover:bg-black/5"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       <Link
         to="/browse"
         className="inline-flex items-center space-x-1.5 text-sm font-medium text-gray-500 hover:text-gray-900 transition"
@@ -91,14 +118,18 @@ export const ProductDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 lg:p-8">
           {/* Product Image */}
           <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center">
-            {product.imageUrl ? (
+            {product.imageUrl && !imageFailed ? (
               <img
                 src={product.imageUrl}
                 alt={product.name}
+                onError={() => setImageFailed(true)}
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="text-gray-400 text-sm">Product image</div>
+              <div className="flex flex-col items-center gap-1 text-gray-400">
+                <ImageOff className="w-8 h-8" aria-hidden="true" />
+                <span className="text-sm">No image</span>
+              </div>
             )}
           </div>
 
@@ -145,6 +176,7 @@ export const ProductDetailPage: React.FC = () => {
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Pack size</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-700">Price (per unit)</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-700">Min Order</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Availability</th>
                   <th className="px-4 py-3 text-center font-semibold text-gray-700">Quantity</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-700">Action</th>
                 </tr>
@@ -152,6 +184,9 @@ export const ProductDetailPage: React.FC = () => {
               <tbody className="divide-y divide-gray-200 bg-white">
                 {product.variants?.map((v: any) => {
                   const qty = quantities[v.id] ?? v.minOrderQty;
+                  const available =
+                    typeof v.qtyOnHand === 'number' ? v.qtyOnHand - (v.qtyReserved ?? 0) : null;
+                  const outOfStock = available !== null && available <= 0;
 
                   return (
                     <tr key={v.id} className="hover:bg-gray-50 transition">
@@ -166,6 +201,17 @@ export const ProductDetailPage: React.FC = () => {
                       <td className="px-4 py-3 text-right text-gray-600 font-medium">
                         {v.minOrderQty}
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {available === null ? (
+                          <span className="text-gray-400">—</span>
+                        ) : available <= 0 ? (
+                          <span className="text-xs font-medium text-rose-600">Out of stock</span>
+                        ) : available < v.minOrderQty * 3 ? (
+                          <span className="text-xs font-medium text-amber-600">Only {available} left</span>
+                        ) : (
+                          <span className="text-xs font-medium text-emerald-600">In stock</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         <input
                           type="number"
@@ -175,7 +221,7 @@ export const ProductDetailPage: React.FC = () => {
                           onChange={(e) =>
                             handleQtyChange(v.id, parseInt(e.target.value, 10) || v.minOrderQty, v.minOrderQty)
                           }
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100"
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-100"
                         />
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -184,10 +230,11 @@ export const ProductDetailPage: React.FC = () => {
                         ) : (
                           <button
                             onClick={() => handleAddToCart(v.id, v.minOrderQty)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center space-x-1 transition ${
+                            disabled={outOfStock}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center space-x-1 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed ${
                               addedItem === v.id
                                 ? 'bg-emerald-600 text-white'
-                                : 'bg-gray-900 hover:bg-gray-800 text-white'
+                                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
                             }`}
                           >
                             {addedItem === v.id ? (

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
+import { notifyError } from '../../lib/notify';
 import { useAuth } from '../../lib/auth';
 import { Layers, Check } from 'lucide-react';
 
@@ -26,7 +27,7 @@ export const SellerStockPage: React.FC = () => {
       setTimeout(() => setAdjustedId(null), 2000);
     },
     onError: (err: any) => {
-      alert(err.message || 'Failed to adjust stock');
+      notifyError(err.message || 'Failed to adjust stock');
     },
   });
 
@@ -100,7 +101,7 @@ export const SellerStockPage: React.FC = () => {
                                 [item.variantId]: e.target.value,
                               }))
                             }
-                            className="w-24 px-2.5 py-1.5 border border-gray-300 rounded-lg text-center text-xs focus:ring-1 focus:ring-gray-900"
+                            className="w-24 px-2.5 py-1.5 border border-gray-300 rounded-lg text-center text-xs focus:ring-1 focus:ring-indigo-500"
                           />
                           <button
                             onClick={() => handleApply(item.variantId)}
@@ -108,7 +109,7 @@ export const SellerStockPage: React.FC = () => {
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 ${
                               adjustedId === item.variantId
                                 ? 'bg-emerald-600 text-white'
-                                : 'bg-gray-900 hover:bg-gray-800 text-white disabled:opacity-40'
+                                : 'bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40'
                             }`}
                           >
                             {adjustedId === item.variantId ? (

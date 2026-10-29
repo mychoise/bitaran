@@ -34,7 +34,7 @@ export const AdminOrdersPage: React.FC = () => {
             id="admin-order-status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="text-sm bg-white border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <option value="">All statuses</option>
             <option value="PAYMENT_PENDING">Payment pending</option>

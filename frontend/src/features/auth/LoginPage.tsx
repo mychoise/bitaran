@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { APP_NAME } from '../../config/app.config';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
+import { CheckCircle2, Eye, EyeOff } from 'lucide-react';
 
 interface LoginForm {
   email: string;
@@ -14,6 +15,7 @@ export const LoginPage: React.FC = () => {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginForm>();
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -59,11 +61,41 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 lg:grid lg:grid-cols-2">
+      {/* Brand panel (desktop only) */}
+      <aside className="hidden lg:flex flex-col justify-between bg-indigo-700 text-white p-12">
+        <span className="text-2xl font-extrabold tracking-tight">{APP_NAME}</span>
+        <div className="max-w-md">
+          <h2 className="text-4xl font-bold leading-tight">
+            Wholesale buying and selling, in one place.
+          </h2>
+          <p className="mt-4 text-indigo-100 text-base leading-relaxed">
+            Order from several verified sellers in a single checkout, and manage stock, orders and
+            deliveries without the back-and-forth.
+          </p>
+          <ul className="mt-8 space-y-3 text-sm text-indigo-50">
+            <li className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-indigo-200" aria-hidden="true" />
+              <span>Every business is reviewed and approved before it can trade</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-indigo-200" aria-hidden="true" />
+              <span>One cart, split automatically into an order per seller</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-indigo-200" aria-hidden="true" />
+              <span>Platform-managed delivery with live order status</span>
+            </li>
+          </ul>
+        </div>
+        <p className="text-xs text-indigo-200">For dealers and wholesalers</p>
+      </aside>
+
+      <div className="flex flex-col justify-center px-4 py-12 sm:px-6 lg:px-12">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">{APP_NAME}</h1>
-        <h2 className="mt-4 text-2xl font-bold text-gray-900">Sign in</h2>
-        <p className="mt-1 text-sm text-gray-600">For dealers and wholesalers</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 lg:hidden">{APP_NAME}</h1>
+        <h2 className="mt-4 lg:mt-0 text-2xl font-bold text-gray-900">Sign in</h2>
+        <p className="mt-1 text-sm text-gray-600">Welcome back. Sign in to your business account.</p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -83,7 +115,7 @@ export const LoginPage: React.FC = () => {
                 id="email"
                 type="email"
                 placeholder="seller1@demo.test"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                 {...register('email', { required: 'Email is required' })}
               />
               {errors.email && (
@@ -95,13 +127,25 @@ export const LoginPage: React.FC = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="Password123!"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-sm"
-                {...register('password', { required: 'Password is required' })}
-              />
+              <div className="relative mt-1">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="Password123!"
+                  className="block w-full pl-3 pr-11 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  {...register('password', { required: 'Password is required' })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-700"
+                  style={{ minHeight: 0 }}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1 text-xs text-rose-600">{errors.password.message}</p>
               )}
@@ -119,7 +163,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 transition"
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -153,6 +197,7 @@ export const LoginPage: React.FC = () => {
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

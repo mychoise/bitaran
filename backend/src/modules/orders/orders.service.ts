@@ -8,6 +8,7 @@ import {
 import { eq, and, sql, inArray } from 'drizzle-orm';
 import { DRIZZLE, DrizzleDB } from '../../db/db.module';
 import {
+  organizations,
   orders,
   orderItems,
   orderStatusHistory,
@@ -43,11 +44,38 @@ const ALLOWED_TRANSITIONS: Record<string, OrderStatusType[]> = {
 export class OrdersService {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDB) {}
 
+  // Attach buyerName / sellerName to order rows so the UI can show businesses by name.
+  private async withOrgNames<
+    T extends { buyerOrgId?: string; sellerOrgId?: string },
+  >(rows: T[]): Promise<Array<T & { buyerName: string | null; sellerName: string | null }>> {
+    const ids = new Set<string>();
+    for (const r of rows) {
+      if (r.buyerOrgId) ids.add(r.buyerOrgId);
+      if (r.sellerOrgId) ids.add(r.sellerOrgId);
+    }
+    const names = new Map<string, string>();
+    if (ids.size > 0) {
+      const orgs = await this.db
+        .select({ id: organizations.id, name: organizations.name })
+        .from(organizations)
+        .where(inArray(organizations.id, [...ids]));
+      for (const o of orgs) names.set(o.id, o.name);
+    }
+    return rows.map((r) => ({
+      ...r,
+      buyerName: r.buyerOrgId ? (names.get(r.buyerOrgId) ?? null) : null,
+      sellerName: r.sellerOrgId ? (names.get(r.sellerOrgId) ?? null) : null,
+    }));
+  }
+
   async listBuyerOrders(
     buyerOrgId: string,
     status?: string,
   ): Promise<unknown[]> {
-    const query = this.db
+    const conditions = [eq(orders.buyerOrgId, buyerOrgId)];
+    if (status) conditions.push(eq(orders.status, status as OrderStatusType));
+
+    const rows = await this.db
       .select({
         id: orders.id,
         sellerOrgId: orders.sellerOrgId,
@@ -57,9 +85,9 @@ export class OrdersService {
         checkoutId: orders.checkoutId,
       })
       .from(orders)
-      .where(eq(orders.buyerOrgId, buyerOrgId));
+      .where(and(...conditions));
 
-    return query;
+    return this.withOrgNames(rows);
   }
 
   async listSellerOrders(
@@ -67,7 +95,9 @@ export class OrdersService {
     status?: string,
   ): Promise<unknown[]> {
     const conditions = [eq(orders.sellerOrgId, sellerOrgId)];
-    return this.db
+    if (status) conditions.push(eq(orders.status, status as OrderStatusType));
+
+    const rows = await this.db
       .select({
         id: orders.id,
         buyerOrgId: orders.buyerOrgId,
@@ -77,6 +107,8 @@ export class OrdersService {
       })
       .from(orders)
       .where(and(...conditions));
+
+    return this.withOrgNames(rows);
   }
 
   async getOrder(
@@ -227,7 +259,7 @@ export class OrdersService {
   }
 
   async listAllOrders(status?: string): Promise<unknown[]> {
-    return this.db
+    const rows = await this.db
       .select({
         id: orders.id,
         buyerOrgId: orders.buyerOrgId,
@@ -236,7 +268,10 @@ export class OrdersService {
         totalPaisa: orders.totalPaisa,
         createdAt: orders.createdAt,
       })
-      .from(orders);
+      .from(orders)
+      .where(status ? eq(orders.status, status as OrderStatusType) : undefined);
+
+    return this.withOrgNames(rows);
   }
 
   // Called by the expiry job

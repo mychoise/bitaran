@@ -3,7 +3,7 @@ import {
   Inject,
   NotFoundException,
 } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { DRIZZLE, DrizzleDB } from '../../db/db.module';
 import {
   organizations,
@@ -139,7 +139,7 @@ export class AdminService {
   // ---- All orders ----
 
   async listAllOrders(status?: string): Promise<unknown[]> {
-    return this.db
+    const rows = await this.db
       .select({
         id: orders.id,
         buyerOrgId: orders.buyerOrgId,
@@ -148,6 +148,22 @@ export class AdminService {
         totalPaisa: orders.totalPaisa,
         createdAt: orders.createdAt,
       })
-      .from(orders);
+      .from(orders)
+      .where(status ? eq(orders.status, status as (typeof orders.status.enumValues)[number]) : undefined);
+
+    const ids = [...new Set(rows.flatMap((r) => [r.buyerOrgId, r.sellerOrgId]))];
+    const orgs = ids.length
+      ? await this.db
+          .select({ id: organizations.id, name: organizations.name })
+          .from(organizations)
+          .where(inArray(organizations.id, ids))
+      : [];
+    const names = new Map(orgs.map((o) => [o.id, o.name]));
+
+    return rows.map((r) => ({
+      ...r,
+      buyerName: names.get(r.buyerOrgId) ?? null,
+      sellerName: names.get(r.sellerOrgId) ?? null,
+    }));
   }
 }
