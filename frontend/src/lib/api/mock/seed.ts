@@ -22,14 +22,17 @@ import type {
 } from "../types.ts";
 import { priceLine } from "./rules.ts";
 
-export const DEMO_DATA_VERSION = 3;
+export const DEMO_DATA_VERSION = 4;
+
+export type StoredCategory = Omit<Category, "productCount">;
 
 export type DemoData = {
   version: number;
   seededOn: BusinessDate;
   business: Business;
   staff: Staff[];
-  categories: Category[];
+  /** Stored without productCount, which is worked out when asked. */
+  categories: StoredCategory[];
   products: Product[];
   routes: Route[];
   shops: Shop[];
@@ -82,7 +85,7 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
     { id: "u-salesman2", fullName: "Test Salesman Two", role: "salesman", email: "salesman2@example.com", phone: "+977 9800000004", active: true, joinedOn: addDays(today, -90), lastLoginAt: nepalInstant(addDays(today, -1), "18:20") },
   ];
 
-  const categories: Category[] = [
+  const categories: StoredCategory[] = [
     { id: "c-snacks", name: "Noodles and snacks" },
     { id: "c-staples", name: "Oil and staples" },
     { id: "c-household", name: "Soap and household" },
@@ -116,11 +119,13 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
     ["Demo candles, 6 pack", "c-household", "pack", 40, 45, 320],
     ["Demo mosquito coil", "c-household", "box", 60, 50, 600],
   ];
+  const SKU_PREFIX: Record<string, string> = { "c-snacks": "SNK", "c-staples": "STP", "c-household": "HSE" };
   const products: Product[] = catalogue.map(([name, categoryId, unitName, unitsPerCarton, price, stock], i) => {
     const unitPricePaisa = rupees(price);
     return {
       id: `p-${String(i + 1).padStart(2, "0")}`,
       name,
+      sku: `DEMO-${SKU_PREFIX[categoryId]}-${String(i + 1).padStart(3, "0")}`,
       categoryId,
       unitName,
       unitsPerCarton,
@@ -193,7 +198,7 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
     const date = addDays(today, spec.offset);
     const route = routes.find((r) => r.id === spec.routeId)!;
     const carried = [...products].sort(() => rand() - 0.5).slice(0, 6);
-    const issued: StockLine[] = carried.map((p) => ({ productId: p.id, units: p.unitsPerCarton * between(1, 2) }));
+    const issued: StockLine[] = carried.map((p) => ({ productId: p.id, units: (p.unitsPerCarton ?? 12) * between(1, 2) }));
     const plan: DayPlan = {
       id: `d-${String(n + 1).padStart(2, "0")}`,
       date,
@@ -234,7 +239,7 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
         .slice(0, between(1, 3))
         .map(([productId, left]) => {
           const product = products.find((p) => p.id === productId)!;
-          const asCarton = left >= product.unitsPerCarton && rand() < 0.3;
+          const asCarton = product.unitsPerCarton !== null && left >= product.unitsPerCarton && rand() < 0.3;
           const qty = asCarton ? 1 : Math.min(left, between(2, 10));
           const line = priceLine(product, qty, asCarton ? "carton" : "unit");
           remaining.set(productId, left - line.baseUnits);

@@ -10,7 +10,7 @@ export const managerNav: NavEntry[] = [
   { href: "/app/manager/sales", label: "Sales", icon: "receipt" },
   { href: "/app/manager/payments", label: "Payments", icon: "wallet" },
   { href: "/app/manager/shops", label: "Shops", icon: "store" },
-  { href: "/app/manager/products", label: "Products and stock", icon: "box" },
+  { href: "/app/manager/products", label: "Products and stock", icon: "box", built: true },
   { href: "/app/manager/returns", label: "Returns and write-offs", icon: "return" },
   { href: "/app/manager/expenses", label: "Expenses", icon: "wallet" },
   { href: "/app/manager/photos", label: "Visit photos", icon: "camera" },

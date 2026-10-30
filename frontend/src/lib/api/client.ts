@@ -48,7 +48,14 @@ export type BusinessInput = Pick<Business, "name" | "phone" | "email" | "address
   /** An id from uploads.image; null removes the logo. */
   logoImageId?: Id | null;
 };
-export type ProductInput = Omit<Product, "id" | "costPricePaisa"> & { costPricePaisa: Paisa };
+/** Stock is set once on create ("opening stock"); after that it changes only through stock moves. */
+export type ProductInput = Omit<Product, "id" | "costPricePaisa" | "imageId" | "imageUrl"> & {
+  costPricePaisa: Paisa;
+  /** An id from uploads.image; null removes the image. */
+  imageId?: Id | null;
+};
+export type ProductUpdateInput = Partial<Omit<ProductInput, "stockUnits">>;
+export type ProductFilter = PageQuery & { categoryId?: Id; search?: string; lowStock?: boolean; active?: boolean };
 export type ShopInput = { name: string; ownerName: string; phone: string; address: string; routeId: Id; creditLimitPaisa: Paisa; openingBalancePaisa: Paisa; dueDays: number };
 export type SaleLineInput = { productId: Id; quantity: number; unit: SaleUnit };
 export type SaleInput = { shopId: Id; planId?: Id; lines: SaleLineInput[]; overrideCreditLimit?: boolean };
@@ -88,12 +95,20 @@ export interface ApiClient {
     /** Stores an image and returns its id, to attach to a record. */
     image(file: Blob): Promise<{ id: Id; url: string }>;
   };
+  categories: {
+    list(): Promise<Category[]>;
+    create(name: string): Promise<Category>;
+    rename(id: Id, name: string): Promise<Category>;
+    /** Only a category no product uses. */
+    remove(id: Id): Promise<void>;
+  };
   products: {
-    categories(): Promise<Category[]>;
-    list(query?: PageQuery & { categoryId?: Id; search?: string; lowStock?: boolean }): Promise<Page<Product>>;
+    list(query?: ProductFilter): Promise<Page<Product>>;
     get(id: Id): Promise<Product>;
     create(input: ProductInput): Promise<Product>;
-    update(id: Id, input: Partial<ProductInput>): Promise<Product>;
+    update(id: Id, input: ProductUpdateInput): Promise<Product>;
+    /** Adds a signed number of base units. Stock never goes below zero. Not logged yet. */
+    adjustStock(id: Id, deltaUnits: number): Promise<Product>;
   };
   shops: {
     routes(): Promise<Route[]>;

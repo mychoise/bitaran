@@ -5,9 +5,32 @@
 import { addDays, todayNepal, type BusinessDate } from "../../dates.ts";
 import type { z } from "zod";
 import { ApiError, type ApiClient } from "../client.ts";
-import { businessSchema, firstIssue, staffSchema, staffUpdateSchema, temporaryPasswordField } from "../schemas.ts";
-import type { Business, DateRange, Id, Page, PageQuery, Product, Shop, ShopWithBalance, Staff, StatementEntry, Viewer } from "../types.ts";
-import { checkPasswordReset, checkStaffChange, emailTaken, overdueItems, rolesCreatableBy, shopBalance } from "./rules.ts";
+import {
+  businessSchema,
+  categoryNameField,
+  firstIssue,
+  productCreateSchema,
+  productSchema,
+  productUpdateSchema,
+  staffSchema,
+  staffUpdateSchema,
+  temporaryPasswordField,
+} from "../schemas.ts";
+import type { Business, Category, DateRange, Id, Page, PageQuery, Product, Shop, ShopWithBalance, Staff, StatementEntry, Viewer } from "../types.ts";
+import {
+  adjustStock,
+  canDeleteCategory,
+  categoryNameTaken,
+  checkPasswordReset,
+  checkStaffChange,
+  emailTaken,
+  isLowStock,
+  overdueItems,
+  rolesCreatableBy,
+  shopBalance,
+  skuTaken,
+} from "./rules.ts";
+import type { StoredCategory } from "./seed.ts";
 import { getData, save } from "./store.ts";
 
 const DELAY_MS = 250;
@@ -25,6 +48,8 @@ const notBuiltYet = async (): Promise<never> => {
 const forbidden = (message = "You do not have access to this.") => new ApiError("forbidden", message);
 const invalid = (message: string) => new ApiError("invalid", message);
 const EMAIL_IN_USE = "Someone on your staff already uses this email.";
+const SKU_IN_USE = "Another product already uses this SKU.";
+const CATEGORY_IN_USE = "There is already a category with this name.";
 
 /** Checks an input the way the backend will, throwing the first problem in plain words. */
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -81,8 +106,22 @@ export function createMockClient(viewer: Viewer): ApiClient {
   };
   /** A salesman sees only his own records. */
   const own = <T extends { salesmanId: Id }>(xs: T[]) => (isSalesman ? xs.filter((x) => x.salesmanId === viewer.id) : xs);
-  /** Cost price is never sent to salesmen or shops. */
-  const shapeProduct = (p: Product): Product => (isManager ? p : { ...p, costPricePaisa: undefined });
+  /** Cost price is never sent to salesmen or shops. The image comes with its address. */
+  const shapeProduct = (p: Product): Product => {
+    const imageUrl = p.imageId ? getData().images[p.imageId] : undefined;
+    return isManager ? { ...p, imageUrl } : { ...p, imageUrl, costPricePaisa: undefined };
+  };
+  const findProduct = (id: Id) => {
+    const p = getData().products.find((x) => x.id === id);
+    if (!p) throw notFound("product");
+    return p;
+  };
+  const withCount = (c: StoredCategory): Category => ({ ...c, productCount: getData().products.filter((p) => p.categoryId === c.id).length });
+  /** An attached image must have been uploaded first. */
+  const checkImage = (imageId: Id) => {
+    if (!getData().images[imageId]) throw invalid("Upload the image again.");
+    return imageId;
+  };
 
   const today = () => todayNepal();
   const withBalance = (shop: Shop): ShopWithBalance => {
@@ -207,24 +246,105 @@ export function createMockClient(viewer: Viewer): ApiClient {
       },
     },
 
+    categories: {
+      list: () => later(() => {
+        requireStaff();
+        const d = getData();
+        return d.categories.map(withCount).sort((x, y) => x.name.localeCompare(y.name));
+      }),
+      create: (name) => later(() => {
+        requireManager();
+        const d = getData();
+        const clean = parse(categoryNameField, name);
+        if (categoryNameTaken(d.categories, clean)) throw new ApiError("conflict", CATEGORY_IN_USE);
+        const category = { id: `c-${Date.now().toString(36)}`, name: clean };
+        d.categories.push(category);
+        save();
+        return withCount(category);
+      }),
+      rename: (id, name) => later(() => {
+        requireManager();
+        const d = getData();
+        const category = d.categories.find((c) => c.id === id);
+        if (!category) throw notFound("category");
+        const clean = parse(categoryNameField, name);
+        if (categoryNameTaken(d.categories, clean, id)) throw new ApiError("conflict", CATEGORY_IN_USE);
+        category.name = clean;
+        save();
+        return withCount(category);
+      }),
+      remove: (id) => later(() => {
+        requireManager();
+        const d = getData();
+        if (!d.categories.some((c) => c.id === id)) throw notFound("category");
+        const check = canDeleteCategory(id, d.products);
+        if (!check.ok) throw new ApiError("conflict", check.reason);
+        d.categories = d.categories.filter((c) => c.id !== id);
+        save();
+      }),
+    },
+
     products: {
-      categories: () => later(() => getData().categories),
       list: (q = {}) => later(() => {
         requireStaff();
         const term = q.search?.trim().toLowerCase();
-        const items = getData().products
-          .filter((p) => (!q.categoryId || p.categoryId === q.categoryId) && (!term || p.name.toLowerCase().includes(term)) && (!q.lowStock || p.stockUnits <= p.lowStockUnits))
+        const items = getData()
+          .products.filter(
+            (p) =>
+              (!q.categoryId || p.categoryId === q.categoryId) &&
+              (!term || p.name.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term)) &&
+              (!q.lowStock || isLowStock(p)) &&
+              (q.active === undefined || p.active === q.active),
+          )
+          .sort((x, y) => x.name.localeCompare(y.name))
           .map(shapeProduct);
         return paginate(items, q);
       }),
       get: (id) => later(() => {
         requireStaff();
-        const p = getData().products.find((x) => x.id === id);
-        if (!p) throw notFound("product");
-        return shapeProduct(p);
+        return shapeProduct(findProduct(id));
       }),
-      create: notBuiltYet,
-      update: notBuiltYet,
+      create: (input) => later(() => {
+        requireManager();
+        const d = getData();
+        const fields = parse(productCreateSchema, input);
+        if (!d.categories.some((c) => c.id === fields.categoryId)) throw invalid("Choose a category.");
+        if (skuTaken(d.products, fields.sku)) throw new ApiError("conflict", SKU_IN_USE);
+        const { imageId, ...rest } = fields;
+        const product: Product = { id: `p-${Date.now().toString(36)}`, ...rest };
+        if (imageId) product.imageId = checkImage(imageId);
+        d.products.push(product);
+        save();
+        return shapeProduct(product);
+      }),
+      update: (id, input) => later(() => {
+        requireManager();
+        const d = getData();
+        const product = findProduct(id);
+        const { imageId, ...fields } = parse(productUpdateSchema, input);
+        // Stock changes only through adjustStock (and, later, day plans and returns).
+        const next: Product = { ...product, ...fields, stockUnits: product.stockUnits };
+        parse(productSchema, next);
+        if (!d.categories.some((c) => c.id === next.categoryId)) throw invalid("Choose a category.");
+        if (skuTaken(d.products, next.sku, id)) throw new ApiError("conflict", SKU_IN_USE);
+        if (imageId === null) delete next.imageId;
+        else if (imageId !== undefined) next.imageId = checkImage(imageId);
+        delete next.imageUrl;
+        Object.assign(product, next);
+        if (!next.imageId) delete product.imageId;
+        save();
+        return shapeProduct(product);
+      }),
+      adjustStock: (id, deltaUnits) => later(() => {
+        requireManager();
+        const product = findProduct(id);
+        const result = adjustStock(product.stockUnits, deltaUnits);
+        if (!result.ok) throw invalid(result.reason);
+        // Not logged yet: the stock moves, but no record of who or why is kept.
+        product.stockUnits = result.stockUnits;
+        save();
+        return shapeProduct(product);
+      }),
     },
 
     shops: {
@@ -378,7 +498,7 @@ export function createMockClient(viewer: Viewer): ApiClient {
           inClearingPaisa: shops.reduce((a, s) => a + s.inClearingPaisa, 0),
           overduePaisa: shops.reduce((a, s) => a + s.overduePaisa, 0),
           overdueShopCount: shops.filter((s) => s.overduePaisa > 0).length,
-          lowStockCount: d.products.filter((p) => p.stockUnits <= p.lowStockUnits).length,
+          lowStockCount: d.products.filter((p) => p.active && isLowStock(p)).length,
           plansByStatus,
           flaggedPhotoCount: d.photos.filter((p) => p.flags.length > 0).length,
         };
@@ -416,7 +536,7 @@ export function createMockClient(viewer: Viewer): ApiClient {
       }),
       lowStock: () => later(() => {
         requireManager();
-        return getData().products.filter((p) => p.stockUnits <= p.lowStockUnits);
+        return getData().products.filter((p) => p.active && isLowStock(p)).map(shapeProduct);
       }),
     },
 

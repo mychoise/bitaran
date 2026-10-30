@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { remainingOnPlan, shopBalance } from "./rules.ts";
+import { checkCarton, remainingOnPlan, shopBalance, skuTaken, validPrice } from "./rules.ts";
 import { seedDemoData } from "./seed.ts";
 
 const data = seedDemoData("2026-10-14");
@@ -45,4 +45,14 @@ test("seed obeys the rules: sequential invoices, priced from products, nothing s
 test("returns never restock damaged or expired goods, and balances are whole paisa", () => {
   for (const r of data.returns) for (const l of r.lines) if (l.reason !== "other") assert.equal(l.restocked, false);
   for (const shop of data.shops) assert.ok(Number.isSafeInteger(shopBalance(shop, data.sales, data.payments, data.returns).balancePaisa));
+});
+
+test("seeded products obey the product rules", () => {
+  for (const p of data.products) {
+    assert.equal(skuTaken(data.products, p.sku, p.id), false, `unique SKU ${p.sku}`);
+    assert.equal(checkCarton(p), null, p.name);
+    assert.ok(validPrice(p.unitPricePaisa) && validPrice(p.costPricePaisa!), p.name);
+    assert.ok(Number.isInteger(p.stockUnits) && p.stockUnits >= 0, p.name);
+    assert.ok(data.categories.some((c) => c.id === p.categoryId), p.name);
+  }
 });

@@ -91,12 +91,13 @@ export function checkCreditLimit(balancePaisa: Paisa, saleTotalPaisa: Paisa, lim
 /** A sale line priced from the product record. A carton uses the carton price and units per carton. */
 export function priceLine(product: Pick<Product, "id" | "unitPricePaisa" | "cartonPricePaisa" | "unitsPerCarton">, quantity: number, unit: SaleUnit): SaleLine {
   if (!Number.isInteger(quantity) || quantity <= 0) throw new Error("Quantity must be a whole number above zero.");
-  const pricePaisa = unit === "carton" ? product.cartonPricePaisa : product.unitPricePaisa;
+  if (unit === "carton" && (product.unitsPerCarton === null || product.cartonPricePaisa === null)) throw new Error("This product is not sold by the carton.");
+  const pricePaisa = unit === "carton" ? product.cartonPricePaisa! : product.unitPricePaisa;
   return {
     productId: product.id,
     quantity,
     unit,
-    baseUnits: unit === "carton" ? quantity * product.unitsPerCarton : quantity,
+    baseUnits: unit === "carton" ? quantity * product.unitsPerCarton! : quantity,
     pricePaisa,
     totalPaisa: pricePaisa * quantity,
   };
@@ -261,4 +262,60 @@ export function checkPasswordReset(actor: Actor, target: StaffRecord): string | 
 export function emailTaken(staff: readonly { id: string; email: string }[], email: string, exceptId?: string): boolean {
   const e = email.trim().toLowerCase();
   return staff.some((s) => s.id !== exceptId && s.email.trim().toLowerCase() === e);
+}
+
+// ---- products and categories ----------------------------------------------------------------
+
+/** SKUs are unique in the business, ignoring case and spaces at the ends. */
+export function skuTaken(products: readonly { id: string; sku: string }[], sku: string, exceptId?: string): boolean {
+  const k = sku.trim().toLowerCase();
+  return products.some((p) => p.id !== exceptId && p.sku.trim().toLowerCase() === k);
+}
+
+/** Prices are whole paisa, zero or more. */
+export const validPrice = (paisa: number) => Number.isInteger(paisa) && paisa >= 0;
+
+/**
+ * Selling by the carton is optional. When it is set, units per carton is a whole number above
+ * zero and the carton has a price; when it is not, neither is set.
+ */
+export function checkCarton(p: { unitsPerCarton: number | null; cartonPricePaisa: number | null }): string | null {
+  if (p.unitsPerCarton === null) return p.cartonPricePaisa === null ? null : "Set units per carton, or leave the carton price empty.";
+  if (!Number.isInteger(p.unitsPerCarton) || p.unitsPerCarton <= 0) return "Units per carton must be a whole number above zero.";
+  if (p.cartonPricePaisa === null) return "Enter the carton price.";
+  return validPrice(p.cartonPricePaisa) ? null : "The carton price cannot be below zero.";
+}
+
+/** Stock is counted in base units; this is the carton equivalent shown beside it. */
+export function cartonSplit(units: number, unitsPerCarton: number | null): { cartons: number; loose: number } | null {
+  if (unitsPerCarton === null || unitsPerCarton <= 0) return null;
+  return { cartons: Math.floor(units / unitsPerCarton), loose: units % unitsPerCarton };
+}
+
+export const isLowStock = (p: Pick<Product, "stockUnits" | "lowStockUnits">) => p.stockUnits <= p.lowStockUnits;
+
+/** Margin per base unit. The percentage is of the selling price, and missing when the price is zero. */
+export function unitMargin(unitPricePaisa: Paisa, costPricePaisa: Paisa): { paisa: Paisa; percent: number | null } {
+  const paisa = unitPricePaisa - costPricePaisa;
+  return { paisa, percent: unitPricePaisa > 0 ? Math.round((paisa / unitPricePaisa) * 1000) / 10 : null };
+}
+
+/** A stock adjustment adds a signed whole number of base units. Stock never goes below zero. */
+export function adjustStock(stockUnits: number, deltaUnits: number): { ok: true; stockUnits: number } | { ok: false; reason: string } {
+  if (!Number.isInteger(deltaUnits) || deltaUnits === 0) return { ok: false, reason: "Enter a whole number other than zero, like 24 or -6." };
+  const next = stockUnits + deltaUnits;
+  if (next < 0) return { ok: false, reason: `Stock cannot go below zero. There ${stockUnits === 1 ? "is" : "are"} only ${stockUnits} in stock.` };
+  return { ok: true, stockUnits: next };
+}
+
+/** Category names are unique, ignoring case and spaces at the ends. */
+export function categoryNameTaken(categories: readonly { id: string; name: string }[], name: string, exceptId?: string): boolean {
+  const n = name.trim().toLowerCase();
+  return categories.some((c) => c.id !== exceptId && c.name.trim().toLowerCase() === n);
+}
+
+/** Only a category no product uses (active or not) can be deleted. Products are deactivated, never deleted. */
+export function canDeleteCategory(categoryId: string, products: readonly Pick<Product, "categoryId">[]): { ok: true } | { ok: false; reason: string } {
+  const used = products.filter((p) => p.categoryId === categoryId).length;
+  return used === 0 ? { ok: true } : { ok: false, reason: `${used} product${used === 1 ? " uses" : "s use"} this category. Move ${used === 1 ? "it" : "them"} to another category first.` };
 }

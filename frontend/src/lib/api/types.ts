@@ -46,23 +46,36 @@ export type Staff = {
   passwordResetAt?: Instant;
 };
 
-export type Category = { id: Id; name: string };
+export type Category = {
+  id: Id;
+  name: string;
+  /** Products in this category, active or not. Sent by the server. A category in use cannot be deleted. */
+  productCount: number;
+};
 
 export type Product = {
   id: Id;
   name: string;
+  /** Stock-keeping code, unique in the business. */
+  sku: string;
   categoryId: Id;
   /** The base unit stock is counted in, e.g. "packet", "bottle". */
   unitName: string;
-  unitsPerCarton: number;
+  /** Null when the product is not sold by the carton. Otherwise above zero. */
+  unitsPerCarton: number | null;
   unitPricePaisa: Paisa;
-  cartonPricePaisa: Paisa;
+  /** Set exactly when unitsPerCarton is. */
+  cartonPricePaisa: Paisa | null;
   /** Per base unit. Present only for owners and managers. */
   costPricePaisa?: Paisa;
   /** Warehouse stock, in base units. */
   stockUnits: number;
   lowStockUnits: number;
+  /** Inactive products are not sold. Products are never deleted. */
   active: boolean;
+  imageId?: Id;
+  /** Where to load the image from. Sent by the server; never written by the app. */
+  imageUrl?: string;
 };
 
 export type Route = { id: Id; name: string; shopIds: Id[] };

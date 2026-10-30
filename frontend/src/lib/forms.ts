@@ -16,3 +16,8 @@ export function zodResolver<T extends FieldValues>(schema: z.ZodType<T, T>): Res
     return { values: {}, errors: errors as FieldErrors<T> };
   };
 }
+
+// Whole numbers are typed as text (so an empty box works) and checked as text. Rupees use parseRupees.
+
+export const WHOLE = /^\s*\d+\s*$/;
+export const SIGNED_WHOLE = /^\s*[+-]?\d+\s*$/;

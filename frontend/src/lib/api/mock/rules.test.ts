@@ -2,6 +2,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { DayPlan, Payment, Return, Sale } from "../types.ts";
 import {
+  adjustStock,
+  canDeleteCategory,
+  cartonSplit,
+  categoryNameTaken,
+  checkCarton,
+  isLowStock,
+  skuTaken,
+  unitMargin,
+  validPrice,
   canCancelSale,
   canClosePlan,
   canDecidePayment,
@@ -187,4 +196,59 @@ test("staff emails are unique, ignoring case and outer spaces", () => {
   assert.equal(emailTaken(staff, " owner@example.COM "), true);
   assert.equal(emailTaken(staff, "owner@example.com", "a"), false, "a person keeps their own email");
   assert.equal(emailTaken(staff, "new@example.com"), false);
+});
+
+test("prices are zero or more, in whole paisa", () => {
+  assert.equal(validPrice(0), true);
+  assert.equal(validPrice(2_500), true);
+  assert.equal(validPrice(-1), false);
+  assert.equal(validPrice(10.5), false);
+});
+
+test("units per carton is above zero when set, and the carton then has a price", () => {
+  assert.equal(checkCarton({ unitsPerCarton: null, cartonPricePaisa: null }), null, "selling by the carton is optional");
+  assert.equal(checkCarton({ unitsPerCarton: 24, cartonPricePaisa: 140_000 }), null);
+  assert.equal(checkCarton({ unitsPerCarton: 0, cartonPricePaisa: 0 }), "Units per carton must be a whole number above zero.");
+  assert.equal(checkCarton({ unitsPerCarton: 2.5, cartonPricePaisa: 0 }), "Units per carton must be a whole number above zero.");
+  assert.equal(checkCarton({ unitsPerCarton: 24, cartonPricePaisa: null }), "Enter the carton price.");
+  assert.equal(checkCarton({ unitsPerCarton: null, cartonPricePaisa: 500 }), "Set units per carton, or leave the carton price empty.");
+  assert.equal(checkCarton({ unitsPerCarton: 24, cartonPricePaisa: -1 }), "The carton price cannot be below zero.");
+});
+
+test("SKUs are unique, ignoring case and outer spaces", () => {
+  const products = [{ id: "a", sku: "DEMO-SNK-001" }];
+  assert.equal(skuTaken(products, " demo-snk-001 "), true);
+  assert.equal(skuTaken(products, "DEMO-SNK-001", "a"), false, "a product keeps its own SKU");
+  assert.equal(skuTaken(products, "DEMO-SNK-002"), false);
+});
+
+test("stock is in base units, with the carton equivalent beside it", () => {
+  assert.deepEqual(cartonSplit(480, 24), { cartons: 20, loose: 0 });
+  assert.deepEqual(cartonSplit(65, 24), { cartons: 2, loose: 17 });
+  assert.equal(cartonSplit(65, null), null);
+  assert.equal(isLowStock({ stockUnits: 48, lowStockUnits: 48 }), true);
+  assert.equal(isLowStock({ stockUnits: 49, lowStockUnits: 48 }), false);
+});
+
+test("a stock adjustment is signed and never takes stock below zero", () => {
+  assert.deepEqual(adjustStock(10, 24), { ok: true, stockUnits: 34 });
+  assert.deepEqual(adjustStock(10, -10), { ok: true, stockUnits: 0 });
+  assert.equal(adjustStock(10, -11).ok, false);
+  assert.equal(adjustStock(10, 0).ok, false);
+  assert.equal(adjustStock(10, 1.5).ok, false);
+});
+
+test("margin per unit, as a share of the selling price", () => {
+  assert.deepEqual(unitMargin(5_000, 4_100), { paisa: 900, percent: 18 });
+  assert.deepEqual(unitMargin(0, 100), { paisa: -100, percent: null });
+  assert.deepEqual(unitMargin(3_000, 3_500), { paisa: -500, percent: -16.7 });
+});
+
+test("categories: unique names, deleted only when no product uses them", () => {
+  assert.equal(categoryNameTaken([{ id: "c1", name: "Snacks" }], " snacks "), true);
+  assert.equal(categoryNameTaken([{ id: "c1", name: "Snacks" }], "Snacks", "c1"), false);
+  assert.deepEqual(canDeleteCategory("c1", []), { ok: true });
+  const inUse = canDeleteCategory("c1", [{ categoryId: "c1" }, { categoryId: "c1" }, { categoryId: "c2" }]);
+  assert.equal(inUse.ok, false);
+  assert.match(inUse.ok ? "" : inUse.reason, /^2 products use this category/);
 });

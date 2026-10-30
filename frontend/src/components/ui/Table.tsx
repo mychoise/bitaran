@@ -17,6 +17,8 @@ export type Column<T> = {
   numeric?: boolean;
   /** The column that names the row (rendered as a row header). */
   rowHeader?: boolean;
+  /** Only in the CSV export, e.g. a flag the table already shows inside another column. */
+  csvOnly?: boolean;
 };
 
 export type SortState = { key: string; dir: "asc" | "desc" } | null;
@@ -36,7 +38,8 @@ type Props<T> = {
 };
 
 /** A dense data table in a cotton card: sticky header, sortable columns, loading, empty and error states. */
-export function Table<T>({ caption, columns, rows, rowKey, loading, error, onRetry, empty, sort: controlled, onSortChange }: Props<T>) {
+export function Table<T>({ caption, columns: allColumns, rows, rowKey, loading, error, onRetry, empty, sort: controlled, onSortChange }: Props<T>) {
+  const columns = useMemo(() => allColumns.filter((c) => !c.csvOnly), [allColumns]);
   const [own, setOwn] = useState<SortState>(null);
   const sort = controlled !== undefined ? controlled : own;
   const setSort = (s: SortState) => (onSortChange ? onSortChange(s) : setOwn(s));

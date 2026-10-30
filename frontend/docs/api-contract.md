@@ -63,17 +63,37 @@ Rules (tested in `rules.ts`):
 - **A temporary password** is 8 to 200 characters. A reset makes the old password stop working.
 - **Nothing is deleted.** A deactivated person cannot sign in, but their sales, payments and day plans stay.
 
-## Products
+## Products and categories
 
 | Method | Path | Request | Response | Who | Status |
 | --- | --- | --- | --- | --- | --- |
-| GET | `/categories` | | `Category[]` | O M S | Planned? |
-| GET | `/products` | `?categoryId&search&lowStock&page&pageSize` | `Page<Product>` (no cost price for S) | O M S | Planned? |
-| GET | `/products/:id` | | `Product` | O M S | Planned? |
-| POST | `/products` | `ProductInput` | `Product` | O M | Planned? |
-| PATCH | `/products/:id` | partial `ProductInput` | `Product` | O M | Planned? |
+| GET | `/categories` | | `Category[]` (by name) | O M S | Planned |
+| POST | `/categories` | `{ name }` | `Category` | O M | Planned |
+| PATCH | `/categories/:id` | `{ name }` | `Category` | O M | Planned |
+| DELETE | `/categories/:id` | | 204, or `409 conflict` when a product uses it | O M | Planned |
+| GET | `/products` | `?search&categoryId&lowStock&active&page&pageSize` (`active` **NEW**; search matches name or SKU) | `Page<Product>` (no cost price for S) | O M S | Planned |
+| GET | `/products/:id` | | `Product` (no cost price for S) | O M S | Planned |
+| POST | `/products` | `ProductInput`, with `stockUnits` as opening stock | `Product` | O M | Planned |
+| PATCH | `/products/:id` | partial `ProductInput`, without `stockUnits`; `imageId: null` removes the photo | `Product` | O M | Planned |
+| POST | `/products/:id/stock-adjust` | `{ deltaUnits }` (a signed whole number, not zero) | `Product` | O M | Planned |
 
-`Product { id, name, categoryId, unitName, unitsPerCarton, unitPricePaisa, cartonPricePaisa, costPricePaisa?, stockUnits, lowStockUnits, active }`. Stock is in base units.
+Shapes:
+- `Category { id, name, productCount }`. `productCount` (**NEW**) counts active and inactive products and is computed by the server. It drives "delete only if unused".
+- `Product { id, name, sku, categoryId, unitName, unitsPerCarton, unitPricePaisa, cartonPricePaisa, costPricePaisa?, stockUnits, lowStockUnits, active, imageId?, imageUrl? }`.
+  - **Changed:** `unitsPerCarton` and `cartonPricePaisa` are now `null` for a product not sold by the carton. Both are set, or neither.
+  - `imageUrl` (**NEW**) is sent by the server, like `Business.logoUrl`.
+- `ProductInput { name, sku, categoryId, unitName, unitPricePaisa, unitsPerCarton, cartonPricePaisa, costPricePaisa, lowStockUnits, active, stockUnits, imageId? }`.
+
+Rules (tested in `rules.ts`; field checks in `schemas.ts`):
+- **Prices** are whole paisa, zero or more: unit price, carton price and cost price.
+- **Units per carton** is a whole number above zero when set, and then the carton needs a price. Otherwise both are `null`.
+- **SKU is unique** in the business, ignoring case and spaces at the ends: `conflict`, "Another product already uses this SKU." It is 1 to 40 characters: letters, numbers, `.`, `_`, `/` or `-`, with no spaces.
+- **Category names are unique**, ignoring case. This is an assumption; please confirm. A category is deleted only when no product, active or not, uses it.
+- **Products are never deleted.** They are deactivated (`active: false`). Inactive products are not issued or sold, and their history stays.
+- **Stock is in base units.** The UI shows the carton equivalent beside it ("2 cartons + 17 cups"). Stock is set on create and then changes only through stock moves: `stock-adjust` now, day plans and returns later. A PATCH must not change it.
+- **Stock adjustment** adds a signed whole number. It is refused (`invalid`) if stock would go below zero. **Adjustments are not logged yet;** the UI says so. A later step should add a stock-movement log (who, when, why).
+- **Low stock** means `stockUnits <= lowStockUnits`. The dashboard and the low-stock report count active products only.
+- **Cost price, and so margin,** is sent only to the owner and managers. Margin = unit price − cost, also shown as a share of the unit price.
 
 ## Shops and routes
 
@@ -183,3 +203,8 @@ A shop only ever sees its own records, and never cost prices.
   - Added `PATCH /business`, `POST /staff/:id/reset-password`, and `POST /uploads/images` (**NEW**).
   - Business gained the fields your brief lists for settings (email, city, registration number, logo), and Staff gained `lastLoginAt`.
   - **NEW**: `Business.logoUrl`, `Staff.passwordResetAt`, `temporaryPassword` on `POST /staff`, and the filters on `GET /staff`.
+- **Step 3 (products and categories):**
+  - Category create, rename and delete; `POST /products/:id/stock-adjust`; product `sku` and image. All are marked Planned, as you confirmed.
+  - **NEW:** `Category.productCount`, `Product.imageUrl`, and the `active` filter on `GET /products`.
+  - **Changed:** `unitsPerCarton` and `cartonPricePaisa` can be `null`. `GET /categories` moved under its own module in `client.ts` (`categories.list`).
+  - The low-stock count and report now leave out inactive products.
