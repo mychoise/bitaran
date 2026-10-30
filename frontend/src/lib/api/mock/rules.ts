@@ -215,3 +215,50 @@ export const canDecidePayment = (p: Pick<Payment, "status">) => p.status === "pe
 
 /** Damaged and expired goods never go back into sellable stock; only "other" may be restocked. */
 export const mayRestock = (reason: ReturnReason, requested: boolean) => requested && reason === "other";
+
+// ---- staff ---------------------------------------------------------------------------------
+
+type Actor = { id: string; role: StaffRole };
+type StaffRecord = { id: string; role: StaffRole };
+
+/** A temporary password must be at least this long (the same as Change password). */
+export const TEMP_PASSWORD_MIN = 8;
+
+/** The owner adds managers and salesmen; a manager adds salesmen only. Nobody adds an owner. */
+export function rolesCreatableBy(role: StaffRole): Exclude<StaffRole, "owner">[] {
+  if (role === "owner") return ["manager", "salesman"];
+  if (role === "manager") return ["salesman"];
+  return [];
+}
+
+/** The owner may change anyone's account; a manager only salesmen's. */
+export const canEditStaff = (actor: Actor, target: StaffRecord) => actor.role === "owner" || (actor.role === "manager" && target.role === "salesman");
+
+/**
+ * Why a change to someone's account is not allowed, or null when it is. There is exactly one
+ * owner: the owner cannot be deactivated or given another role, and nobody else becomes owner.
+ */
+export function checkStaffChange(actor: Actor, target: StaffRecord, change: { role?: StaffRole; active?: boolean }): string | null {
+  if (!canEditStaff(actor, target)) return "You cannot change this person's account.";
+  if (target.role === "owner") {
+    if (change.active === false) return "The owner cannot be deactivated.";
+    if (change.role !== undefined && change.role !== "owner") return "The owner's role cannot be changed.";
+    return null;
+  }
+  if (change.role === "owner") return "There is exactly one owner. Nobody else can be made owner.";
+  if (change.role !== undefined && change.role !== target.role && !rolesCreatableBy(actor.role).includes(change.role)) return "You cannot give this role.";
+  if (change.active === false && actor.id === target.id) return "You cannot deactivate your own account.";
+  return null;
+}
+
+/** Why a temporary password cannot be set, or null. Your own password goes through Change password. */
+export function checkPasswordReset(actor: Actor, target: StaffRecord): string | null {
+  if (actor.id === target.id) return "Use Change password for your own account.";
+  return canEditStaff(actor, target) ? null : "You cannot reset this person's password.";
+}
+
+/** Emails are unique across staff, ignoring case and spaces at the ends. */
+export function emailTaken(staff: readonly { id: string; email: string }[], email: string, exceptId?: string): boolean {
+  const e = email.trim().toLowerCase();
+  return staff.some((s) => s.id !== exceptId && s.email.trim().toLowerCase() === e);
+}

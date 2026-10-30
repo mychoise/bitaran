@@ -7,8 +7,12 @@ import {
   canDecidePayment,
   canDeletePlan,
   canMovePlan,
+  canEditStaff,
   canStartPlan,
   checkCreditLimit,
+  checkPasswordReset,
+  checkStaffChange,
+  emailTaken,
   initialPaymentStatus,
   mayRestock,
   nextInvoiceNo,
@@ -16,6 +20,7 @@ import {
   planShortage,
   priceLine,
   remainingOnPlan,
+  rolesCreatableBy,
   shopBalance,
   validatePayment,
 } from "./rules.ts";
@@ -140,4 +145,46 @@ test("damaged and expired goods are never restocked", () => {
   assert.equal(mayRestock("expired", true), false);
   assert.equal(mayRestock("other", true), true);
   assert.equal(mayRestock("other", false), false);
+});
+
+const owner = { id: "u-owner", role: "owner" as const };
+const manager = { id: "u-manager", role: "manager" as const };
+const salesman = { id: "u-salesman", role: "salesman" as const };
+
+test("the owner adds managers and salesmen; a manager adds salesmen only", () => {
+  assert.deepEqual(rolesCreatableBy("owner"), ["manager", "salesman"]);
+  assert.deepEqual(rolesCreatableBy("manager"), ["salesman"]);
+  assert.deepEqual(rolesCreatableBy("salesman"), []);
+  assert.equal(canEditStaff(owner, manager), true);
+  assert.equal(canEditStaff(manager, salesman), true);
+  assert.equal(canEditStaff(manager, owner), false);
+  assert.equal(canEditStaff(manager, { id: "u-m2", role: "manager" }), false);
+  assert.equal(canEditStaff(salesman, salesman), false);
+});
+
+test("there is exactly one owner, who cannot be deactivated or change role", () => {
+  assert.equal(checkStaffChange(owner, owner, { active: false }), "The owner cannot be deactivated.");
+  assert.equal(checkStaffChange(owner, owner, { role: "manager" }), "The owner's role cannot be changed.");
+  assert.equal(checkStaffChange(owner, owner, { role: "owner" }), null);
+  assert.equal(checkStaffChange(manager, owner, { active: false }), "You cannot change this person's account.");
+  assert.equal(checkStaffChange(owner, manager, { role: "owner" }), "There is exactly one owner. Nobody else can be made owner.");
+  assert.equal(checkStaffChange(owner, salesman, { role: "manager" }), null);
+  assert.equal(checkStaffChange(owner, manager, { active: false }), null);
+  assert.equal(checkStaffChange(manager, salesman, { role: "manager" }), "You cannot give this role.");
+  assert.equal(checkStaffChange(manager, salesman, { active: false }), null);
+});
+
+test("nobody deactivates or resets their own account here", () => {
+  assert.equal(checkStaffChange(manager, { id: "u-manager", role: "salesman" }, { active: false }), "You cannot deactivate your own account.");
+  assert.equal(checkPasswordReset(owner, owner), "Use Change password for your own account.");
+  assert.equal(checkPasswordReset(owner, manager), null);
+  assert.equal(checkPasswordReset(manager, salesman), null);
+  assert.equal(checkPasswordReset(manager, owner), "You cannot reset this person's password.");
+});
+
+test("staff emails are unique, ignoring case and outer spaces", () => {
+  const staff = [{ id: "a", email: "Owner@Example.com" }, { id: "b", email: "sales@example.com" }];
+  assert.equal(emailTaken(staff, " owner@example.COM "), true);
+  assert.equal(emailTaken(staff, "owner@example.com", "a"), false, "a person keeps their own email");
+  assert.equal(emailTaken(staff, "new@example.com"), false);
 });

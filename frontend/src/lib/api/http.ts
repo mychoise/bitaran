@@ -13,8 +13,9 @@ export function createHttpClient(viewer: Viewer): ApiClient {
   const m = <T extends object>(names: (keyof T)[]) => Object.fromEntries(names.map((n) => [n, notConnected])) as unknown as T;
   return {
     viewer,
-    business: m<ApiClient["business"]>(["get"]),
-    staff: m<ApiClient["staff"]>(["list", "get", "create", "update"]),
+    business: m<ApiClient["business"]>(["get", "update"]),
+    staff: m<ApiClient["staff"]>(["list", "get", "create", "update", "resetPassword"]),
+    uploads: m<ApiClient["uploads"]>(["image"]),
     products: m<ApiClient["products"]>(["categories", "list", "get", "create", "update"]),
     shops: m<ApiClient["shops"]>(["routes", "list", "get", "statement", "create", "update"]),
     dayPlans: m<ApiClient["dayPlans"]>(["list", "get", "today", "create", "remove", "start", "markVisit", "close", "reconcile"]),

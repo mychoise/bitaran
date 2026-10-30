@@ -27,8 +27,26 @@ export function sessionSecret(): string {
   return secret || DEV_SESSION_SECRET;
 }
 
+/**
+ * API_MODE: where the app's data comes from. "mock" (default) is the in-browser demo store;
+ * "api" is the real backend. Never throws, so pages can read it while a build prerenders;
+ * the production guard below is what refuses mock.
+ */
+export function readApiMode(): AuthMode {
+  return (process.env.API_MODE ?? "mock").trim().toLowerCase() === "api" ? "api" : "mock";
+}
+
+function assertApiMode() {
+  const raw = (process.env.API_MODE ?? "mock").trim().toLowerCase();
+  if (raw !== "mock" && raw !== "api") throw new Error(`API_MODE must be "mock" or "api", not "${raw}".`);
+  if (raw === "mock" && isProduction) {
+    throw new Error("API_MODE=mock is not allowed in a production build. Set API_MODE=api once the backend is connected.");
+  }
+}
+
 /** Fails fast at server start when the settings are unsafe for production. */
 export function assertAuthConfig() {
   authMode();
+  assertApiMode();
   sessionSecret();
 }

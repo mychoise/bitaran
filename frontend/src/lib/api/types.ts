@@ -16,7 +16,21 @@ export type Page<T> = { items: T[]; total: number; page: number; pageSize: numbe
 export type PageQuery = { page?: number; pageSize?: number };
 export type DateRange = { from?: BusinessDate; to?: BusinessDate };
 
-export type Business = { id: Id; name: string; pan: string; address: string; phone: string };
+export type Business = {
+  id: Id;
+  name: string;
+  /** Set once at sign-up. Shown, never edited in the app. */
+  pan: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  /** Company registration number, if the business has one. */
+  registrationNo: string;
+  logoImageId?: Id;
+  /** Where to load the logo from. Sent by the server; never written by the app. */
+  logoUrl?: string;
+};
 
 export type Staff = {
   id: Id;
@@ -24,8 +38,12 @@ export type Staff = {
   role: StaffRole;
   email: string;
   phone: string;
+  /** Inactive people cannot sign in. Their records stay; nobody is ever deleted. */
   active: boolean;
   joinedOn: BusinessDate;
+  lastLoginAt?: Instant;
+  /** When a manager last set a temporary password. The password itself is never sent back. */
+  passwordResetAt?: Instant;
 };
 
 export type Category = { id: Id; name: string };

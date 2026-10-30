@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { AreaPage } from "@/components/auth/AreaPage";
+import { SalesmanToday } from "@/components/app/Homes";
 
-export const metadata: Metadata = { title: "Salesman" };
+export const metadata: Metadata = { title: "Today" };
 
 /** Salesmen land here. */
 export default function SalesmanPage() {
-  return <AreaPage path="/app/salesman" />;
+  return <SalesmanToday />;
 }

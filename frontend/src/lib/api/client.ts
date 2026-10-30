@@ -40,6 +40,14 @@ import type {
 // ---- inputs and filters --------------------------------------------------------------------
 
 export type StaffInput = { fullName: string; role: Exclude<StaffRole, "owner">; email: string; phone: string };
+/** A new account starts with a temporary password the manager types and passes on in person. */
+export type StaffCreateInput = StaffInput & { temporaryPassword: string };
+export type StaffUpdateInput = Partial<StaffInput> & { active?: boolean };
+export type StaffFilter = { search?: string; role?: StaffRole; active?: boolean };
+export type BusinessInput = Pick<Business, "name" | "phone" | "email" | "address" | "city" | "registrationNo"> & {
+  /** An id from uploads.image; null removes the logo. */
+  logoImageId?: Id | null;
+};
 export type ProductInput = Omit<Product, "id" | "costPricePaisa"> & { costPricePaisa: Paisa };
 export type ShopInput = { name: string; ownerName: string; phone: string; address: string; routeId: Id; creditLimitPaisa: Paisa; openingBalancePaisa: Paisa; dueDays: number };
 export type SaleLineInput = { productId: Id; quantity: number; unit: SaleUnit };
@@ -66,12 +74,19 @@ export interface ApiClient {
 
   business: {
     get(): Promise<Business>;
+    /** Owner only. The PAN cannot be changed. */
+    update(input: Partial<BusinessInput>): Promise<Business>;
   };
   staff: {
-    list(): Promise<Staff[]>;
+    list(filter?: StaffFilter): Promise<Staff[]>;
     get(id: Id): Promise<Staff>;
-    create(input: StaffInput): Promise<Staff>;
-    update(id: Id, input: Partial<StaffInput> & { active?: boolean }): Promise<Staff>;
+    create(input: StaffCreateInput): Promise<Staff>;
+    update(id: Id, input: StaffUpdateInput): Promise<Staff>;
+    resetPassword(id: Id, temporaryPassword: string): Promise<void>;
+  };
+  uploads: {
+    /** Stores an image and returns its id, to attach to a record. */
+    image(file: Blob): Promise<{ id: Id; url: string }>;
   };
   products: {
     categories(): Promise<Category[]>;

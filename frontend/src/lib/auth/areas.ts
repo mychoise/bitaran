@@ -15,6 +15,8 @@ export function landingFor(p: Profile): string {
 export function canOpen(pathname: string, p: Profile): boolean {
   const path = pathname.replace(/\/+$/, "");
   if (path === "/app/change-password") return true;
+  // Business settings: the owner only.
+  if (path === "/app/manager/settings" || path.startsWith("/app/manager/settings/")) return p.type === "staff" && p.role === "owner";
   if (path.startsWith("/app/manager")) return p.type === "staff" && (p.role === "owner" || p.role === "manager");
   if (path.startsWith("/app/salesman")) return p.type === "staff" && p.role === "salesman";
   if (path.startsWith("/app/shop")) return p.type === "shop";

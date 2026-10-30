@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { AreaPage } from "@/components/auth/AreaPage";
+import { ManagerToday } from "@/components/app/Homes";
 
-export const metadata: Metadata = { title: "Manager" };
+export const metadata: Metadata = { title: "Today" };
 
 /** Owners and managers land here. */
 export default function ManagerPage() {
-  return <AreaPage path="/app/manager" />;
+  return <ManagerToday />;
 }
