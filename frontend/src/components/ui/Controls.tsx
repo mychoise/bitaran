@@ -175,12 +175,12 @@ export function DemoImage({ src, alt, className = "" }: { src: string; alt: stri
 }
 
 /** A thumbnail that opens the full image in a modal. */
-export function ImageViewer({ src, alt }: { src: string; alt: string }) {
+export function ImageViewer({ src, alt, thumbClassName = "h-20 w-28" }: { src: string; alt: string; /** Size of the thumbnail. */ thumbClassName?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="choice rounded-input" aria-label={`Open ${alt}`}>
-        <DemoImage src={src} alt={alt} className="h-20 w-28" />
+      <button type="button" onClick={() => setOpen(true)} className={`choice rounded-input ${thumbClassName.includes("w-full") ? "block w-full" : ""}`.trim()} aria-label={`Open ${alt}`}>
+        <DemoImage src={src} alt={alt} className={thumbClassName} />
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title={alt}>
         <DemoImage src={src} alt={alt} className="h-80 w-full" />

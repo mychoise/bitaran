@@ -6,14 +6,16 @@ export type NavEntry = { href: string; label: string; icon: string; ownerOnly?: 
 
 export const managerNav: NavEntry[] = [
   { href: "/app/manager", label: "Today", icon: "home" },
-  { href: "/app/manager/plans", label: "Day plans", icon: "route" },
-  { href: "/app/manager/sales", label: "Sales", icon: "receipt" },
-  { href: "/app/manager/payments", label: "Payments", icon: "wallet" },
-  { href: "/app/manager/shops", label: "Shops", icon: "store" },
+  { href: "/app/manager/day-plans", label: "Day plans", icon: "route", built: true },
+  { href: "/app/manager/sales", label: "Sales", icon: "receipt", built: true },
+  { href: "/app/manager/payments", label: "Payments", icon: "wallet", built: true },
+  { href: "/app/manager/shops", label: "Shops", icon: "store", built: true },
+  { href: "/app/manager/routes", label: "Routes", icon: "route", built: true },
   { href: "/app/manager/products", label: "Products and stock", icon: "box", built: true },
-  { href: "/app/manager/returns", label: "Returns and write-offs", icon: "return" },
-  { href: "/app/manager/expenses", label: "Expenses", icon: "wallet" },
-  { href: "/app/manager/photos", label: "Visit photos", icon: "camera" },
+  { href: "/app/manager/returns", label: "Returns", icon: "return", built: true },
+  { href: "/app/manager/write-offs", label: "Write-offs", icon: "box", built: true },
+  { href: "/app/manager/expenses", label: "Expenses", icon: "wallet", built: true },
+  { href: "/app/manager/photos", label: "Visit photos", icon: "camera", built: true },
   { href: "/app/manager/reports", label: "Reports", icon: "chart" },
   { href: "/app/manager/staff", label: "Staff", icon: "users", built: true },
   { href: "/app/manager/settings", label: "Settings", icon: "settings", ownerOnly: true, built: true },
@@ -23,10 +25,10 @@ export const managerNavFor = (role: StaffRole) => managerNav.filter((n) => !n.ow
 
 export const salesmanNav: NavEntry[] = [
   { href: "/app/salesman", label: "Today", icon: "home" },
-  { href: "/app/salesman/shops", label: "Shops", icon: "store" },
-  { href: "/app/salesman/sell", label: "Sell", icon: "cart" },
-  { href: "/app/salesman/stock", label: "Stock", icon: "box" },
-  { href: "/app/salesman/more", label: "More", icon: "more" },
+  { href: "/app/salesman/shops", label: "Shops", icon: "store", built: true },
+  { href: "/app/salesman/today", label: "Sales", icon: "receipt", built: true },
+  { href: "/app/salesman/stock", label: "Stock", icon: "box", built: true },
+  { href: "/app/salesman/more", label: "More", icon: "more", built: true },
 ];
 
 export const shopNav: NavEntry[] = [

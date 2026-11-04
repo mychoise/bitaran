@@ -35,10 +35,12 @@ type Props<T> = {
   /** Controlled sort, e.g. kept in the URL. Without it the table sorts itself. */
   sort?: SortState;
   onSortChange?: (s: SortState) => void;
+  /** A totals row under the rows, by column key. The first column shows `label` unless given a cell. */
+  totals?: { label: string; cells: Partial<Record<string, ReactNode>> };
 };
 
 /** A dense data table in a cotton card: sticky header, sortable columns, loading, empty and error states. */
-export function Table<T>({ caption, columns: allColumns, rows, rowKey, loading, error, onRetry, empty, sort: controlled, onSortChange }: Props<T>) {
+export function Table<T>({ caption, columns: allColumns, rows, rowKey, loading, error, onRetry, empty, sort: controlled, onSortChange, totals }: Props<T>) {
   const columns = useMemo(() => allColumns.filter((c) => !c.csvOnly), [allColumns]);
   const [own, setOwn] = useState<SortState>(null);
   const sort = controlled !== undefined ? controlled : own;
@@ -114,6 +116,23 @@ export function Table<T>({ caption, columns: allColumns, rows, rowKey, loading, 
                   </tr>
                 ))}
           </tbody>
+          {totals && !loading && sorted?.length ? (
+            <tfoot>
+              <tr>
+                {columns.map((c, i) =>
+                  i === 0 ? (
+                    <th key={c.key} scope="row" className={c.numeric ? "num" : ""}>
+                      {totals.cells[c.key] ?? totals.label}
+                    </th>
+                  ) : (
+                    <td key={c.key} className={c.numeric ? "num" : ""}>
+                      {totals.cells[c.key] ?? null}
+                    </td>
+                  ),
+                )}
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
       </div>
       {!loading && sorted && sorted.length === 0 ? (

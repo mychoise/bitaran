@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { SalesmanToday } from "@/components/app/Homes";
+import { Today } from "@/components/app/salesman/Today";
 
 export const metadata: Metadata = { title: "Today" };
 
 /** Salesmen land here. */
 export default function SalesmanPage() {
-  return <SalesmanToday />;
+  return <Today />;
 }

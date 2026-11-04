@@ -2,7 +2,7 @@
 // things with the same words. The backend must check the same (see docs/api-contract.md).
 
 import { z } from "zod";
-import { checkCarton, TEMP_PASSWORD_MIN } from "./mock/rules.ts";
+import { checkCarton, checkLocation, checkPan, TEMP_PASSWORD_MIN } from "./mock/rules.ts";
 
 export const requiredText = (what: string, max: number) =>
   z.string().trim().min(1, `Enter the ${what}.`).max(max, `Keep the ${what} under ${max} characters.`);
@@ -75,6 +75,38 @@ export const productCreateSchema = withCartonRule(productFields.extend({ stockUn
 export const productUpdateSchema = productFields.partial();
 /** A whole product, used to check the result of an update. */
 export const productSchema = withCartonRule(productFields);
+
+export const routeNameField = requiredText("route name", 80);
+
+const shopFields = z.object({
+  name: requiredText("shop name", 120),
+  ownerName: requiredText("owner's name", 100),
+  phone: phoneField,
+  address: requiredText("address", 200),
+  routeId: z.string().min(1).nullable(),
+  pan: z.string().trim(),
+  panImageId: z.string().nullable().optional(),
+  registrationNo: z.string().trim().max(50, "Keep the registration number under 50 characters."),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+  creditLimitPaisa: paisa("credit limit"),
+  openingBalancePaisa: z.number("Enter the opening balance.").int("Enter the opening balance in rupees and paisa."),
+  dueDays: z.number("Enter the days to pay.").int("Days to pay is a whole number.").min(0, "Days to pay cannot be below zero.").max(365, "Keep days to pay to a year or less."),
+});
+const shopLogin = { loginEmail: emailField.optional(), temporaryPassword: temporaryPasswordField.optional() };
+
+/** The PAN and location rules, checked on the whole shop (after a partial update is merged). */
+const shopRules = (v: { pan: string; latitude: number | null; longitude: number | null }, ctx: z.RefinementCtx) => {
+  const pan = checkPan(v.pan);
+  if (pan) ctx.addIssue({ code: "custom", path: ["pan"], message: pan });
+  const at = checkLocation(v.latitude, v.longitude);
+  if (at) ctx.addIssue({ code: "custom", path: ["latitude"], message: at });
+};
+
+export const shopCreateSchema = shopFields.extend(shopLogin).superRefine(shopRules);
+export const shopUpdateSchema = shopFields.partial().extend({ ...shopLogin, active: z.boolean().optional() });
+/** A whole shop, used to check the result of an update. */
+export const shopSchema = shopFields.superRefine(shopRules);
 
 /** The first problem, in words a person can act on. */
 export const firstIssue = (err: z.ZodError) => err.issues[0]?.message ?? "Check the form and try again.";

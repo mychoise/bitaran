@@ -22,7 +22,7 @@ import type {
 } from "../types.ts";
 import { priceLine } from "./rules.ts";
 
-export const DEMO_DATA_VERSION = 4;
+export const DEMO_DATA_VERSION = 10;
 
 export type StoredCategory = Omit<Category, "productCount">;
 
@@ -45,6 +45,8 @@ export type DemoData = {
   photos: VisitPhoto[];
   /** Images captured in the app (data URLs), by id. Seeded images are drawn, not stored. */
   images: Record<string, string>;
+  /** Idempotency keys already used, with what each one made. A repeated submit returns it. */
+  idempotency: Record<string, { kind: string; id: string }>;
 };
 
 /** Seeded images are drawn locally from their id (see DemoImage); nothing is fetched. */
@@ -151,19 +153,41 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
     ["s-demo6", "Demo Mart", "r-lakeside", "Baidam"],
     ["s-demo7", "Demo Traders", "r-lakeside", "Lakeside"],
   ];
-  const shops: Shop[] = shopRows.map(([id, name, routeId, place], i) => ({
-    id,
-    name,
-    ownerName: `Demo Owner ${i + 1}`,
-    phone: `+977 98000001${String(i).padStart(2, "0")}`,
-    address: `${place}, Pokhara (demo)`,
-    routeId,
-    creditLimitPaisa: rupees(pick([20_000, 30_000, 40_000, 60_000])),
-    openingBalancePaisa: rupees(pick([0, 0, 2_500, 8_000, 12_000])),
-    dueDays: pick([7, 15]),
-    active: true,
-    hasLogin: id.startsWith("s-shop"),
-  }));
+  // Rough centres of each place, for the location field. Approximate; demo only.
+  const PLACE_AT: Record<string, [number, number]> = {
+    Bagar: [28.2489, 83.989],
+    Mahendrapul: [28.224, 83.989],
+    "Prithvi Chowk": [28.2003, 83.9824],
+    Lamachaur: [28.2706, 83.9766],
+    Chipledhunga: [28.2167, 83.9868],
+    "Srijana Chowk": [28.2106, 83.979],
+    Baidam: [28.2073, 83.96],
+    Lakeside: [28.212, 83.9585],
+  };
+  const LOGIN: Record<string, string> = { "s-shop": "shop@example.com", "s-shop2": "shop2@example.com", "s-shop3": "shop3@example.com" };
+  const shops: Shop[] = shopRows.map(([id, name, routeId, place], i) => {
+    const at = i % 3 === 2 ? null : PLACE_AT[place];
+    return {
+      id,
+      name,
+      ownerName: `Demo Owner ${i + 1}`,
+      phone: `+977 98000001${String(i).padStart(2, "0")}`,
+      address: `${place}, Pokhara (demo)`,
+      routeId,
+      // Demo PANs: 9 digits, unique, made up. Two shops have none yet.
+      pan: i === 4 || i === 8 ? "" : String(100_000_101 + i * 7),
+      registrationNo: i % 4 === 0 ? `DEMO-REG-${100 + i}` : "",
+      latitude: at ? at[0] : null,
+      longitude: at ? at[1] : null,
+      creditLimitPaisa: rupees(pick([20_000, 30_000, 40_000, 60_000])),
+      openingBalancePaisa: rupees(pick([0, 0, 2_500, 8_000, 12_000])),
+      dueDays: pick([7, 15]),
+      active: true,
+      hasLogin: id in LOGIN,
+      loginEmail: LOGIN[id],
+      createdByRole: "manager",
+    };
+  });
   // One shop starts near its limit so the credit rule shows up in the demo.
   shops[2].creditLimitPaisa = rupees(20_000);
   shops[2].openingBalancePaisa = rupees(17_500);
@@ -199,14 +223,16 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
     const route = routes.find((r) => r.id === spec.routeId)!;
     const carried = [...products].sort(() => rand() - 0.5).slice(0, 6);
     const issued: StockLine[] = carried.map((p) => ({ productId: p.id, units: (p.unitsPerCarton ?? 12) * between(1, 2) }));
+    const planId = `d-${String(n + 1).padStart(2, "0")}`;
     const plan: DayPlan = {
-      id: `d-${String(n + 1).padStart(2, "0")}`,
+      id: planId,
       date,
       salesmanId: spec.salesmanId,
       routeId: route.id,
       status: spec.status,
       issued,
-      visits: route.shopIds.map((shopId) => ({ shopId, status: "pending" })),
+      visits: route.shopIds.map((shopId, i) => ({ id: `${planId}-v${i + 1}`, shopId, status: "pending" })),
+      createdAt: nepalInstant(addDays(date, -1), "17:30"),
     };
     dayPlans.push(plan);
     if (spec.status === "planned") continue;
@@ -287,6 +313,14 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
     toCancel.status = "cancelled";
     toCancel.cancelledAt = nepalInstant(toCancel.date, "17:00");
     toCancel.cancelReason = "Entered for the wrong shop (demo)";
+    // Its goods never left the salesman, so they came back with the rest of the stock.
+    const plan = dayPlans.find((p) => p.id === toCancel.planId);
+    for (const line of toCancel.lines) {
+      for (const counts of [plan?.reportedUnsold, plan?.counted]) {
+        const row = counts?.find((l) => l.productId === line.productId);
+        if (row) row.units += line.baseUnits;
+      }
+    }
   }
 
   // Cheque and online payments in every state, with drawn image placeholders.
@@ -319,7 +353,7 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
   }
 
   // Flag three visit photos so the manager's review has something to look at.
-  const flagged: VisitPhoto["flags"][] = [["old_photo"], ["far_from_shop"], ["duplicate"]];
+  const flagged: VisitPhoto["flags"][] = [["old_photo"], ["far_from_shop"], ["duplicate"], ["no_photo_data"]];
   flagged.forEach((flags, i) => {
     const photo = photos[3 + i * 5];
     if (!photo) return;
@@ -327,6 +361,7 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
     if (flags[0] === "old_photo") photo.deviceTakenAt = nepalInstant(addDays(nepalDateOf(photo.takenAt), -3), "10:00");
     if (flags[0] === "far_from_shop") photo.distanceM = 1400;
     if (flags[0] === "duplicate") photo.imageId = photos[0].imageId;
+    if (flags[0] === "no_photo_data") delete photo.deviceTakenAt;
   });
 
   const returns: Return[] = [
@@ -342,15 +377,28 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
   }
 
   const writeOffs: WriteOff[] = [
-    { id: "wo-1", date: addDays(today, -4), productId: "p-11", units: 3, reason: "damaged", note: "Bags torn in the store (demo)", createdBy: "u-manager" },
-    { id: "wo-2", date: addDays(today, -1), productId: "p-16", units: 2, reason: "expired", note: "Past its date (demo)", createdBy: "u-manager" },
+    { id: "wo-1", date: addDays(today, -4), createdAt: nepalInstant(addDays(today, -4), "11:00"), productId: "p-11", units: 3, unit: "unit", quantity: 3, reason: "damaged", note: "Bags torn in the store (demo)", createdBy: "u-manager" },
+    { id: "wo-2", date: addDays(today, -1), createdAt: nepalInstant(addDays(today, -1), "11:00"), productId: "p-16", units: 2, unit: "unit", quantity: 2, reason: "expired", note: "Past its date (demo)", createdBy: "u-manager" },
   ];
 
   const expenses: Expense[] = [];
-  const expense = (staffId: string, type: Expense["type"], offset: number, amount: number, note: string, bill = false) =>
-    expenses.push({ id: `exp-${expenses.length + 1}`, date: addDays(today, offset), staffId, type, amountPaisa: rupees(amount), note, billImageId: bill ? demoImageId("bill", imageN++) : undefined });
-  expense("u-salesman", "salary", -5, 18_000, "Monthly salary (demo)");
-  expense("u-salesman2", "salary", -5, 16_000, "Monthly salary (demo)");
+  const expense = (staffId: string, type: Expense["type"], offset: number, amount: number, note: string, bill = false) => {
+    const date = addDays(today, offset);
+    // Fuel and khaja go on that day's plan when the person had one.
+    const planId = type === "fuel" || type === "khaja" ? dayPlans.find((p) => p.date === date && p.salesmanId === staffId)?.id : undefined;
+    expenses.push({ id: `exp-${expenses.length + 1}`, date, staffId, type, amountPaisa: rupees(amount), note, billImageId: bill ? demoImageId("bill", imageN++) : undefined, planId, createdBy: type === "salary" ? "u-owner" : staffId, createdAt: nepalInstant(date, "18:00") });
+  };
+  /** Salary paid on a day covers the month before it. */
+  const salary = (staffId: string, offset: number, amount: number) => {
+    expense(staffId, "salary", offset, amount, "Monthly salary (demo)");
+    const [y, m] = addDays(today, offset).slice(0, 7).split("-").map(Number);
+    expenses[expenses.length - 1].salaryMonth = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+  };
+  for (const back of [-65, -35, -5]) {
+    salary("u-salesman", back, 18_000);
+    salary("u-salesman2", back, 16_000);
+  }
+  for (const back of [-40, -38, -33, -70, -68]) expense("u-salesman", "fuel", back, 450, "Motorbike fuel (demo)");
   for (let d = -6; d <= -1; d++) {
     expense("u-salesman", "fuel", d, 450, "Motorbike fuel (demo)", d % 2 === 0);
     expense("u-salesman", "khaja", d, 180, "Khaja on route (demo)");
@@ -358,5 +406,5 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
   }
   expense("u-manager", "misc", -3, 300, "Packing tape (demo)", true);
 
-  return { version: DEMO_DATA_VERSION, seededOn: today, business, staff, categories, products, routes, shops, dayPlans, sales, payments, returns, writeOffs, expenses, photos, images: {} };
+  return { version: DEMO_DATA_VERSION, seededOn: today, business, staff, categories, products, routes, shops, dayPlans, sales, payments, returns, writeOffs, expenses, photos, images: {}, idempotency: {} };
 }

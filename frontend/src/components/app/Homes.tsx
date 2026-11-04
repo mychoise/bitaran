@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { Card, MoneyText, PageHeader, Stat, StatusBadge } from "@/components/ui/Display";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
-import { formatDate, formatTime, todayNepal } from "@/lib/dates";
+import { formatDate, todayNepal } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { errorMessage, useApiQuery } from "@/lib/api/provider";
 
@@ -47,78 +47,6 @@ export function ManagerToday() {
           </ul>
         </Card>
       ) : null}
-    </>
-  );
-}
-
-export function SalesmanToday() {
-  const plan = useApiQuery(["dayPlans", "today"], (api) => api.dayPlans.today());
-  const routes = useApiQuery(["shops", "routes"], (api) => api.shops.routes());
-  const shops = useApiQuery(["shops", "list", "all"], (api) => api.shops.list({ pageSize: 200 }));
-  if (plan.isPending) return <LoadingState label="Loading today" />;
-  if (plan.isError) return <ErrorState message={errorMessage(plan.error)} onRetry={() => plan.refetch()} />;
-  const p = plan.data;
-  if (!p) return <EmptyState title="No route today" line="Your manager has not given you a route for today. When they do, it shows here." />;
-  const route = routes.data?.find((r) => r.id === p.routeId);
-  const count = (status: string) => p.visits.filter((v) => v.status === status).length;
-  const shop = (id: string) => shops.data?.items.find((s) => s.id === id);
-  const units = p.issued.reduce((a, l) => a + l.units, 0);
-  return (
-    <>
-      <PageHeader title={route?.name ?? "Today's route"} lead={formatDate(p.date)} />
-      {/* Phones: the summary first, then the shops. Desktop: shops on the left, summary beside them. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
-        <Card dense className="lg:sticky lg:top-24 lg:col-start-3 lg:row-start-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={p.status} />
-            <span className="text-ink-2">
-              {p.visits.length - count("pending")} of {p.visits.length} shops done
-            </span>
-          </div>
-          <dl className="m-0 mt-5 grid grid-cols-3 gap-4 lg:grid-cols-1">
-            {[
-              ["Visited", count("visited")],
-              ["Skipped", count("skipped")],
-              ["To visit", count("pending")],
-            ].map(([label, n]) => (
-              <div key={label} className="flex flex-col gap-1 lg:flex-row lg:items-baseline lg:justify-between">
-                <dt className="text-sm text-muted">{label}</dt>
-                <dd className="m-0 font-outlier text-2xl leading-tight">{n}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-5 border-t border-rule-2 pt-4 text-sm text-ink-2">
-            Stock issued: {p.issued.length} product{p.issued.length === 1 ? "" : "s"}, {units} units
-          </p>
-        </Card>
-        <section aria-labelledby="route-shops" className="lg:col-span-2 lg:row-start-1">
-          <h2 id="route-shops" className="text-title tracking-normal">
-            Shops on this route
-          </h2>
-          <ol className="m-0 mt-4 grid list-none grid-cols-1 gap-3 p-0 xl:grid-cols-2">
-            {p.visits.map((v, i) => {
-              const s = shop(v.shopId);
-              return (
-                <li key={v.shopId}>
-                  <Card dense className="flex h-full items-center gap-4">
-                    <span className="w-6 font-outlier text-lg text-muted">{i + 1}</span>
-                    <span className="flex min-w-0 flex-1 flex-col gap-1">
-                      <span className="text-lg font-medium">{s?.name ?? "…"}</span>
-                      {s ? (
-                        <span className="text-sm text-ink-2">
-                          Balance <MoneyText paisa={s.balancePaisa} balance />
-                          {v.at ? <> · visited {formatTime(v.at)}</> : null}
-                        </span>
-                      ) : null}
-                    </span>
-                    {v.status === "pending" ? <StatusBadge status="pending" label="To visit" /> : <StatusBadge status={v.status} />}
-                  </Card>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      </div>
     </>
   );
 }

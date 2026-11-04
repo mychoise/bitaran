@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkCarton, remainingOnPlan, shopBalance, skuTaken, validPrice } from "./rules.ts";
+import { checkCarton, checkLocation, planShortage, checkPan, panTaken, remainingOnPlan, shopBalance, shopEmailTaken, skuTaken, validPrice } from "./rules.ts";
 import { seedDemoData } from "./seed.ts";
 
 const data = seedDemoData("2026-10-14");
@@ -55,4 +55,23 @@ test("seeded products obey the product rules", () => {
     assert.ok(Number.isInteger(p.stockUnits) && p.stockUnits >= 0, p.name);
     assert.ok(data.categories.some((c) => c.id === p.categoryId), p.name);
   }
+});
+
+test("seeded shops obey the shop rules, and routes and shops agree", () => {
+  for (const s of data.shops) {
+    assert.equal(checkPan(s.pan), null, s.name);
+    assert.equal(panTaken(data.shops, s.pan, s.id), false, `unique PAN ${s.pan}`);
+    assert.equal(checkLocation(s.latitude, s.longitude), null, s.name);
+    if (s.loginEmail) assert.equal(shopEmailTaken(data.shops, s.loginEmail, s.id), false, s.loginEmail);
+    assert.equal(s.hasLogin, Boolean(s.loginEmail), s.name);
+    const onRoutes = data.routes.filter((r) => r.shopIds.includes(s.id)).map((r) => r.id);
+    assert.deepEqual(onRoutes, s.routeId ? [s.routeId] : [], `${s.name} is on exactly its own route`);
+  }
+});
+
+test("seeded day plans: counts never exceed what was left, one plan shows a shortage", () => {
+  const withShortage = data.dayPlans.filter((p) => p.counted).map((p) => planShortage(p, data.sales, data.writeOffs.filter((w) => w.planId === p.id)));
+  for (const rows of withShortage) for (const r of rows) assert.ok(r.shortage >= 0, `no negative shortage for ${r.productId}`);
+  assert.equal(withShortage.filter((rows) => rows.some((r) => r.shortage > 0)).length, 1, "exactly one reconciled plan is short");
+  for (const p of data.dayPlans) assert.equal(new Set(data.dayPlans.filter((q) => q.salesmanId === p.salesmanId && q.routeId === p.routeId && q.date === p.date)).size, 1);
 });

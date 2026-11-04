@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatAmount, formatBalance, formatMoney, groupIndian, parseRupees, sumPaisa } from "./money.ts";
+import { formatAmount, formatBalance, formatMoney, groupIndian, parseRupees, parseSignedRupees, sumPaisa } from "./money.ts";
 
 test("groups digits the Nepali/Indian way", () => {
   assert.equal(groupIndian("0"), "0");
@@ -38,4 +38,12 @@ test("parses typed rupees into paisa exactly", () => {
   assert.equal(parseRupees("abc"), null);
   // 0.1 + 0.2 style float errors cannot happen: 0.10 + 0.20 rupees is 30 paisa
   assert.equal(sumPaisa([parseRupees("0.10")!, parseRupees("0.20")!]), 30);
+});
+
+test("signed rupees: a minus means credit", () => {
+  assert.equal(parseSignedRupees("-500"), -50_000);
+  assert.equal(parseSignedRupees("− 1,250.50"), -125_050);
+  assert.equal(parseSignedRupees("2,500"), 250_000);
+  assert.equal(parseSignedRupees("-"), null);
+  assert.equal(parseSignedRupees("--5"), null);
 });

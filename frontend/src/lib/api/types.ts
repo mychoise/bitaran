@@ -86,13 +86,32 @@ export type Shop = {
   ownerName: string;
   phone: string;
   address: string;
-  routeId: Id;
+  /** Null while the shop is on no route. */
+  routeId: Id | null;
+  /** The shop's PAN, 9 digits, unique in the business. "" when it has none. */
+  pan: string;
+  /** A photo of the PAN card, when there is one. */
+  panImageId?: Id;
+  /** Where to load the PAN card photo from. Sent by the server; never written by the app. */
+  panImageUrl?: string;
+  registrationNo: string;
+  /** Where the shop is, typed in as numbers (no map). Both set, or both null. */
+  latitude: number | null;
+  longitude: number | null;
   creditLimitPaisa: Paisa;
+  /** Owed when the shop was added. Negative means it started with credit. */
   openingBalancePaisa: Paisa;
   /** Days after a sale before it is due. */
   dueDays: number;
+  /** Inactive shops are not visited or sold to. Shops are never deleted. */
   active: boolean;
   hasLogin: boolean;
+  /** The email the shop signs in with, when it has a login. Unique across shops. */
+  loginEmail?: string;
+  /** When a manager last set a temporary password. The password itself is never sent back. */
+  passwordResetAt?: Instant;
+  /** Who added the shop. A salesman's shops start with no credit and no opening balance. */
+  createdByRole?: StaffRole;
 };
 
 export type ShopWithBalance = Shop & {
@@ -103,11 +122,52 @@ export type ShopWithBalance = Shop & {
   overduePaisa: Paisa;
 };
 
+/** A shop's balance, part by part. */
+export type ShopBalance = {
+  openingPaisa: Paisa;
+  salesPaisa: Paisa;
+  paymentsPaisa: Paisa;
+  returnsPaisa: Paisa;
+  /** Owed: opening + sales − payments − returns. Negative means the shop has credit. */
+  balancePaisa: Paisa;
+  /** Pending cheques and online payments, not yet counted. */
+  inClearingPaisa: Paisa;
+  overduePaisa: Paisa;
+  creditLimitPaisa: Paisa;
+  /** How much of the credit limit the balance uses, 0 when the shop owes nothing. */
+  creditUsedPaisa: Paisa;
+};
+
+/** What a shop has taken to date: one row per product and unit, from confirmed sales. */
+export type ItemTaken = { productId: Id; unit: "unit" | "carton"; quantity: number; baseUnits: number; totalPaisa: Paisa };
+
 export type StockLine = { productId: Id; units: number };
 
 export type DayPlanStatus = "planned" | "in_progress" | "closed" | "reconciled";
 export type VisitStatus = "pending" | "visited" | "skipped";
-export type Visit = { shopId: Id; status: VisitStatus; at?: Instant; skipReason?: string };
+export type Visit = {
+  id: Id;
+  shopId: Id;
+  status: VisitStatus;
+  /** When it was marked visited or skipped. */
+  at?: Instant;
+  skipReason?: string;
+  /** Added on the day: a shop that was not on the route. */
+  adHoc?: boolean;
+};
+
+/** A visit with its shop, as the salesman sees it on the day. */
+export type VisitShop = {
+  visit: Visit;
+  planId: Id;
+  planStatus: DayPlanStatus;
+  /** Its place in the day's list, from 1. */
+  position: number;
+  shop: ShopWithBalance;
+  /** Confirmed sales to this shop on this plan. */
+  todayPurchasesPaisa: Paisa;
+  todaySalesCount: number;
+};
 
 export type DayPlan = {
   id: Id;
@@ -121,11 +181,50 @@ export type DayPlan = {
   reportedUnsold?: StockLine[];
   /** The manager's count when reconciling. It wins over the salesman's number. */
   counted?: StockLine[];
+  /** What the salesman says he handed over at closing. */
   cashHandedOverPaisa?: Paisa;
+  /** What the manager counted when reconciling. */
   cashCountedPaisa?: Paisa;
+  /** The manager's notes when reconciling. */
+  reconcileNotes?: string;
+  reconciledBy?: Id;
+  createdAt?: Instant;
   startedAt?: Instant;
   closedAt?: Instant;
   reconciledAt?: Instant;
+};
+
+/** One product's stock on a day plan. All in base units. */
+export type DayStockLine = {
+  productId: Id;
+  issued: number;
+  sold: number;
+  /** issued − sold − written off: what should still be with the salesman. */
+  remaining: number;
+  /** The salesman's count at closing, when closed. */
+  reportedUnsold: number | null;
+  /** The manager's count, once reconciled. */
+  counted: number | null;
+  writtenOff: number;
+  /** issued − sold − back − written off, using the manager's count once there is one. */
+  shortage: number | null;
+};
+
+/** A day plan with everything worked out: the plan's page and the end-of-day report. */
+export type DayReport = {
+  plan: DayPlan;
+  stock: DayStockLine[];
+  cash: {
+    /** Confirmed cash payments taken on this plan. */
+    collectedPaisa: Paisa;
+    handedOverPaisa: Paisa | null;
+    countedPaisa: Paisa | null;
+    /** counted (or handed over, before reconcile) − collected. Negative is cash missing. */
+    differencePaisa: Paisa | null;
+  };
+  sales: { count: number; totalPaisa: Paisa };
+  payments: { method: PaymentMethod; count: number; amountPaisa: Paisa; pendingCount: number }[];
+  visits: { visited: number; skipped: number; pending: number };
 };
 
 export type SaleUnit = "unit" | "carton";
@@ -155,8 +254,18 @@ export type Sale = {
   status: SaleStatus;
   cancelledAt?: Instant;
   cancelReason?: string;
+  /** The visit it was made on, for a salesman's sale. */
+  visitId?: Id;
+  /** Lines added up, before the discount. totalPaisa = subtotal − discount. */
+  subtotalPaisa?: Paisa;
+  discountPaisa?: Paisa;
+  /** Cash paid at the counter for this sale; recorded as a cash payment against it. */
+  cashPaidPaisa?: Paisa;
   /** Set when a manager or owner allowed a sale over the credit limit. */
   limitOverrideBy?: Id;
+  cancelledBy?: Id;
+  /** Confirmed payments made against this sale. Sent by the server. */
+  paidPaisa?: Paisa;
 };
 
 export type PaymentMethod = "cash" | "cheque" | "online";
@@ -174,6 +283,13 @@ export type Payment = {
   amountPaisa: Paisa;
   status: PaymentStatus;
   chequeNo?: string;
+  bank?: string;
+  chequeDate?: BusinessDate;
+  /** The online payment's reference number. */
+  reference?: string;
+  visitId?: Id;
+  /** Addresses of the images, in the same order as imageIds. Sent by the server. */
+  imageUrls?: string[];
   /** Cheque photos or online screenshots. */
   imageIds: Id[];
   decidedAt?: Instant;
@@ -189,6 +305,7 @@ export type Return = {
   shopId: Id;
   salesmanId: Id;
   planId?: Id;
+  visitId?: Id;
   lines: ReturnLine[];
   valuePaisa: Paisa;
 };
@@ -196,8 +313,12 @@ export type Return = {
 export type WriteOff = {
   id: Id;
   date: BusinessDate;
+  createdAt?: Instant;
   productId: Id;
+  /** In base units. The unit and quantity as typed are kept beside it. */
   units: number;
+  unit?: SaleUnit;
+  quantity?: number;
   reason: ReturnReason;
   note: string;
   planId?: Id;
@@ -211,11 +332,33 @@ export type Expense = {
   staffId: Id;
   type: ExpenseType;
   amountPaisa: Paisa;
+  /** The description. */
   note: string;
   billImageId?: Id;
+  /** Fuel and khaja: the day plan it was spent on, if any. */
+  planId?: Id;
+  /** Salary: the month it covers, "YYYY-MM". */
+  salaryMonth?: string;
+  createdBy?: Id;
+  createdAt?: Instant;
+  /** The last edit. No history of edits is kept yet. */
+  updatedAt?: Instant;
+  updatedBy?: Id;
+  /** Where to load the bill photo from. Sent by the server. */
+  billImageUrl?: string;
 };
 
-export type PhotoFlag = "old_photo" | "far_from_shop" | "duplicate";
+/** Expense totals over a date range, by type and by month (of the expense date). */
+export type ExpenseSummary = {
+  from: BusinessDate;
+  to: BusinessDate;
+  totalPaisa: Paisa;
+  count: number;
+  byType: { type: ExpenseType; count: number; amountPaisa: Paisa }[];
+  byMonth: { month: string; totalPaisa: Paisa; byType: Record<ExpenseType, Paisa> }[];
+};
+
+export type PhotoFlag = "old_photo" | "far_from_shop" | "duplicate" | "no_photo_data";
 export type VisitPhoto = {
   id: Id;
   planId: Id;
@@ -228,6 +371,50 @@ export type VisitPhoto = {
   distanceM?: number;
   imageId: Id;
   flags: PhotoFlag[];
+  visitId?: Id;
+  note?: string;
+  /** Where to load the image from. Sent by the server. */
+  imageUrl?: string;
+};
+
+/** Today's sales for the signed-in salesman (all salesmen for a manager), shop by shop. */
+export type TodayReport = {
+  date: BusinessDate;
+  count: number;
+  totalPaisa: Paisa;
+  cashCollectedPaisa: Paisa;
+  byShop: { shopId: Id; count: number; totalPaisa: Paisa; cashPaisa: Paisa }[];
+  /** Per salesman, biggest first. A salesman sees only their own row. */
+  bySalesman: { salesmanId: Id; count: number; totalPaisa: Paisa; cashPaisa: Paisa }[];
+};
+
+/** One line of a salesman's history: a sale or a payment they took. */
+export type SalesmanHistoryEntry = {
+  kind: "sale" | "payment";
+  id: Id;
+  date: BusinessDate;
+  /** When it was recorded, for ordering inside a day. */
+  at: Instant;
+  shopId: Id;
+  amountPaisa: Paisa;
+  status: SaleStatus | PaymentStatus;
+  /** The invoice number for a sale; the method for a payment. */
+  ref: string;
+};
+
+/** One salesman's numbers over a date range. Confirmed sales only; bounced payments left out. */
+export type SalesmanAnalytics = {
+  from: BusinessDate;
+  to: BusinessDate;
+  sales: { count: number; totalPaisa: Paisa };
+  payments: { method: PaymentMethod; count: number; amountPaisa: Paisa; pendingCount: number }[];
+  perDay: { date: BusinessDate; count: number; totalPaisa: Paisa }[];
+  perShop: { shopId: Id; count: number; totalPaisa: Paisa }[];
+  topProducts: { productId: Id; baseUnits: number; totalPaisa: Paisa }[];
+  returnsPaisa: Paisa;
+  expensesPaisa: Paisa;
+  /** Over the reconciled day plans in the range: units not accounted for, valued at the unit price. */
+  shortage: { plans: number; units: number; valuePaisa: Paisa; byProduct: { productId: Id; units: number; valuePaisa: Paisa }[] };
 };
 
 export type DashboardSummary = {
@@ -235,6 +422,10 @@ export type DashboardSummary = {
   salesTodayPaisa: Paisa;
   salesTodayCount: number;
   collectedTodayPaisa: Paisa;
+  /** Confirmed cash payments today. */
+  cashTodayPaisa: Paisa;
+  /** Cheque and online payments waiting for a decision (any date). */
+  pendingPaymentCount: number;
   inClearingPaisa: Paisa;
   overduePaisa: Paisa;
   overdueShopCount: number;

@@ -46,6 +46,11 @@ export function formatDate(d: BusinessDate): string {
   return `${+d.slice(8, 10)} ${MONTHS[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}`;
 }
 
+/** "2026-10" -> "Oct 2026". */
+export function formatMonth(ym: string): string {
+  return `${MONTHS[+ym.slice(5, 7) - 1]} ${ym.slice(0, 4)}`;
+}
+
 const timeFmt = new Intl.DateTimeFormat("en-GB", { timeZone: NEPAL_TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 /** An instant shown as Nepal time, "14:05". */

@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import { DayScroller, type DayPart } from "@/components/how/DayScroller";
 import { Flow } from "@/components/how/FlowDiagram";
+import { RoleExplorer, type Role } from "@/components/how/RoleExplorer";
 import { FinalCta } from "@/components/home/FinalCta";
+import { DailyPlanSheet } from "@/components/product/DailyPlanSheet";
 import { OpeningSheet } from "@/components/product/OpeningSheet";
+import { ReportsBoard } from "@/components/product/ReportsBoard";
 import { RouteScreen } from "@/components/product/RouteScreen";
+import { ShopStatementScreen } from "@/components/product/ShopStatementScreen";
 import { PageHero, SampleNote } from "@/components/site/PageHero";
 import { ProductFigure } from "@/components/ui/ProductFigure";
 import { pageMetadata } from "@/lib/metadata";
@@ -19,38 +24,106 @@ const start = [
   { title: "Run your first day", line: "Stock out in the morning, sales on the route, the count at night." },
 ];
 
-const day = [
+const day: DayPart[] = [
   {
     time: "Morning",
+    short: "Morning",
     title: "The plan and the stock",
     line: "The manager makes the day plan and hands out stock. Routes appear on each phone in order.",
     example: "Example Salesman takes 20 cartons of noodles and 48 bottles of oil.",
   },
   {
     time: "During the day",
+    short: "Day",
     title: "Shops, sales and payments",
     line: "At each shop the salesman sells, collects payment and takes a visit photo.",
     example: "At Example Kirana he sells 3 cartons and collects Rs 6,600 cash.",
   },
   {
     time: "Evening",
+    short: "Evening",
     title: "Close the day, count it back",
     line: "The salesman closes his day. The manager counts the stock and cash that come back.",
     example: "11 bottles of oil come back. The count shows 1 short.",
   },
   {
     time: "After",
+    short: "After",
     title: "The reports update",
     line: "Sales, balances, overdue udharo and low stock are up to date for the owner.",
     example: "Example Kirana now owes Rs 12,400, due on 20 Kartik.",
   },
 ];
 
-const roles = [
-  { role: "Owner", does: "Sees every sale, balance and report." },
-  { role: "Manager", does: "Plans routes, issues stock, confirms cheques, counts returns." },
-  { role: "Salesman", does: "Records his sales and payments. Sees only his own." },
-  { role: "Shop", does: "Sees its own balance and statement." },
+const roles: Role[] = [
+  {
+    name: "Owner",
+    where: "On a computer or a phone",
+    summary: "Sees the whole business, and is the one who sets it up: the business details, the managers and the salesmen.",
+    day: [
+      { when: "Morning", what: "Looks at yesterday's sales and which shops owe money." },
+      { when: "Day", what: "Watches sales and payments come in, route by route." },
+      { when: "Evening", what: "Sees the count, any shortage, and the day's totals." },
+    ],
+    can: ["See every sale, payment and balance", "See cost prices and margins", "Add managers and salesmen", "Change the business settings"],
+    cannot: [],
+    visual: (
+      <ProductFigure slot="how-role-owner" screenshot="Owner's reports: sales, balances and stock">
+        <ReportsBoard />
+      </ProductFigure>
+    ),
+  },
+  {
+    name: "Manager",
+    where: "On a computer",
+    summary: "Runs the day: plans each route, hands out the stock, confirms payments and counts what comes back.",
+    day: [
+      { when: "Morning", what: "Makes each salesman's plan and issues his stock." },
+      { when: "Day", what: "Confirms cheques and online payments as they arrive." },
+      { when: "Evening", what: "Counts the stock and cash that come back." },
+    ],
+    can: ["Plan routes and issue stock", "Confirm or bounce cheques", "Count returns and see shortages", "Add salesmen"],
+    cannot: ["Change the business settings", "Add other managers"],
+    visual: (
+      <ProductFigure slot="how-role-manager" screenshot="Manager's morning plan: route, shops in order, stock issued">
+        <DailyPlanSheet />
+      </ProductFigure>
+    ),
+  },
+  {
+    name: "Salesman",
+    where: "On his phone",
+    summary: "Rides the route and records every visit: the sale, the payment and a photo, shop by shop.",
+    day: [
+      { when: "Morning", what: "Sees his route in order and the stock he carries." },
+      { when: "Day", what: "Sells, takes payment and a visit photo at each shop." },
+      { when: "Evening", what: "Closes his day and hands back stock and cash." },
+    ],
+    can: ["See his own route, sales and payments", "Check a shop's balance before selling", "Photograph cheques and visits"],
+    cannot: ["See other salesmen's work", "See cost prices", "Sell past a shop's credit limit without a manager"],
+    visual: (
+      <ProductFigure slot="how-role-salesman" screenshot="Salesman's route screen on a phone">
+        <RouteScreen className="mx-auto" />
+      </ProductFigure>
+    ),
+  },
+  {
+    name: "Shop",
+    where: "On its phone",
+    summary: "Sees its own account with you at any time, so there is no argument about what it owes.",
+    day: [
+      { when: "Morning", what: "Checks what it owes before the salesman comes." },
+      { when: "Day", what: "Gets an invoice for every sale." },
+      { when: "Evening", what: "Sees a cheque as pending until it clears." },
+    ],
+    can: ["See its balance and due dates", "See its statement, invoices and payments", "See its returns"],
+    cannot: ["See other shops", "Change anything: it only views"],
+    visual: (
+      <ProductFigure slot="how-role-shop" screenshot="A shop's own balance and statement">
+        <ShopStatementScreen className="mx-auto" />
+      </ProductFigure>
+    ),
+  },
 ];
 
 export default function HowItWorksPage() {
@@ -94,42 +167,15 @@ export default function HowItWorksPage() {
             <h2 id="day-title">A day with Bitaran</h2>
             <SampleNote>An example salesman and example shops</SampleNote>
           </div>
-          <div className="mt-16 grid grid-cols-1 gap-x-columns gap-y-12 lg:grid-cols-12">
-            <div className="lg:col-span-4">
-              <div className="lg:sticky lg:top-28">
-                <ProductFigure slot="how-route" screenshot="Salesman's route screen on a phone">
-                  <RouteScreen className="mx-auto lg:mx-0" />
-                </ProductFigure>
-              </div>
-            </div>
-            <ol className="m-0 list-none p-0 lg:col-span-7 lg:col-start-6">
-              {day.map((d) => (
-                <li key={d.time} data-reveal className="draw-rule pt-6 pb-24 last:pb-0">
-                  <p className="text-lg font-medium text-muted">{d.time}</p>
-                  <h3 className="mt-2 text-section">{d.title}</h3>
-                  <p className="mt-4 text-lg text-ink-2">{d.line}</p>
-                  <p className="stock mt-6 rounded-stock px-5 py-4 text-md">
-                    <span className="font-semibold">Example: </span>
-                    {d.example}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </div>
+          <DayScroller parts={day} />
         </div>
       </section>
 
       <section aria-labelledby="roles-title" className="py-section">
         <div className="container">
           <h2 id="roles-title">Who does what</h2>
-          <ul data-reveal="stagger" className="m-0 mt-16 grid list-none grid-cols-1 gap-columns p-0 sm:grid-cols-2 xl:grid-cols-4">
-            {roles.map((r) => (
-              <li key={r.role} className="stock flex min-h-60 flex-col rounded-stock p-8">
-                <h3 className="text-section">{r.role}</h3>
-                <p className="mt-auto pt-8 text-lg text-ink-2">{r.does}</p>
-              </li>
-            ))}
-          </ul>
+          <p className="lead mt-6 max-w-3xl text-ink-2">Four kinds of login. Each one sees what that job needs, and nothing more. Choose one to see its day.</p>
+          <RoleExplorer roles={roles} />
         </div>
       </section>
 

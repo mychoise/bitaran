@@ -57,3 +57,11 @@ export function sumPaisa(values: readonly Paisa[]): Paisa {
   assertPaisa(total);
   return total;
 }
+
+/** Like parseRupees, but a leading minus is allowed: "-500" is a credit of Rs 500. */
+export function parseSignedRupees(input: string): Paisa | null {
+  const t = input.trim();
+  const negative = t.startsWith("-") || t.startsWith("−");
+  const paisa = parseRupees(negative ? t.slice(1) : t);
+  return paisa === null ? null : negative ? -paisa : paisa;
+}

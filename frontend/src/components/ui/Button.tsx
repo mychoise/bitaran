@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "quiet";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -18,6 +18,8 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   loading?: boolean;
   loadingLabel?: string;
   icon?: ReactNode;
+  /** React 19 passes refs as a prop; this one reaches the <button>. */
+  ref?: Ref<HTMLButtonElement>;
 };
 
 export function Button({ variant = "primary", size = "md", loading = false, loadingLabel, icon, className = "", disabled, children, type = "button", ...rest }: Props) {

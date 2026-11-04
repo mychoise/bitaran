@@ -237,6 +237,64 @@
   .choice:active { transform: translateY(1px); }
   .choice:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 
+  /* Smooth scrolling: the content that GSAP moves sits on its own graphics layer, so each frame
+     slides the already-painted page instead of painting it again. */
+  .smooth-wrapper[style*="fixed"] > .smooth-content { will-change: transform; }
+
+  /* Scroll route (website): the Pokhara rail fixed in the left margin. */
+  .scroll-route .route-peak { fill: var(--color-paper-3); stroke: var(--color-ink-2); stroke-width: 1.25px; stroke-linejoin: round; }
+  .scroll-route .route-snow { fill: none; stroke: var(--color-cotton); stroke-width: 2px; stroke-linejoin: round; }
+  .scroll-route .route-lake { fill: var(--color-paper-3); stroke: var(--color-rule-2); stroke-width: 1.25px; }
+  .scroll-route .route-guide { fill: none; stroke: var(--color-rule-2); stroke-width: 2.5px; stroke-dasharray: 1.5 5; stroke-linecap: round; }
+  .scroll-route .route-travelled { fill: none; stroke: var(--color-accent-2); stroke-width: 3px; stroke-linecap: round; }
+  .scroll-route .route-dot { fill: var(--color-cotton); stroke: var(--color-rule-2); stroke-width: 2px; transform-box: fill-box; transform-origin: center; transition: fill var(--dur-short), stroke var(--dur-short); }
+  .scroll-route .route-dot.is-passed { fill: var(--color-accent-2); stroke: var(--color-accent-2); }
+  .scroll-route .route-marker-dot { fill: var(--color-accent-2); stroke: var(--color-cotton); stroke-width: 2px; }
+  .scroll-route .route-marker-ring { fill: var(--color-accent-2); fill-opacity: 0.16; stroke: var(--color-accent-2); stroke-width: 1.25px; transform-box: fill-box; transform-origin: center; }
+  .scroll-route .route-rail-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em; fill: var(--color-ink);
+    paint-order: stroke; stroke: var(--color-cotton); stroke-width: 4px; stroke-linejoin: round;
+  }
+  .scroll-route .route-stop { cursor: pointer; outline: none; }
+  .scroll-route .route-hit { fill: transparent; }
+  .scroll-route .route-stop:hover .route-dot:not(.is-passed) { stroke: var(--color-accent-2); }
+  .scroll-route .route-stop:focus-visible .route-hit { stroke: var(--color-focus); stroke-width: 2px; }
+  .scroll-route .route-count { font-family: var(--font-outlier); font-size: 10px; fill: var(--color-muted); }
+
+  /* How it works, "Who does what": the role tabs. The chosen one is lifted with an ink edge and
+     the coral marker along its top. */
+  .role-tab {
+    position: relative; cursor: pointer; border: 2px solid transparent;
+    transition: translate var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out), border-color var(--dur-short);
+  }
+  .role-tab:hover { translate: 0 -2px; box-shadow: var(--edge-stock), var(--cast-stock-lift); }
+  .role-tab:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+  .role-tab[aria-selected="true"] { border-color: var(--color-ink); box-shadow: var(--edge-stock), var(--cast-stock-lift); }
+  .role-tab[aria-selected="true"]::before {
+    content: ""; position: absolute; top: -2px; left: 20%; right: 20%; height: 4px;
+    border-radius: 0 0 var(--radius-pill) var(--radius-pill); background: var(--color-accent-2);
+  }
+  .role-panel:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 8px; border-radius: var(--radius-card); }
+
+  /* How it works: the four points of the day along the top of the phone. */
+  .day-point { position: relative; color: var(--color-muted); }
+  .day-point + .day-point::before {
+    content: ""; position: absolute; top: 5px; right: 50%; width: 100%; height: 2px;
+    background: var(--color-rule-2); transition: background-color var(--dur-long);
+  }
+  .day-point:is([data-state="done"], [data-state="now"]) + .day-point:is([data-state="done"], [data-state="now"])::before { background: var(--color-accent-2); }
+  .day-point-dot {
+    position: relative; z-index: 1; width: 12px; height: 12px; border: 2px solid var(--color-rule-2);
+    border-radius: var(--radius-pill); background: var(--color-cotton);
+    transition: background-color var(--dur-short), border-color var(--dur-short), box-shadow var(--dur-short);
+  }
+  .day-point[data-state="done"] .day-point-dot { border-color: var(--color-accent-2); background: var(--color-accent-2); }
+  .day-point[data-state="now"] { color: var(--color-ink); font-weight: 600; }
+  .day-point[data-state="now"] .day-point-dot {
+    border-color: var(--color-accent-2); background: var(--color-accent-2);
+    box-shadow: 0 0 0 4px color-mix(in oklch, var(--color-accent-2) 22%, transparent);
+  }
+
   /* ===== App kit (docs/design-language.md section 8). Built on the website recipes above. ===== */
 
   /* Button sizes and the quiet text button. md is the website's 48px. */
@@ -276,6 +334,7 @@
   .data-table tbody td, .data-table tbody th { padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-rule); text-align: left; vertical-align: middle; }
   .data-table tbody tr:last-child > * { border-bottom: 0; }
   .data-table tbody tr:hover > * { background: var(--color-paper); }
+  .data-table tfoot th, .data-table tfoot td { position: sticky; bottom: 0; background: var(--color-paper-2); padding: var(--space-sm) var(--space-md); border-top: 1px solid var(--color-rule-2); font-weight: 600; text-align: left; }
   .data-table .num { text-align: right; font-family: var(--font-outlier); font-variant-numeric: tabular-nums; }
   .data-table .sort-btn { display: inline-flex; align-items: center; gap: var(--space-2xs); background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
   .data-table .sort-btn[data-active="true"] { color: var(--color-ink); }
@@ -323,11 +382,34 @@
   .bottom-tab:focus-visible, .side-link:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 
   /* Demo ribbon: the website's dashed draft style. */
+  /* Bar chart: thin bars in the first chart colour, a light grid, ink text. */
+  .bar-chart .bar-grid { stroke: var(--color-rule); stroke-width: 1px; }
+  .bar-chart .bar-axis { stroke: var(--color-rule-2); stroke-width: 1px; }
+  .bar-chart .bar-mark { fill: var(--color-chart-1); transition: fill-opacity var(--dur-micro); }
+  .bar-chart:hover .bar-mark:not(.is-active), .bar-chart:focus-within .bar-mark:not(.is-active) { fill-opacity: 0.55; }
+  .bar-chart .bar-hit { fill: transparent; outline: none; cursor: default; }
+  .bar-chart .bar-hit:focus-visible { stroke: var(--color-focus); stroke-width: 2px; }
+  .bar-chart .bar-label { font-size: 11px; fill: var(--color-muted); }
+  .bar-chart .bar-tip { pointer-events: none; }
+  .bar-chart .bar-tip-box { fill: var(--color-board); }
+  .bar-chart .bar-tip-label { font-size: 11px; fill: var(--color-board-type); opacity: 0.8; }
+  .bar-chart .bar-tip-value { font-family: var(--font-outlier); font-size: 13px; font-weight: 600; fill: var(--color-board-type); }
+
+  /* Route editor: a shop being dragged fades; the row it would land on is marked in coral. */
+  .route-row { transition: opacity var(--dur-short), box-shadow var(--dur-short); }
+  .route-row[data-dragging] { opacity: 0.45; }
+  .route-row[data-over] { box-shadow: inset 0 2px 0 var(--color-accent-2); }
+
   .demo-ribbon { border-bottom: 1px dashed var(--color-muted); background: var(--color-paper-3); color: var(--color-ink-2); font-size: var(--text-sm); }
 
   /* Print: white page, ink text, no app chrome. */
   @media print {
     .no-print { display: none !important; }
+    [role="tablist"] { display: none !important; }
+    /* Paper cannot scroll: tables show in full, a little smaller. */
+    .table-scroll { overflow: visible; }
+    .data-table { font-size: 11px; }
+    .data-table th, .data-table td { padding: 6px 8px; }
     body { background: none; }
     .stock { box-shadow: none; background-image: none; }
   }
@@ -437,6 +519,17 @@
   .js [data-reveal].is-in [data-pop="8"] { animation-delay: 1070ms; }
   .js [data-reveal].is-in [data-pop="9"] { animation-delay: 1180ms; }
 
+  /* The scroll route's marker breathes gently while it rides. */
+  .scroll-route .route-marker-ring { animation: route-pulse 2400ms var(--ease-in-out) infinite; }
+  /* A stop lands with a small pop as the marker reaches it. */
+  .scroll-route .route-dot.is-passed { animation: tick-in 260ms var(--ease-out); }
+
+  /* How it works: a role's panel rises in when it is chosen. */
+  .role-panel:not([hidden]) { animation: rise 420ms var(--ease-out); }
+
+  /* How it works: the phone's screen slides in as the day moves on. */
+  .day-screen { animation: rise 360ms var(--ease-out); }
+
   /* Small state changes. */
   .faq-panel:not([hidden]) { animation: fade-down var(--dur-short) var(--ease-out); }
   #mobile-menu:not([hidden]) { animation: fade-down var(--dur-short) var(--ease-out); }
@@ -453,4 +546,5 @@
 @keyframes shade-in { to { opacity: 1; } }
 @keyframes skeleton-pulse { 50% { opacity: 0.55; } }
 @keyframes reveal-failsafe { to { opacity: 1; translate: 0 0; } }
+@keyframes route-pulse { 50% { scale: 1.35; fill-opacity: 0.06; } }
 @keyframes reveal-failsafe-clip { to { clip-path: inset(0); } }

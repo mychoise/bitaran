@@ -1,13 +1,23 @@
 // Small display pieces: Card, Stat, PageHeader, Badge, StatusBadge, MoneyText, Skeleton.
 // All built from the website's tokens and recipes (docs/design-language.md).
 
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { formatBalance, formatMoney, type Paisa } from "@/lib/money";
 import { AlertIcon, CheckIcon, ClockIcon, XCircleIcon } from "./icons";
 
-/** The website's cotton card (.stock). `dense` for dashboards. */
-export function Card({ children, className = "", dense = false, as: Tag = "div" }: { children: ReactNode; className?: string; dense?: boolean; as?: "div" | "section" | "article" }) {
-  return <Tag className={`stock rounded-stock ${dense ? "p-5" : "p-8"} ${className}`.trim()}>{children}</Tag>;
+/** The website's cotton card (.stock). `dense` for dashboards. Other attributes (aria-label…) pass through. */
+export function Card({
+  children,
+  className = "",
+  dense = false,
+  as: Tag = "div",
+  ...rest
+}: { children: ReactNode; className?: string; dense?: boolean; as?: "div" | "section" | "article" } & Omit<HTMLAttributes<HTMLElement>, "children" | "className">) {
+  return (
+    <Tag className={`stock rounded-stock ${dense ? "p-5" : "p-8"} ${className}`.trim()} {...rest}>
+      {children}
+    </Tag>
+  );
 }
 
 /** A figure with its label, like the website's figure rows. No icon tiles. */
