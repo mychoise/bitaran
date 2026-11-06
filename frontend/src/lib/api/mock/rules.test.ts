@@ -9,7 +9,8 @@ import {
   checkExpense,
   checkExpensePlan,
   expenseSummary,
-  salesOnDay,
+  salesInRange,
+  unitsSold,
   salesmanHistory,
   shortageTotals,
   checkReturnLines,
@@ -72,6 +73,7 @@ import {
   rolesCreatableBy,
   shopBalance,
   validatePayment,
+  collectable,
 } from "./rules.ts";
 
 const shop = { id: "s1", openingBalancePaisa: 50_000 };
@@ -191,6 +193,17 @@ test("payments: cash confirmed at once, cheque and online pending, proof require
   assert.equal(canDecidePayment({ status: "pending" }), true);
   assert.equal(canDecidePayment({ status: "bounced" }), false);
   assert.equal(canDecidePayment({ status: "confirmed" }), false);
+});
+
+test("a payment can be no more than the shop owes, less what is already in clearing", () => {
+  assert.equal(collectable(10_000, 0), 10_000);
+  assert.equal(collectable(10_000, 4_000), 6_000);
+  assert.equal(collectable(10_000, 12_000), 0);
+  assert.equal(collectable(-500, 0), 0); // the shop has credit
+  const cash = (amountPaisa: number) => ({ method: "cash" as const, amountPaisa, imageIds: [] });
+  assert.deepEqual(validatePayment(cash(6_000), new Set(), 6_000), []);
+  assert.deepEqual(validatePayment(cash(6_001), new Set(), 6_000), ["That is more than the shop owes. The most you can take is Rs 60.00."]);
+  assert.deepEqual(validatePayment(cash(100), new Set(), 0), ["This shop owes nothing right now, so there is nothing to collect."]);
 });
 
 test("damaged and expired goods are never restocked", () => {
@@ -627,7 +640,7 @@ test("write-offs: from the warehouse, or from a day plan without reducing the wa
   assert.match(checkWriteOff(input, { ...product, id: "p9" }, plan, sold, []) ?? "", /not issued/);
 });
 
-test("one day's sales: confirmed only, cash only, by shop and by salesman", () => {
+test("sales in a range: confirmed only, cash only, by shop and by salesman", () => {
   const sales = [
     sale({ id: "a", date: "2026-11-04", salesmanId: "u1", shopId: "s1", totalPaisa: 1_000 }),
     sale({ id: "b", date: "2026-11-04", salesmanId: "u2", shopId: "s1", totalPaisa: 3_000 }),
@@ -638,7 +651,7 @@ test("one day's sales: confirmed only, cash only, by shop and by salesman", () =
     pay({ date: "2026-11-04", salesmanId: "u1", shopId: "s2", amountPaisa: 500 }),
     pay({ id: "q", date: "2026-11-04", salesmanId: "u1", shopId: "s1", method: "cheque", status: "pending", amountPaisa: 800 }),
   ];
-  const r = salesOnDay("2026-11-04", sales, payments);
+  const r = salesInRange({ from: "2026-11-04", to: "2026-11-04" }, sales, payments);
   assert.equal(r.count, 2);
   assert.equal(r.totalPaisa, 4_000);
   assert.equal(r.cashCollectedPaisa, 500);
@@ -663,3 +676,17 @@ test("shortage over reconciled plans: only shortfalls, valued at the unit price"
   // d1: p1 10 − 6 sold − 2 back − 1 written off = 1 short; p2 none. d2: p1 4 − 3 − 1 = 0.
   assert.deepEqual(t, { plans: 2, units: 1, valuePaisa: 250, byProduct: [{ productId: "p1", units: 1, valuePaisa: 250 }] });
 });
+
+test("a range of days adds up, and units sold count confirmed sales in the range", () => {
+  const line = (productId: string, baseUnits: number) => ({ productId, unit: "unit" as const, quantity: baseUnits, baseUnits, pricePaisa: 0, totalPaisa: 0 });
+  const sales = [
+    sale({ id: "a", date: "2026-11-02", totalPaisa: 100, lines: [line("p1", 4)] }),
+    sale({ id: "b", date: "2026-11-04", totalPaisa: 200, lines: [line("p1", 2), line("p2", 1)] }),
+    sale({ id: "c", date: "2026-11-04", status: "cancelled", lines: [line("p1", 50)] }),
+    sale({ id: "d", date: "2026-10-01", totalPaisa: 999, lines: [line("p1", 9)] }),
+  ];
+  const r = salesInRange({ from: "2026-11-01", to: "2026-11-04" }, sales, []);
+  assert.deepEqual([r.from, r.to, r.count, r.totalPaisa], ["2026-11-01", "2026-11-04", 2, 300]);
+  assert.deepEqual([...unitsSold(sales, { from: "2026-11-01", to: "2026-11-04" })], [["p1", 6], ["p2", 1]]);
+});
+

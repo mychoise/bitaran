@@ -44,9 +44,21 @@ function assertApiMode() {
   }
 }
 
+/**
+ * API_URL: the backend's base URL including its version prefix, e.g.
+ * "http://localhost:3000/api/v1". Server-only. Needed when either mode is "api".
+ */
+export function apiUrl(): string {
+  const raw = process.env.API_URL?.trim().replace(/\/+$/, "");
+  if (!raw) throw new Error("API_URL is not set. Set it to the backend's base URL, e.g. http://localhost:3000/api/v1.");
+  if (!/^https?:\/\//.test(raw)) throw new Error(`API_URL must start with http:// or https://, not "${raw}".`);
+  return raw;
+}
+
 /** Fails fast at server start when the settings are unsafe for production. */
 export function assertAuthConfig() {
   authMode();
   assertApiMode();
   sessionSecret();
+  apiUrl();
 }

@@ -21,7 +21,7 @@ import {
   staffUpdateSchema,
   temporaryPasswordField,
 } from "../schemas.ts";
-import type { Business, Category, DateRange, DayPlan, DayReport, Expense, Id, Payment, Return, Sale, Visit, VisitPhoto, VisitShop, WriteOff, Page, PageQuery, Product, Shop, ShopWithBalance, Staff, StatementEntry, Viewer } from "../types.ts";
+import type { Business, Category, DateRange, DayPlan, DayReport, Expense, Id, Payment, Return, Sale, Visit, VisitPhoto, VisitShop, WriteOff, Page, PageQuery, Product, Shop, ShopInvoice, ShopWithBalance, Staff, StatementEntry, Viewer } from "../types.ts";
 import {
   canDecidePayment,
   cancelledGoodsGo,
@@ -31,7 +31,8 @@ import {
   checkDueDate,
   checkExpense,
   checkExpensePlan,
-  salesOnDay,
+  salesInRange,
+  unitsSold,
   salesmanHistory,
   expenseSummary,
   checkReturnLines,
@@ -49,6 +50,7 @@ import {
   saleMoney,
   salesmanNumbers,
   validatePayment,
+  collectable,
   canStartPlan,
   checkAddVisit,
   checkClose,
@@ -84,6 +86,7 @@ import {
   skuTaken,
 } from "./rules.ts";
 import type { StoredCategory } from "./seed.ts";
+import { failureSimulated } from "./flags.ts";
 import { getData, save } from "./store.ts";
 
 const DELAY_MS = 250;
@@ -93,6 +96,7 @@ const DELAY_MS = 250;
  * answer (React Query sees it) and a screen can never change the store by accident.
  */
 const later = <T,>(value: () => T): Promise<T> => new Promise((resolve, reject) => setTimeout(() => {
+  if (failureSimulated()) return reject(new ApiError("unreachable", "Simulated connection failure"));
   try {
     resolve(structuredClone(value()));
   } catch (err) {
@@ -265,6 +269,31 @@ export function createMockClient(viewer: Viewer): ApiClient {
   const shapeSale = (s: Sale): Sale => ({ ...s, paidPaisa: getData().payments.filter((p) => p.saleId === s.id && p.status === "confirmed").reduce((a, p) => a + p.amountPaisa, 0) });
   const shapePayment = (p: Payment): Payment => ({ ...p, imageUrls: p.imageIds.map(imageUrl) });
   const shapePhoto = (p: VisitPhoto): VisitPhoto => ({ ...p, imageUrl: imageUrl(p.imageId) });
+  /** A sale as its shop sees it: product and salesman names, no internal ids or cost. */
+  const shopInvoice = (s: Sale, withPayments = false): ShopInvoice => {
+    const d = getData();
+    const shaped = shapeSale(s);
+    return {
+      id: s.id,
+      invoiceNo: s.invoiceNo,
+      date: s.date,
+      createdAt: s.createdAt,
+      dueDate: s.dueDate,
+      status: s.status,
+      lines: s.lines.map((l) => {
+        const product = d.products.find((x) => x.id === l.productId);
+        return { productName: product?.name ?? "A product", unitName: product?.unitName ?? "unit", unit: l.unit, quantity: l.quantity, pricePaisa: l.pricePaisa, totalPaisa: l.totalPaisa };
+      }),
+      subtotalPaisa: s.subtotalPaisa,
+      discountPaisa: s.discountPaisa ?? 0,
+      totalPaisa: s.totalPaisa,
+      paidPaisa: shaped.paidPaisa ?? 0,
+      salesmanName: d.staff.find((x) => x.id === s.salesmanId)?.fullName ?? "Your salesman",
+      cancelledAt: s.cancelledAt,
+      cancelReason: s.cancelReason,
+      payments: withPayments ? d.payments.filter((p) => p.saleId === s.id).sort(newestFirst).map((p) => ({ date: p.date, method: p.method, amountPaisa: p.amountPaisa, status: p.status })) : undefined,
+    };
+  };
   const shapeExpense = (e: Expense): Expense => (e.billImageId ? { ...e, billImageUrl: imageUrl(e.billImageId) } : e);
   /** Salary must be for an active staff member, and a day plan must be that person's. */
   const checkExpenseRefs = (e: Pick<Expense, "staffId" | "planId">) => {
@@ -972,7 +1001,8 @@ export function createMockClient(viewer: Viewer): ApiClient {
         once(input.idempotencyKey, "payment", (id) => getData().payments.find((x) => x.id === id), () => {
           const d = getData();
           const { plan, visit, shop } = onVisit(input.visitId);
-          const problems = validatePayment(input, new Set(d.payments.flatMap((p) => p.imageIds)));
+          const owed = withBalance(shop);
+          const problems = validatePayment(input, new Set(d.payments.flatMap((p) => p.imageIds)), collectable(owed.balancePaisa, owed.inClearingPaisa));
           if (problems.length) throw invalid(problems[0]);
           input.imageIds.forEach(checkImage);
           if (input.saleId && !d.sales.some((x) => x.id === input.saleId && x.shopId === shop.id && x.status === "confirmed")) throw invalid("That sale is not one of this shop's.");
@@ -1198,7 +1228,7 @@ export function createMockClient(viewer: Viewer): ApiClient {
           const known = new Set(d.photos.map((p) => d.images[p.imageId]).filter(Boolean).map(fingerprint));
           // Flags ask the manager to look; they never stop the photo being saved.
           const flags = photoFlags({ takenAt, deviceTakenAt: input.deviceTakenAt, distanceM, fingerprint: fingerprint(url), knownFingerprints: known });
-          const photo: VisitPhoto = { id: `ph-${Date.now().toString(36)}`, planId: plan.id, shopId: shop.id, salesmanId: plan.salesmanId, visitId: visit.id, takenAt, deviceTakenAt: input.deviceTakenAt, distanceM, imageId: input.imageId, flags, note: input.note.trim() || undefined };
+          const photo: VisitPhoto = { id: `ph-${Date.now().toString(36)}`, planId: plan.id, shopId: shop.id, salesmanId: plan.salesmanId, visitId: visit.id, takenAt, deviceTakenAt: input.deviceTakenAt, distanceM, latitude: input.latitude, longitude: input.longitude, imageId: input.imageId, flags, note: input.note.trim() || undefined };
           d.photos.push(photo);
           markVisited(visit);
           return photo;
@@ -1261,12 +1291,12 @@ export function createMockClient(viewer: Viewer): ApiClient {
           .map((x) => ({ shopId: x.shop.id, overduePaisa: x.items.reduce((a, i) => a + i.unpaidPaisa, 0), oldestDueDate: x.items[0].dueDate }))
           .sort((a, b) => a.oldestDueDate.localeCompare(b.oldestDueDate));
       }),
-      today: (date) => later(() => {
+      today: (range) => later(() => {
         requireStaff();
-        if (date && isSalesman) throw forbidden("You can see only today's numbers.");
-        if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw invalid("Choose a date.");
+        if (range && isSalesman) throw forbidden("You can see only today's numbers.");
+        if (range && range.from > range.to) throw invalid("The start date is after the end date.");
         const d = getData();
-        return salesOnDay(date ?? today(), own(d.sales), own(d.payments));
+        return salesInRange(range ?? { from: today(), to: today() }, own(d.sales), own(d.payments));
       }),
       salesmanAnalytics: (salesmanId, range) => later(() => {
         requireStaff();
@@ -1281,38 +1311,95 @@ export function createMockClient(viewer: Viewer): ApiClient {
         if (!d.staff.some((x) => x.id === salesmanId)) throw notFound("salesman");
         return salesmanHistory(salesmanId, range, d.sales, d.payments);
       }),
-      lowStock: () => later(() => {
+      lowStock: (range) => later(() => {
         requireManager();
-        return getData().products.filter((p) => p.active && isLowStock(p)).map(shapeProduct);
+        const r = range ?? { from: addDays(today(), -29), to: today() };
+        if (r.from > r.to) throw invalid("The start date is after the end date.");
+        const sold = unitsSold(getData().sales, r);
+        return getData().products.filter((p) => p.active && isLowStock(p)).map((p) => ({ ...shapeProduct(p), soldUnits: sold.get(p.id) ?? 0 }));
       }),
     },
 
     shopPortal: {
+      me: () => later(() => {
+        const shop = myShop();
+        const b = getData().business;
+        return {
+          shopName: shop.name,
+          ownerName: shop.ownerName,
+          phone: shop.phone,
+          address: shop.address,
+          pan: shop.pan,
+          registrationNo: shop.registrationNo,
+          loginEmail: shop.loginEmail,
+          business: { name: b.name, address: b.address, city: b.city, phone: b.phone, pan: b.pan },
+        };
+      }),
       summary: () => later(() => {
         const shop = myShop();
         const d = getData();
         const s = withBalance(shop);
         const overdue = overdueItems(shop, d.sales, d.payments, d.returns, today(), addDays(d.seededOn, -30));
-        return { shopName: shop.name, businessName: d.business.name, balancePaisa: s.balancePaisa, inClearingPaisa: s.inClearingPaisa, creditLimitPaisa: shop.creditLimitPaisa, overduePaisa: s.overduePaisa, oldestOverdueDate: overdue[0]?.dueDate };
+        const last = d.payments.filter((p) => p.shopId === shop.id && p.status !== "bounced").sort((x, y) => y.createdAt.localeCompare(x.createdAt))[0];
+        return {
+          shopName: shop.name,
+          businessName: d.business.name,
+          balancePaisa: s.balancePaisa,
+          inClearingPaisa: s.inClearingPaisa,
+          creditLimitPaisa: shop.creditLimitPaisa,
+          creditUsedPaisa: creditUsage(s.balancePaisa, shop.creditLimitPaisa).usedPaisa,
+          overduePaisa: s.overduePaisa,
+          oldestOverdueDate: overdue[0]?.dueDate,
+          lastPayment: last ? { date: last.date, amountPaisa: last.amountPaisa, method: last.method, status: last.status } : undefined,
+        };
       }),
       statement: (range) => later(() => statementFor(myShop(), range)),
       invoices: (q = {}) => later(() => {
         const shop = myShop();
-        return paginate(getData().sales.filter((s) => s.shopId === shop.id && inRange(s.date, q)).sort(newestFirst), q);
+        const items = getData().sales.filter((s) => s.shopId === shop.id && inRange(s.date, q) && (!q.status || s.status === q.status)).sort(newestFirst);
+        return paginate(items.map((s) => shopInvoice(s)), q);
       }),
       invoice: (id) => later(() => {
         const shop = myShop();
         const s = getData().sales.find((x) => x.id === id && x.shopId === shop.id);
         if (!s) throw notFound("invoice");
-        return s;
+        return shopInvoice(s, true);
       }),
       payments: (q = {}) => later(() => {
         const shop = myShop();
-        return paginate(getData().payments.filter((p) => p.shopId === shop.id && inRange(p.date, q)).sort(newestFirst), q);
+        const d = getData();
+        const items = d.payments
+          .filter((p) => p.shopId === shop.id && inRange(p.date, q) && (!q.status || p.status === q.status))
+          .sort(newestFirst)
+          .map((p) => ({
+            id: p.id,
+            date: p.date,
+            method: p.method,
+            amountPaisa: p.amountPaisa,
+            status: p.status,
+            chequeNo: p.chequeNo,
+            bank: p.bank,
+            reference: p.reference,
+            invoiceNo: p.saleId ? d.sales.find((x) => x.id === p.saleId)?.invoiceNo : undefined,
+          }));
+        return paginate(items, q);
       }),
       returns: (q = {}) => later(() => {
         const shop = myShop();
-        return paginate(getData().returns.filter((r) => r.shopId === shop.id && inRange(r.date, q)).sort(newestFirst), q);
+        const d = getData();
+        const items = d.returns
+          .filter((r) => r.shopId === shop.id && inRange(r.date, q))
+          .sort(newestFirst)
+          .map((r) => ({
+            id: r.id,
+            date: r.date,
+            valuePaisa: r.valuePaisa,
+            lines: r.lines.map((l) => {
+              const product = d.products.find((x) => x.id === l.productId);
+              return { productName: product?.name ?? "A product", unitName: product?.unitName ?? "unit", units: l.units, reason: l.reason };
+            }),
+          }));
+        return paginate(items, q);
       }),
     },
   };

@@ -8,6 +8,7 @@ import { Database } from '../src/database/database.types.js';
 import {
   products,
   retailClients,
+  sales,
   users,
 } from '../src/database/schema/index.js';
 import { seed, SeedResult } from '../src/database/seed/seed.js';
@@ -288,6 +289,19 @@ describe('Every route, every caller (e2e)', () => {
       },
     });
     const saleId: string = sale.body.id;
+    // One invoice for the logged-in shop itself, for GET /shop/me/invoices/{id}.
+    const shopSaleId = randomUUID();
+    await db.insert(sales).values({
+      id: shopSaleId,
+      businessId: seeded.businessId,
+      clientId: shop.id,
+      salesmanId: salesman.id,
+      dayPlanId: planId,
+      invoiceNumber: 900_001,
+      saleDate: today,
+      totalPaisa: 1000,
+      createdAt: new Date(),
+    });
     const toCancel = await ok('salesman', 'POST', `${A}/sales`, {
       headers: { 'Idempotency-Key': randomUUID() },
       body: {
@@ -353,6 +367,7 @@ describe('Every route, every caller (e2e)', () => {
       [`${A}/products/{id}`]: product.id,
       [`${A}/routes/{id}`]: seeded.routeId,
       [`${A}/sales/{id}`]: saleId,
+      [`${A}/shop/me/invoices/{id}`]: shopSaleId,
       [`${A}/payments/{id}`]: paymentId,
       [`${A}/returns/{id}`]: ret.body.id,
       [`${A}/write-offs/{id}`]: writeOff.body.id,

@@ -15,6 +15,11 @@ import type {
   Expense,
   ExpenseSummary,
   SalesmanHistoryEntry,
+  ShopInvoice,
+  ShopPayment,
+  ShopProfile,
+  ShopReturn,
+  LowStockItem,
   ExpenseType,
   Id,
   Page,
@@ -256,21 +261,26 @@ export interface ApiClient {
     salesByDay(range: DateRange): Promise<{ date: BusinessDate; totalPaisa: Paisa; count: number }[]>;
     salesBySalesman(range: DateRange): Promise<{ salesmanId: Id; totalPaisa: Paisa; count: number }[]>;
     overdue(): Promise<{ shopId: Id; overduePaisa: Paisa; oldestDueDate: BusinessDate }[]>;
-    lowStock(): Promise<Product[]>;
-    /** Today's sales: the salesman's own, or everyone's for a manager. A manager may ask for another date. */
-    today(date?: BusinessDate): Promise<TodayReport>;
+    /** Active products at or below their low-stock level, with units sold in the range (default the last 30 days). */
+    lowStock(range?: Required<DateRange>): Promise<LowStockItem[]>;
+    /** Today's sales: the salesman's own, or everyone's for a manager. A manager may ask for a date range. */
+    today(range?: Required<DateRange>): Promise<TodayReport>;
     salesmanAnalytics(salesmanId: Id, range: Required<DateRange>): Promise<SalesmanAnalytics>;
     /** Every sale and payment the salesman took in the range, newest first. Owner or manager. */
     salesmanHistory(salesmanId: Id, range: Required<DateRange>): Promise<SalesmanHistoryEntry[]>;
   };
   /** The logged-in shop's own data. Only shop logins may call these. */
   shopPortal: {
+    /** GET /shop/me */
+    me(): Promise<ShopProfile>;
+    /** GET /shop/me/balance */
     summary(): Promise<ShopSummary>;
+    /** GET /shop/me/statement */
     statement(range?: DateRange): Promise<StatementEntry[]>;
-    invoices(query?: PageQuery & DateRange): Promise<Page<Sale>>;
-    invoice(id: Id): Promise<Sale>;
-    payments(query?: PageQuery & DateRange): Promise<Page<Payment>>;
-    returns(query?: PageQuery & DateRange): Promise<Page<Return>>;
+    invoices(query?: PageQuery & DateRange & { status?: SaleStatus }): Promise<Page<ShopInvoice>>;
+    invoice(id: Id): Promise<ShopInvoice>;
+    payments(query?: PageQuery & DateRange & { status?: PaymentStatus }): Promise<Page<ShopPayment>>;
+    returns(query?: PageQuery & DateRange): Promise<Page<ShopReturn>>;
   };
 }
 

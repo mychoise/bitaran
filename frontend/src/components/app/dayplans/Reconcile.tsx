@@ -25,12 +25,13 @@ import { usePlanLookups } from "./lookups";
 export function ReconcilePage({ id }: { id: string }) {
   const q = useApiQuery(["dayPlans", "report", id], (api) => api.dayPlans.report(id));
   const look = usePlanLookups();
-  if (q.isPending || !look.ready) return <LoadingState label="Loading this day" />;
   if (q.isError) {
     if (q.error instanceof ApiError && q.error.code === "not_found")
       return <EmptyState title="This day plan was not found" line="It may have been deleted while it was still planned." action={<Link href="/app/manager/day-plans" className={buttonClass("secondary", "sm")}>Back to day plans</Link>} />;
     return <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />;
   }
+  if (look.error) return <ErrorState message={errorMessage(look.error)} onRetry={look.retry} />;
+  if (q.isPending || !look.ready) return <LoadingState label="Loading this day" />;
   const r = q.data;
   const p = r.plan;
   const title = `${formatDate(p.date)}: ${look.person(p.salesmanId)}`;

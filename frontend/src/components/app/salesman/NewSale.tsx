@@ -300,6 +300,8 @@ function Review({ v, lines, onBack, onDone }: { v: VisitShop; lines: { product: 
 
 function Invoice({ sale, v, products }: { sale: Sale; v: VisitShop; products: Product[] }) {
   const toast = useToast();
+  const business = useApiQuery(["business"], (api) => api.business.get());
+  const b = business.data;
   const name = (id: string) => products.find((p) => p.id === id);
   const text = [
     `Invoice ${sale.invoiceNo}, ${formatDate(sale.date)}`,
@@ -325,12 +327,25 @@ function Invoice({ sale, v, products }: { sale: Sale; v: VisitShop; products: Pr
   return (
     <article aria-labelledby="invoice-title">
       <Card>
+        {b ? (
+          <div className="mb-4 border-b-2 border-ink pb-3 text-sm">
+            <p className="font-semibold">{b.name}</p>
+            <p className="text-ink-2">
+              {b.address}, {b.city}
+            </p>
+            <p className="text-ink-2">PAN {b.pan}</p>
+          </div>
+        ) : null}
         <p className="text-sm text-muted">Invoice</p>
         <h2 id="invoice-title" className="font-outlier text-display-s">
           No. {sale.invoiceNo}
         </h2>
         <p className="mt-1 text-ink-2">
           {v.shop.name} · {formatDateTime(sale.createdAt)}
+        </p>
+        <p className="text-sm text-ink-2">
+          {v.shop.address}
+          {v.shop.pan ? ` · PAN ${v.shop.pan}` : ""}
         </p>
         <ul className="m-0 mt-5 list-none p-0">
           {sale.lines.map((l) => (

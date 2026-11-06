@@ -28,7 +28,13 @@ export function CloseDay() {
   const byId = useMemo(() => new Map((products.data?.items ?? []).map((p) => [p.id, p])), [products.data]);
   if (plan.isPending) return <LoadingState label="Loading your day" />;
   if (plan.isError) return <ErrorState message={errorMessage(plan.error)} onRetry={() => plan.refetch()} />;
-  if (!plan.data) return <EmptyState title="No plan for today" line="There is nothing to close." />;
+  if (!plan.data)
+    return (
+      <>
+        <h1 className="visually-hidden">Close the day</h1>
+        <EmptyState title="No plan for today" line="There is nothing to close." />
+      </>
+    );
   if (report.isPending || products.isPending) return <LoadingState label="Loading your day" />;
   if (report.isError) return <ErrorState message={errorMessage(report.error)} onRetry={() => report.refetch()} />;
   const r = report.data;

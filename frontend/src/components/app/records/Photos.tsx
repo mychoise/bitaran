@@ -67,7 +67,16 @@ export function PhotoReview() {
                       <p className="text-sm text-ink-2">
                         {look.person(p.salesmanId)} · {formatDateTime(p.takenAt)}
                       </p>
-                      <p className="text-sm text-muted">{p.distanceM === undefined ? "No location sent" : `${p.distanceM} m from the shop's saved location`}</p>
+                      {p.latitude !== undefined && p.longitude !== undefined ? (
+                        <p className="text-sm text-ink-2">
+                          Taken at <span className="font-outlier">{p.latitude.toFixed(5)}, {p.longitude.toFixed(5)}</span>{" "}
+                          <a href={`https://www.openstreetmap.org/?mlat=${p.latitude}&mlon=${p.longitude}#map=18/${p.latitude}/${p.longitude}`} target="_blank" rel="noopener noreferrer" className="text-link">
+                            Open in map<span className="visually-hidden"> (opens a new tab)</span>
+                          </a>
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted">No location sent</p>
+                      )}
                       {p.note ? <p className="mt-1 text-sm">“{p.note}”</p> : null}
                     </div>
                     {p.flags.length ? (

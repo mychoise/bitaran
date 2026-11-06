@@ -26,7 +26,7 @@ function Tile({ title, href, linkText, children, className = "" }: { title: stri
   );
 }
 
-const Big = ({ children }: { children: ReactNode }) => <p className="font-outlier text-2xl leading-tight text-ink">{children}</p>;
+const Big = ({ children }: { children: ReactNode }) => <p className="font-outlier text-2xl leading-tight whitespace-nowrap text-ink">{children}</p>;
 
 export function ManagerDashboard() {
   const today = todayNepal();

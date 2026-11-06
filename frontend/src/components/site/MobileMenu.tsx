@@ -52,7 +52,7 @@ export function MobileMenu({ items, appUrl, demoUrl }: Props) {
                 href={item.href}
                 aria-current={pathname === item.href ? "page" : undefined}
                 onClick={() => setOpen(false)}
-                className="flex min-h-12 items-center text-lg no-underline aria-[current=page]:font-semibold"
+                className={`flex min-h-12 items-center text-lg no-underline ${pathname === item.href ? "font-semibold" : ""}`}
               >
                 {item.label}
               </Link>

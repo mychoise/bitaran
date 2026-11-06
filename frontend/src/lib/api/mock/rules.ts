@@ -3,7 +3,7 @@
 // (Plain relative imports with .ts so Node's test runner can load this file directly.)
 
 import type { BusinessDate } from "../../dates.ts";
-import type { Paisa } from "../../money.ts";
+import { formatMoney, type Paisa } from "../../money.ts";
 import type {
   DayPlan,
   DayPlanStatus,
@@ -227,12 +227,25 @@ export const initialPaymentStatus = (method: PaymentMethod): PaymentStatus => (m
  * Checks a new payment. Returns plain-language problems, or none. A cheque needs its number,
  * bank, date and a photo; an online payment its reference and a screenshot.
  */
+/**
+ * The most a payment can be: what the shop owes, less cheques and online payments already in
+ * clearing (they will lower the balance once confirmed). Never below zero.
+ */
+export const collectable = (balancePaisa: Paisa, inClearingPaisa: Paisa): Paisa => Math.max(0, balancePaisa - inClearingPaisa);
+
+export const NOTHING_TO_COLLECT = "This shop owes nothing right now, so there is nothing to collect.";
+export const overLimit = (limitPaisa: Paisa) => `That is more than the shop owes. The most you can take is ${formatMoney(limitPaisa)}.`;
+
+/** `limitPaisa`, when given, is what the shop can pay now (see collectable). */
 export function validatePayment(
   input: { method: PaymentMethod; amountPaisa: Paisa; chequeNo?: string; bank?: string; chequeDate?: string; reference?: string; imageIds: readonly string[] },
   usedImageIds: ReadonlySet<string>,
+  limitPaisa?: Paisa,
 ): string[] {
   const problems: string[] = [];
-  if (!Number.isSafeInteger(input.amountPaisa) || input.amountPaisa <= 0) problems.push("Enter an amount above zero.");
+  if (limitPaisa !== undefined && limitPaisa <= 0) problems.push(NOTHING_TO_COLLECT);
+  else if (!Number.isSafeInteger(input.amountPaisa) || input.amountPaisa <= 0) problems.push("Enter an amount above zero.");
+  else if (limitPaisa !== undefined && input.amountPaisa > limitPaisa) problems.push(overLimit(limitPaisa));
   if (input.method === "cheque") {
     if (!input.chequeNo?.trim()) problems.push("Enter the cheque number.");
     if (!input.bank?.trim()) problems.push("Enter the bank.");
@@ -846,10 +859,11 @@ export function shortageTotals(
   return { plans: plans.length, units: sum(byProduct.map((x) => x.units)), valuePaisa: sum(byProduct.map((x) => x.valuePaisa)), byProduct };
 }
 
-/** One day's confirmed sales and confirmed cash, by shop and by salesman, biggest first. */
-export function salesOnDay(day: BusinessDate, sales: readonly Sale[], payments: readonly Payment[]) {
-  const sold = sales.filter((x) => x.date === day && x.status === "confirmed");
-  const cash = payments.filter((x) => x.date === day && x.method === "cash" && x.status === "confirmed");
+/** Confirmed sales and confirmed cash over a range (one day by default), by shop and by salesman, biggest first. */
+export function salesInRange(range: { from: BusinessDate; to: BusinessDate }, sales: readonly Sale[], payments: readonly Payment[]) {
+  const inRange = (d: string) => d >= range.from && d <= range.to;
+  const sold = sales.filter((x) => inRange(x.date) && x.status === "confirmed");
+  const cash = payments.filter((x) => inRange(x.date) && x.method === "cash" && x.status === "confirmed");
   const rows = <K extends "shopId" | "salesmanId">(key: K) =>
     [...new Set([...sold.map((x) => x[key]), ...cash.map((x) => x[key])])]
       .map((id) => {
@@ -858,13 +872,22 @@ export function salesOnDay(day: BusinessDate, sales: readonly Sale[], payments: 
       })
       .sort((a, b) => b.totalPaisa - a.totalPaisa || b.cashPaisa - a.cashPaisa);
   return {
-    date: day,
+    date: range.to,
+    from: range.from,
+    to: range.to,
     count: sold.length,
     totalPaisa: sum(sold.map((x) => x.totalPaisa)),
     cashCollectedPaisa: sum(cash.map((x) => x.amountPaisa)),
     byShop: rows("shopId").map(({ id, ...r }) => ({ shopId: id, ...r })),
     bySalesman: rows("salesmanId").map(({ id, ...r }) => ({ salesmanId: id, ...r })),
   };
+}
+
+/** Base units sold per product over a range, confirmed sales only. */
+export function unitsSold(sales: readonly Sale[], range: { from: BusinessDate; to: BusinessDate }): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const s of sales) if (s.status === "confirmed" && s.date >= range.from && s.date <= range.to) for (const l of s.lines) m.set(l.productId, (m.get(l.productId) ?? 0) + l.baseUnits);
+  return m;
 }
 
 /** Every sale and payment a salesman took in a range, newest first. */

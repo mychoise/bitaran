@@ -18,7 +18,7 @@ export async function handleLogin(req: NextRequest, kind: "staff" | "shop") {
 
   let client: AuthClient;
   try {
-    client = getAuthClient();
+    client = await getAuthClient();
   } catch (err) {
     return fail(toCode(err));
   }

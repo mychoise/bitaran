@@ -22,7 +22,7 @@ import type {
 } from "../types.ts";
 import { priceLine } from "./rules.ts";
 
-export const DEMO_DATA_VERSION = 10;
+export const DEMO_DATA_VERSION = 11;
 
 export type StoredCategory = Omit<Category, "productCount">;
 
@@ -254,7 +254,10 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
       const at = nepalInstant(date, `${String(hh).padStart(2, "0")}:${String(between(10, 50)).padStart(2, "0")}`);
       visit.status = "visited";
       visit.at = at;
-      photos.push({ id: `ph-${photoN++}`, planId: plan.id, shopId: visit.shopId, salesmanId: plan.salesmanId, takenAt: at, deviceTakenAt: at, distanceM: between(5, 40), imageId: demoImageId("shop", photos.length + 1), flags: [] });
+      // Taken a few metres from the shop's saved spot (0.0001° is about 11 m).
+      const spot = shops.find((s) => s.id === visit.shopId);
+      const near = (deg: number | null | undefined) => (deg == null ? undefined : Math.round((deg + (rand() - 0.5) * 0.0006) * 1e6) / 1e6);
+      photos.push({ id: `ph-${photoN++}`, planId: plan.id, shopId: visit.shopId, salesmanId: plan.salesmanId, takenAt: at, deviceTakenAt: at, distanceM: between(5, 40), latitude: near(spot?.latitude), longitude: near(spot?.longitude), imageId: demoImageId("shop", photos.length + 1), flags: [] });
 
       // Keep room so today's route always has sales of its own; about 40 in all.
       if ((spec.status !== "in_progress" && sales.length >= 37) || rand() < 0.2) continue;
@@ -359,7 +362,10 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
     if (!photo) return;
     photo.flags = flags;
     if (flags[0] === "old_photo") photo.deviceTakenAt = nepalInstant(addDays(nepalDateOf(photo.takenAt), -3), "10:00");
-    if (flags[0] === "far_from_shop") photo.distanceM = 1400;
+    if (flags[0] === "far_from_shop") {
+      photo.distanceM = 1400;
+      if (photo.latitude !== undefined) photo.latitude = Math.round((photo.latitude + 0.0126) * 1e6) / 1e6;
+    }
     if (flags[0] === "duplicate") photo.imageId = photos[0].imageId;
     if (flags[0] === "no_photo_data") delete photo.deviceTakenAt;
   });

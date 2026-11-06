@@ -1,5 +1,7 @@
 # Bitaran app API contract
 
+> **The backend now exists** (`../backend`, NestJS). Its own routes are what count, for example `/product-categories` rather than `/categories`. `docs/backend-gaps.md` lists every difference from this contract and what the frontend does about it.
+
 > **PROPOSED. Not yet verified against the real backend.** Built step by step as the screens
 > need each call. Source of truth on the frontend: `src/lib/api/client.ts` (the `ApiClient`
 > interface) and `src/lib/api/types.ts` (the shapes). Business rules both sides must enforce:
@@ -9,6 +11,98 @@
 - **Planned** means you confirmed the backend plans this call.
 - **Planned?** means I do not have the backend plan in front of me; I assume the backend plans it. Please confirm or correct.
 - **NEW** means the UI needs it and the backend plan (as described to me) does not have it yet. A planned call can carry a NEW field or parameter; those are named in the row.
+
+## Every call the UI makes
+
+83 calls: 68 in the backend plan, 15 new and needed from the backend. The sections below give each call's request, response, who may call it and the rules. Sign-in is in `auth-contract.md`.
+
+Not in this table: `GET /clients/:id/sales` and `GET /clients/:id/returns` (planned, but the app uses `GET /sales?shopId=` and `GET /returns?shopId=` instead), and `GET /reports/sales-by-salesman` (no screen uses it yet).
+
+| Area | Call | Status | Note |
+| --- | --- | --- | --- |
+| Business | GET `/business` | In the backend plan |  |
+| Business | PATCH `/business` | In the backend plan |  |
+| Uploads | POST `/uploads/images` | **NEW, needed from the backend** |  |
+| Staff | GET `/staff` | In the backend plan |  |
+| Staff | GET `/staff/:id` | In the backend plan |  |
+| Staff | POST `/staff` | In the backend plan |  |
+| Staff | PATCH `/staff/:id` | In the backend plan |  |
+| Staff | POST `/staff/:id/reset-password` | In the backend plan |  |
+| Products and categories | GET `/categories` | In the backend plan |  |
+| Products and categories | POST `/categories` | In the backend plan |  |
+| Products and categories | PATCH `/categories/:id` | In the backend plan |  |
+| Products and categories | DELETE `/categories/:id` | In the backend plan |  |
+| Products and categories | GET `/products` | In the backend plan |  |
+| Products and categories | GET `/products/:id` | In the backend plan |  |
+| Products and categories | POST `/products` | In the backend plan |  |
+| Products and categories | PATCH `/products/:id` | In the backend plan |  |
+| Products and categories | POST `/products/:id/stock-adjust` | In the backend plan |  |
+| Routes | GET `/routes` | In the backend plan |  |
+| Routes | GET `/routes/:id` | In the backend plan |  |
+| Routes | POST `/routes` | In the backend plan |  |
+| Routes | PATCH `/routes/:id` | In the backend plan |  |
+| Routes | DELETE `/routes/:id` | In the backend plan |  |
+| Routes | PUT `/routes/:id/clients` | In the backend plan |  |
+| Shops | GET `/clients` | In the backend plan |  |
+| Shops | GET `/clients/:id` | In the backend plan |  |
+| Shops | POST `/clients` | In the backend plan |  |
+| Shops | PATCH `/clients/:id` | In the backend plan |  |
+| Shops | POST `/clients/:id/reset-password` | In the backend plan |  |
+| Shops | GET `/clients/:id/balance` | In the backend plan |  |
+| Shops | GET `/clients/:id/statement` | In the backend plan |  |
+| Shops | GET `/clients/:id/items-taken` | In the backend plan |  |
+| Day plans | GET `/day-plans` | In the backend plan |  |
+| Day plans | GET `/day-plans/:id` | In the backend plan |  |
+| Day plans | GET `/day-plans/:id/report` | In the backend plan |  |
+| Day plans | GET `/day-plans/today` | **NEW, needed from the backend** |  |
+| Day plans | POST `/day-plans` | In the backend plan |  |
+| Day plans | DELETE `/day-plans/:id` | In the backend plan |  |
+| Day plans | POST `/day-plans/:id/start` | In the backend plan |  |
+| Day plans | GET `/day-plans/:id/shops` | In the backend plan |  |
+| Day plans | POST `/day-plans/:id/visits` | In the backend plan |  |
+| Day plans | GET `/visits/:id` | **NEW, needed from the backend** |  |
+| Day plans | PATCH `/visits/:id` | In the backend plan |  |
+| Day plans | POST `/day-plans/:id/close` | In the backend plan |  |
+| Day plans | POST `/day-plans/:id/reconcile` | In the backend plan |  |
+| Sales | GET `/sales` | In the backend plan |  |
+| Sales | GET `/sales/:id` | In the backend plan |  |
+| Sales | POST `/sales` | In the backend plan |  |
+| Sales | POST `/sales/:id/cancel` | In the backend plan |  |
+| Payments | GET `/payments` | In the backend plan |  |
+| Payments | GET `/payments/:id` | In the backend plan |  |
+| Payments | POST `/payments` | In the backend plan |  |
+| Payments | PATCH `/payments/:id/status` | In the backend plan |  |
+| Returns and write-offs | GET `/returns` | In the backend plan |  |
+| Returns and write-offs | GET `/returns/:id` | In the backend plan |  |
+| Returns and write-offs | POST `/returns` | In the backend plan |  |
+| Returns and write-offs | GET `/clients/:id/returnable` | **NEW, needed from the backend** |  |
+| Returns and write-offs | GET `/write-offs` | In the backend plan |  |
+| Returns and write-offs | POST `/write-offs` | In the backend plan |  |
+| Expenses and photos | GET `/expenses` | In the backend plan |  |
+| Expenses and photos | GET `/expenses/:id` | **NEW, needed from the backend** |  |
+| Expenses and photos | POST `/expenses` | In the backend plan |  |
+| Expenses and photos | PATCH `/expenses/:id` | In the backend plan |  |
+| Expenses and photos | GET `/expenses/summary` | In the backend plan |  |
+| Expenses and photos | GET `/visit-photos` | In the backend plan |  |
+| Expenses and photos | POST `/visits/:id/photos` | In the backend plan |  |
+| Reports | GET `/reports/dashboard` | **NEW, needed from the backend** | Dashboard tiles. |
+| Reports | GET `/reports/sales-by-day` | **NEW, needed from the backend** | Dashboard 14-day chart. Assumed planned since Step 1; please confirm. |
+| Reports | GET `/reports/today` | In the backend plan |  |
+| Reports | GET `/reports/salesman/:id/history` | In the backend plan |  |
+| Reports | GET `/reports/salesman/:id/analytics` | In the backend plan |  |
+| Reports | GET `/reports/overdue-credit` | In the backend plan |  |
+| Reports | GET `/reports/low-stock` | In the backend plan |  |
+| Shop portal | GET `/shop/me` | In the backend plan |  |
+| Shop portal | GET `/shop/me/balance` | In the backend plan |  |
+| Shop portal | GET `/shop/me/statement` | In the backend plan |  |
+| Shop portal | GET `/shop/me/invoices` | **NEW, needed from the backend** |  |
+| Shop portal | GET `/shop/me/invoices/:id` | **NEW, needed from the backend** |  |
+| Shop portal | GET `/shop/me/payments` | **NEW, needed from the backend** |  |
+| Shop portal | GET `/shop/me/returns` | **NEW, needed from the backend** |  |
+| Sign-in | POST `/auth/staff/login` | **NEW, needed from the backend** | Proposed in `auth-contract.md`; not confirmed yet. |
+| Sign-in | POST `/auth/shop/login` | **NEW, needed from the backend** | Proposed in `auth-contract.md`; not confirmed yet. |
+| Sign-in | GET `/auth/me` | **NEW, needed from the backend** | Proposed in `auth-contract.md`; not confirmed yet. |
+| Sign-in | POST `/auth/change-password` | **NEW, needed from the backend** | Proposed in `auth-contract.md`; not confirmed yet. |
 
 ## Conventions
 
@@ -299,15 +393,24 @@ Rules (tested):
 
 | Method | Path | Request | Response | Who | Status |
 | --- | --- | --- | --- | --- | --- |
-| GET | `/expenses` | `?staffId&type&from&to&page&pageSize` | `Page<Expense>` | O M (S own) | Planned |
-| POST | `/expenses` | `{ idempotencyKey, staffId?, type, amountPaisa, date, note, billImageId? }` | `Expense` | O M S (own) | Planned |
+| GET | `/expenses` | `?staffId&type&from&to&page&pageSize` | `Page<Expense>` (with `billImageUrl`) | O M (S own) | Planned |
+| GET | `/expenses/:id` | | `Expense` | O M (S own) | **NEW** |
+| POST | `/expenses` | `{ idempotencyKey, staffId?, type, amountPaisa, date, note, billImageId?, planId?, salaryMonth? }` | `Expense` | O M S (own) | Planned |
+| PATCH | `/expenses/:id` | any of `{ staffId, type, amountPaisa, date, note, billImageId, planId, salaryMonth }` (`null` clears the last three) | `Expense` | O M | Planned |
+| GET | `/expenses/summary` | `?from&to&staffId&type` (from and to required) | `ExpenseSummary` | O M | Planned |
 | GET | `/visit-photos` | `?from&to&planId&shopId&salesmanId&flagged&page&pageSize` (dates are the Nepal date of `takenAt`) | `Page<VisitPhoto>` (with `imageUrl`) | O M (S own) | Planned |
 | POST | `/visits/:id/photos` | `{ idempotencyKey, imageId, note, deviceTakenAt?, latitude?, longitude? }` | `VisitPhoto` | S (own visit, day in progress) | Planned |
 | POST | `/uploads/images` | the image file (multipart) | `{ id, url }` | O M S | **NEW** (see Uploads) |
 
 **Expenses:**
 - A salesman adds only their own: `fuel`, `khaja` or `misc`. Salary is added by the owner or a manager.
-- The amount is above zero, the date is not in the future, and the note is up to 300 characters.
+- The amount is above zero, the date is not in the future, and the note (the description) is up to 300 characters.
+- **Salary needs a staff member** (tested). It also needs `salaryMonth`, the month it covers as `"YYYY-MM"` (**NEW**, an assumption).
+- `planId` (**NEW**) is only for `fuel` and `khaja`, and must be one of that staff member's day plans. The server drops `planId` for other types and `salaryMonth` for non-salary.
+- Without `staffId`, an owner's or manager's expense is recorded under them.
+- **NEW** fields: `planId`, `salaryMonth`, `createdBy`, `createdAt`, `updatedAt`, `updatedBy`, `billImageUrl`.
+- **No edit history is kept yet.** A PATCH replaces the values and records `updatedAt` and `updatedBy` only.
+- `ExpenseSummary { from, to, totalPaisa, count, byType: [{ type, count, amountPaisa }] (all four types), byMonth: [{ month: "YYYY-MM", totalPaisa, byType: { salary, fuel, khaja, misc } }] }`, by the month of the expense date, oldest first.
 
 **Visit photos:**
 - The server records the real time.
@@ -324,33 +427,63 @@ Rules (tested):
 
 | Method | Path | Request | Response | Who | Status |
 | --- | --- | --- | --- | --- | --- |
-| GET | `/reports/dashboard` | `?date` | `DashboardSummary` | O M | **NEW** |
-| GET | `/reports/today` | | `TodayReport` | S (own); O M (all) | Planned |
+| GET | `/reports/dashboard` | `?date` | `DashboardSummary` | O M | **NEW** (dashboard data) |
+| GET | `/reports/sales-by-day` | `?from&to` | `{ date, totalPaisa, count }[]` | O M | Planned? (since Step 1; the dashboard chart needs it) |
+| GET | `/reports/today` | `?from&to` (O M only; default today) | `TodayReport` | S (own, today only); O M (all) | Planned |
+| GET | `/reports/salesman/:id/history` | `?from&to` | `SalesmanHistoryEntry[]`, newest first | O M | Planned |
 | GET | `/reports/salesman/:id/analytics` | `?from&to` | `SalesmanAnalytics` | S (self only); O M | Planned |
-| GET | `/reports/sales-by-day` | `?from&to` | `{ date, totalPaisa, count }[]` | O M | Planned? |
-| GET | `/reports/sales-by-salesman` | `?from&to` | `{ salesmanId, totalPaisa, count }[]` | O M | Planned? |
-| GET | `/reports/overdue` | | `{ shopId, overduePaisa, oldestDueDate }[]`, oldest first | O M | Planned? |
-| GET | `/reports/low-stock` | | `Product[]` | O M | Planned? |
+| GET | `/reports/overdue-credit` | | `{ shopId, overduePaisa, oldestDueDate }[]`, oldest first | O M | Planned |
+| GET | `/reports/low-stock` | `?from&to` (default the last 30 days) | `LowStockItem[]` = `Product & { soldUnits }` (active only) | O M | Planned |
+| GET | `/reports/sales-by-salesman` | `?from&to` | `{ salesmanId, totalPaisa, count }[]` | O M | Planned? (not used by a screen yet) |
+
+**Dashboard data that needs its own call** (not covered by the five planned reports):
+- `GET /reports/dashboard`: sales today (total and count), cash collected today, payments waiting (count), day plans today by status, flagged photos (count), plus in-clearing, overdue and low-stock totals.
+- `GET /reports/sales-by-day`: the 14-day chart.
+- The top 5 overdue shops and the low-stock list use `/reports/overdue-credit` and `/reports/low-stock`.
 
 **Shapes:**
-- `DashboardSummary { date, salesTodayPaisa, salesTodayCount, collectedTodayPaisa, inClearingPaisa, overduePaisa, overdueShopCount, lowStockCount, plansByStatus, flaggedPhotoCount }`.
-- `TodayReport { date, count, totalPaisa, cashCollectedPaisa, byShop: [{ shopId, count, totalPaisa, cashPaisa }] }`: confirmed sales today, and confirmed cash payments today.
-- `SalesmanAnalytics { from, to, sales: { count, totalPaisa }, payments: [{ method, count, amountPaisa, pendingCount }], perDay: [{ date, count, totalPaisa }], perShop: [{ shopId, count, totalPaisa }], topProducts: [{ productId, baseUnits, totalPaisa }] (top 5), returnsPaisa, expensesPaisa }`.
+- `DashboardSummary { date, salesTodayPaisa, salesTodayCount, collectedTodayPaisa, cashTodayPaisa, pendingPaymentCount, inClearingPaisa, overduePaisa, overdueShopCount, lowStockCount, plansByStatus, flaggedPhotoCount }`.
+  - **NEW:** `cashTodayPaisa` (confirmed cash payments today) and `pendingPaymentCount` (pending cheque and online payments, any date).
+  - `flaggedPhotoCount` counts every flagged photo: there is no "reviewed" mark yet.
+- `TodayReport { date, from, to, count, totalPaisa, cashCollectedPaisa, byShop: [{ shopId, count, totalPaisa, cashPaisa }], bySalesman: [{ salesmanId, count, totalPaisa, cashPaisa }] }`.
+  - Confirmed sales and confirmed cash payments in the range (one day by default). `date` is the last day.
+  - **NEW:** `bySalesman`, `from`, `to`, and `?from&to`. A shop or salesman with cash but no sale appears with `count: 0`.
+- `SalesmanHistoryEntry { kind: "sale" | "payment", id, date, at, shopId, amountPaisa, status, ref }` (**NEW**). `ref` is the invoice number ("Invoice 12") or the payment method. Every status is included, so cancelled sales and bounced payments show.
+- `SalesmanAnalytics { from, to, sales: { count, totalPaisa }, payments: [{ method, count, amountPaisa, pendingCount }], perDay: [{ date, count, totalPaisa }], perShop: [{ shopId, count, totalPaisa }], topProducts: [{ productId, baseUnits, totalPaisa }] (top 5), returnsPaisa, expensesPaisa, shortage }`.
   - Confirmed sales only; bounced payments are left out.
   - Days with no sales are not sent; the app shows them as empty.
+  - The app works out the average sale (total ÷ count).
+  - **NEW:** `shortage { plans, units, valuePaisa, byProduct: [{ productId, units, valuePaisa }] }` (tested). It covers the salesman's reconciled day plans in the range: issued − sold − counted back − written off, per product. Only shortfalls count, valued at the product's unit price.
+- **Low stock** (**NEW** `soldUnits`): base units sold of each product in the range, from confirmed sales. The stock is the warehouse now; stock out on a day plan is not counted.
+- **Overdue credit:** payments are put against the oldest invoices first. The app works out the days overdue (today − `oldestDueDate`), and its optional date range narrows by `oldestDueDate`.
 
 ## Shop portal (the logged-in shop's own data)
 
+The shop is taken from the session, never from the request, so a shop only ever sees its own records. No call here returns a cost price, a product id's full record, or another shop's data.
+
 | Method | Path | Request | Response | Who | Status |
 | --- | --- | --- | --- | --- | --- |
-| GET | `/shop-portal/summary` | | `ShopSummary { shopName, businessName, balancePaisa, inClearingPaisa, creditLimitPaisa, overduePaisa, oldestOverdueDate? }` | Sh | Planned? |
-| GET | `/shop-portal/statement` | `?from&to` | `StatementEntry[]` | Sh | Planned? |
-| GET | `/shop-portal/invoices` | `?from&to&page&pageSize` | `Page<Sale>` | Sh | **NEW** |
-| GET | `/shop-portal/invoices/:id` | | `Sale` | Sh | **NEW** |
-| GET | `/shop-portal/payments` | `?from&to&page&pageSize` | `Page<Payment>` | Sh | **NEW** |
-| GET | `/shop-portal/returns` | `?from&to&page&pageSize` | `Page<Return>` | Sh | **NEW** |
+| GET | `/shop/me` | | `ShopProfile` | Sh | Planned |
+| GET | `/shop/me/balance` | | `ShopSummary` | Sh | Planned |
+| GET | `/shop/me/statement` | `?from&to` | `StatementEntry[]` | Sh | Planned |
+| GET | `/shop/me/invoices` | `?from&to&status&page&pageSize` | `Page<ShopInvoice>`, newest first | Sh | **NEW: needed, not in your backend plan** |
+| GET | `/shop/me/invoices/:id` | | `ShopInvoice` with `payments` | Sh | **NEW: needed, not in your backend plan** |
+| GET | `/shop/me/payments` | `?from&to&status&page&pageSize` | `Page<ShopPayment>`, newest first | Sh | **NEW: needed, not in your backend plan** |
+| GET | `/shop/me/returns` | `?from&to&page&pageSize` | `Page<ShopReturn>`, newest first | Sh | **NEW: needed, not in your backend plan** |
 
-A shop only ever sees its own records, and never cost prices.
+The password is changed through the existing auth call `POST /auth/change-password` (in `docs/auth-contract.md`), from the existing `/app/change-password` page. The shop portal has no password call of its own.
+
+**Shapes** (all **NEW** except `StatementEntry`):
+- `ShopProfile { shopName, ownerName, phone, address, pan ("" when none), registrationNo, loginEmail?, business: { name, address, city, phone, pan } }`.
+- `ShopSummary { shopName, businessName, balancePaisa, inClearingPaisa, creditLimitPaisa, creditUsedPaisa, overduePaisa, oldestOverdueDate?, lastPayment? }`.
+  - `creditUsedPaisa` = max(0, balance).
+  - `lastPayment { date, amountPaisa, method, status }` is the latest one that did not bounce.
+- `ShopInvoice { id, invoiceNo, date, createdAt, dueDate, status, lines: [{ productName, unitName, unit, quantity, pricePaisa, totalPaisa }], subtotalPaisa?, discountPaisa, totalPaisa, paidPaisa, salesmanName, cancelledAt?, cancelReason?, payments?: [{ date, method, amountPaisa, status }] }`.
+  - Selling prices only, as on the printed invoice.
+  - Leaves out the plan, the visit, who allowed an over-limit sale, and who cancelled it.
+  - Another shop's invoice id answers `404`, not `403`, so ids are not confirmed.
+- `ShopPayment { id, date, method, amountPaisa, status, chequeNo?, bank?, reference?, invoiceNo? }`: no photos and no decided-by.
+- `ShopReturn { id, date, lines: [{ productName, unitName, units, reason }], valuePaisa }`.
 
 ## Change log
 
@@ -387,3 +520,19 @@ A shop only ever sees its own records, and never cost prices.
   - `GET /sales/:id`, `POST /sales/:id/cancel`, `GET /payments/:id`, `PATCH /payments/:id/status`, `GET /returns/:id`, `POST /returns` (manager), `GET`/`POST /write-offs` and `GET /visit-photos` are marked Planned, as you listed.
   - **Changed:** `PATCH /payments/:id/status` replaces the separate confirm and bounce calls. Write-offs take `unit` and `quantity`.
   - **NEW:** `Sale.paidPaisa` and `cancelledBy`, `Payment.imageUrls`, `VisitPhoto.imageUrl`, the `no_photo_data` flag, and the `saleId` and date filters.
+- **Step 9 (expenses):**
+  - `GET`, `POST` and `PATCH /expenses` and `GET /expenses/summary` are marked Planned, as you listed.
+  - **NEW:** `GET /expenses/:id`, the `planId`, `salaryMonth`, `createdBy`/`createdAt`, `updatedBy`/`updatedAt` and `billImageUrl` fields, and the `ExpenseSummary` shape.
+- **Step 10 (reports and dashboard):**
+  - `GET /reports/today`, `/reports/salesman/:id/history`, `/reports/salesman/:id/analytics`, `/reports/overdue-credit` and `/reports/low-stock` are marked Planned, as you listed.
+  - **Changed:** `/reports/overdue` is renamed `/reports/overdue-credit` to match your brief.
+  - **NEW:** the `SalesmanHistoryEntry` shape, `?from&to` and `bySalesman` on today, `?from&to` and `soldUnits` on low stock, `shortage` on analytics, and `cashTodayPaisa` and `pendingPaymentCount` on the dashboard. The dashboard and the 14-day chart need `GET /reports/dashboard` (**NEW**) and `GET /reports/sales-by-day` (Planned? since Step 1). Neither is in your planned list.
+- **Step 11 (shop portal):**
+  - `GET /shop/me`, `/shop/me/balance` and `/shop/me/statement` are marked Planned, as you listed. They replace the `/shop-portal/summary` and `/shop-portal/statement` guesses.
+  - **NEW, needed (not in your backend plan):** `GET /shop/me/invoices`, `/shop/me/invoices/:id`, `/shop/me/payments` and `/shop/me/returns`. These replace the `/shop-portal/...` guesses.
+  - **NEW:** the `ShopProfile`, `ShopInvoice`, `ShopPayment` and `ShopReturn` shapes, and `creditUsedPaisa` and `lastPayment` on `ShopSummary`.
+  - The password is changed with the existing `POST /auth/change-password`.
+- **Step 12 (polish and hand-over):**
+  - Added the "Every call the UI makes" table at the top, built from the rows below and marked "In the backend plan" or "NEW, needed from the backend".
+  - "Planned?" rows from Step 1 (`GET /reports/sales-by-day`) count as new until you confirm them. The four sign-in calls are listed from `auth-contract.md`.
+  - No call or shape changed in this step.

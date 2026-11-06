@@ -162,7 +162,7 @@ export function DemoImage({ src, alt, className = "" }: { src: string; alt: stri
   if (src.startsWith("demo-img:")) {
     const [, kind, n] = src.split(":");
     return (
-      <div role="img" aria-label={`${alt} (demo image)`} className={`visit-photo relative flex flex-col items-start justify-end gap-1 overflow-hidden rounded-input p-3 ${className}`.trim()}>
+      <div role="img" aria-label={`${alt} (${DEMO_LABEL[kind] ?? "Photo"} ${n}, demo)`} className={`visit-photo relative flex flex-col items-start justify-end gap-1 overflow-hidden rounded-input p-3 ${className}`.trim()}>
         <CameraIcon className="size-6 text-ink-2" />
         <span className="rounded-input bg-board px-2 text-xs text-board-type">
           {DEMO_LABEL[kind] ?? "Photo"} {n}, demo
@@ -179,7 +179,8 @@ export function ImageViewer({ src, alt, thumbClassName = "h-20 w-28" }: { src: s
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={`choice rounded-input ${thumbClassName.includes("w-full") ? "block w-full" : ""}`.trim()} aria-label={`Open ${alt}`}>
+      <button type="button" onClick={() => setOpen(true)} className={`choice rounded-input ${thumbClassName.includes("w-full") ? "block w-full" : ""}`.trim()}>
+        <span className="visually-hidden">Open </span>
         <DemoImage src={src} alt={alt} className={thumbClassName} />
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title={alt}>

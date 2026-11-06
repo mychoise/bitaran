@@ -13,7 +13,8 @@ const ApiContext = createContext<ApiContextValue | null>(null);
 
 /**
  * React Query and the ApiClient for one signed-in person. The mode comes from the server's
- * API_MODE; the mock (and its demo data) is only downloaded when the mode is "mock".
+ * API_MODE; the mock (and its demo data) is only downloaded when the mode is "mock", and a
+ * production build does not contain it at all.
  */
 export function ApiProvider({ mode, viewer, children }: { mode: ApiMode; viewer: Viewer; children: ReactNode }) {
   const [queryClient] = useState(
@@ -22,7 +23,8 @@ export function ApiProvider({ mode, viewer, children }: { mode: ApiMode; viewer:
   const value = useMemo<ApiContextValue>(() => {
     let client: Promise<ApiClient> | null = null;
     const getClient = () =>
-      (client ??= mode === "mock" ? import("./mock").then((m) => m.createMockClient(viewer)) : Promise.resolve(createHttpClient(viewer)));
+      (client ??=
+        process.env.NODE_ENV !== "production" && mode === "mock" ? import("./mock").then((m) => m.createMockClient(viewer)) : Promise.resolve(createHttpClient(viewer)));
     return { mode, viewer, getClient };
   }, [mode, viewer]);
   return (

@@ -28,7 +28,13 @@ export function RouteShops() {
 
   if (plan.isPending) return <LoadingState label="Loading your shops" />;
   if (plan.isError) return <ErrorState message={errorMessage(plan.error)} onRetry={() => plan.refetch()} />;
-  if (!plan.data) return <EmptyState title="No plan for today" line="When your manager gives you a route, its shops show here in order." />;
+  if (!plan.data)
+    return (
+      <>
+        <h1 className="visually-hidden">Shops</h1>
+        <EmptyState title="No plan for today" line="When your manager gives you a route, its shops show here in order." />
+      </>
+    );
   if (shops.isPending) return <LoadingState label="Loading your shops" />;
   if (shops.isError) return <ErrorState message={errorMessage(shops.error)} onRetry={() => shops.refetch()} />;
 

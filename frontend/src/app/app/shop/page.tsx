@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { ShopOverview } from "@/components/app/Homes";
+import { ShopHome } from "@/components/app/shop/Portal";
 
-export const metadata: Metadata = { title: "Overview" };
+export const metadata: Metadata = { title: "Home" };
 
 /** Shops land here. */
 export default function ShopPage() {
-  return <ShopOverview />;
+  return <ShopHome />;
 }

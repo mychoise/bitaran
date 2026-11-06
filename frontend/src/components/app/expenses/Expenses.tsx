@@ -242,6 +242,17 @@ function ExpenseForm({ existing }: { existing?: Expense }) {
   const planOptions = (plans.data?.items ?? []).slice().sort((a, b) => b.date.localeCompare(a.date));
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
+      {look.error || plans.isError ? (
+        <div className="lg:col-span-3">
+          <ErrorState
+            message={`The staff or day plan lists did not load. ${errorMessage(look.error ?? plans.error)}`}
+            onRetry={() => {
+              look.retry();
+              if (plans.isError) plans.refetch();
+            }}
+          />
+        </div>
+      ) : null}
       <Card as="section" className="lg:col-span-2" aria-label="Expense">
         <Segmented
           label="Type of expense"
@@ -366,10 +377,10 @@ export function ExpenseSummaryView() {
         <EmptyState title="No expenses in these dates" line="Try a wider date range." />
       ) : (
         <>
-          <dl className="m-0 grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <dl className="m-0 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
             <Card dense>
               <dt className="text-sm text-muted">Total</dt>
-              <dd className="m-0 mt-1 font-outlier text-xl">{formatMoney(d!.totalPaisa)}</dd>
+              <dd className="m-0 mt-1 font-outlier text-xl whitespace-nowrap">{formatMoney(d!.totalPaisa)}</dd>
               <dd className="m-0 text-sm text-ink-2">
                 {d!.count} expense{d!.count === 1 ? "" : "s"}
               </dd>
@@ -377,7 +388,7 @@ export function ExpenseSummaryView() {
             {d!.byType.map((t) => (
               <Card key={t.type} dense>
                 <dt className="text-sm text-muted">{EXPENSE_TYPE[t.type]}</dt>
-                <dd className="m-0 mt-1 font-outlier text-xl">{formatMoney(t.amountPaisa)}</dd>
+                <dd className="m-0 mt-1 font-outlier text-xl whitespace-nowrap">{formatMoney(t.amountPaisa)}</dd>
                 <dd className="m-0 text-sm text-ink-2">
                   {t.count} expense{t.count === 1 ? "" : "s"}
                 </dd>

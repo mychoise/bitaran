@@ -369,6 +369,9 @@ export type VisitPhoto = {
   /** The camera's own time (EXIF), if it had one. */
   deviceTakenAt?: Instant;
   distanceM?: number;
+  /** Where the phone was when the photo was taken, if it sent its location. */
+  latitude?: number;
+  longitude?: number;
   imageId: Id;
   flags: PhotoFlag[];
   visitId?: Id;
@@ -379,7 +382,10 @@ export type VisitPhoto = {
 
 /** Today's sales for the signed-in salesman (all salesmen for a manager), shop by shop. */
 export type TodayReport = {
+  /** The last day of the range (today, for a salesman). */
   date: BusinessDate;
+  from: BusinessDate;
+  to: BusinessDate;
   count: number;
   totalPaisa: Paisa;
   cashCollectedPaisa: Paisa;
@@ -401,6 +407,9 @@ export type SalesmanHistoryEntry = {
   /** The invoice number for a sale; the method for a payment. */
   ref: string;
 };
+
+/** A low-stock product, with what sold of it in the report's dates. */
+export type LowStockItem = Product & { /** Left out when the server cannot work it out. */ soldUnits?: number };
 
 /** One salesman's numbers over a date range. Confirmed sales only; bounced payments left out. */
 export type SalesmanAnalytics = {
@@ -451,6 +460,64 @@ export type ShopSummary = {
   balancePaisa: Paisa;
   inClearingPaisa: Paisa;
   creditLimitPaisa: Paisa;
+  /** max(0, balance): how much of the limit is in use. */
+  creditUsedPaisa: Paisa;
   overduePaisa: Paisa;
   oldestOverdueDate?: BusinessDate;
+  /** The latest payment that was not bounced. */
+  lastPayment?: { date: BusinessDate; amountPaisa: Paisa; method: PaymentMethod; status: PaymentStatus };
+};
+
+/** What a shop sees about itself and the business it buys from. */
+export type ShopProfile = {
+  shopName: string;
+  ownerName: string;
+  phone: string;
+  address: string;
+  /** "" when the shop has none. */
+  pan: string;
+  registrationNo: string;
+  loginEmail?: string;
+  business: { name: string; address: string; city: string; phone: string; pan: string };
+};
+
+/** An invoice as the shop sees it: names instead of internal ids, never a cost price. */
+export type ShopInvoice = {
+  id: Id;
+  invoiceNo: number;
+  date: BusinessDate;
+  createdAt: Instant;
+  dueDate: BusinessDate;
+  status: SaleStatus;
+  lines: { productName: string; unitName: string; unit: SaleUnit; quantity: number; pricePaisa: Paisa; totalPaisa: Paisa }[];
+  subtotalPaisa?: Paisa;
+  discountPaisa: Paisa;
+  totalPaisa: Paisa;
+  /** Confirmed payments against this invoice. */
+  paidPaisa: Paisa;
+  salesmanName: string;
+  cancelledAt?: Instant;
+  cancelReason?: string;
+  /** Payments linked to this invoice (detail only). */
+  payments?: { date: BusinessDate; method: PaymentMethod; amountPaisa: Paisa; status: PaymentStatus }[];
+};
+
+export type ShopPayment = {
+  id: Id;
+  date: BusinessDate;
+  method: PaymentMethod;
+  amountPaisa: Paisa;
+  status: PaymentStatus;
+  chequeNo?: string;
+  bank?: string;
+  reference?: string;
+  /** The invoice it was paid against, if any. */
+  invoiceNo?: number;
+};
+
+export type ShopReturn = {
+  id: Id;
+  date: BusinessDate;
+  lines: { productName: string; unitName: string; units: number; reason: ReturnReason }[];
+  valuePaisa: Paisa;
 };

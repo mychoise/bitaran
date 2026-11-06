@@ -48,7 +48,7 @@ export function VisitScreen({ visitId }: { visitId: string }) {
             Shop {v.position}
             {v.visit.adHoc ? ", added today" : ""}
           </p>
-          <h1 className="text-display-s">{v.shop.name}</h1>
+          <h1 className="mt-1 text-display-s">{v.shop.name}</h1>
           <p className="mt-1 text-lg text-ink-2">{v.shop.address}</p>
           <p className="mt-1 text-sm text-ink-2">
             {v.shop.ownerName} · <a href={`tel:${v.shop.phone.replace(/\s/g, "")}`} className="text-link">{v.shop.phone}</a>

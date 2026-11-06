@@ -130,7 +130,7 @@ export function SaleDetail({ id }: { id: string }) {
             </div>
             <div className="text-right">
               <p className="text-sm text-muted">Invoice</p>
-              <h1 id="invoice-title" className="font-outlier text-display-s leading-none">
+              <h1 id="invoice-title" className="mt-1 font-outlier text-display-s leading-none">
                 No. {s.invoiceNo}
               </h1>
               <p className="mt-2">

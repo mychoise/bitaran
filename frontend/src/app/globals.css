@@ -405,11 +405,18 @@
   /* Print: white page, ink text, no app chrome. */
   @media print {
     .no-print { display: none !important; }
+    /* Buttons and button-styled links do nothing on paper. */
+    .btn { display: none !important; }
     [role="tablist"] { display: none !important; }
     /* Paper cannot scroll: tables show in full, a little smaller. */
-    .table-scroll { overflow: visible; }
+    .table-scroll { overflow: visible; max-height: none; }
     .data-table { font-size: 11px; }
     .data-table th, .data-table td { padding: 6px 8px; }
+    /* Headings may wrap on paper, so wide tables fit the page width. */
+    .data-table thead th { white-space: normal; position: static; }
+    .data-table tfoot th, .data-table tfoot td { position: static; }
+    .data-table tr { break-inside: avoid; }
+    .data-table .sort-btn svg { display: none; }
     body { background: none; }
     .stock { box-shadow: none; background-image: none; }
   }

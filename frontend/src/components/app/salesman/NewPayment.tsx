@@ -13,7 +13,7 @@ import { Card, MoneyText, StatusBadge } from "@/components/ui/Display";
 import { Input, Select } from "@/components/ui/Field";
 import { FormProblem } from "@/components/ui/Form";
 import { useToast } from "@/components/ui/Overlay";
-import { validatePayment } from "@/lib/api/mock/rules";
+import { collectable, overLimit, validatePayment } from "@/lib/api/mock/rules";
 import { errorMessage, useApiMutation, useApiQuery } from "@/lib/api/provider";
 import type { Payment, PaymentMethod, VisitShop } from "@/lib/api/types";
 import { formatDate, todayNepal } from "@/lib/dates";
@@ -50,9 +50,11 @@ function PaymentForm({ v }: { v: VisitShop }) {
   }, DAY_AFFECTS);
 
   const amountPaisa = parseRupees(amount);
+  const limit = collectable(v.shop.balancePaisa, v.shop.inClearingPaisa);
   const problems = validatePayment(
     { method, amountPaisa: amountPaisa ?? 0, chequeNo, bank, chequeDate, reference, imageIds: shot ? ["photo"] : [] },
     new Set(),
+    limit,
   );
   const show = (m: string) => (tried && problems.includes(m) ? m : undefined);
 
@@ -66,6 +68,22 @@ function PaymentForm({ v }: { v: VisitShop }) {
           {done.status === "pending" ? "Pending until your manager confirms it. It does not lower what the shop owes until then." : "Confirmed. It already lowers what the shop owes."}
         </p>
         <Link href={`/app/salesman/shops/${v.visit.id}`} className={buttonClass("primary", "lg", "mt-6 w-full")}>
+          Back to {v.shop.name}
+        </Link>
+      </Card>
+    );
+
+  if (limit <= 0)
+    return (
+      <Card as="section" aria-label="Nothing to collect">
+        <p className="text-lg font-medium">Nothing to collect</p>
+        <p className="mt-2 text-ink-2">
+          {v.shop.balancePaisa > 0
+            ? `${v.shop.name} owes ${formatMoney(v.shop.balancePaisa)}, and cheques or online payments already in clearing cover it.`
+            : `${v.shop.name} owes nothing right now.`}{" "}
+          There is nothing to collect.
+        </p>
+        <Link href={`/app/salesman/shops/${v.visit.id}`} className={buttonClass("secondary", "lg", "mt-6 w-full")}>
           Back to {v.shop.name}
         </Link>
       </Card>
@@ -109,7 +127,7 @@ function PaymentForm({ v }: { v: VisitShop }) {
           .
         </p>
         <div className="mt-4 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-          <Input label="Amount (Rs)" inputMode="decimal" size="lg" autoComplete="off" value={amount} error={show("Enter an amount above zero.") ?? (tried && amountPaisa === null ? "Enter the amount in rupees, like 6,600." : undefined)} onChange={(e) => setAmount(e.target.value)} />
+          <Input label="Amount (Rs)" inputMode="decimal" size="lg" autoComplete="off" value={amount} hint={`Up to ${formatMoney(limit)}.`} error={show("Enter an amount above zero.") ?? (amountPaisa !== null && amountPaisa > limit ? overLimit(limit) : undefined) ?? (tried && amountPaisa === null ? "Enter the amount in rupees, like 6,600." : undefined)} onChange={(e) => setAmount(e.target.value)} />
           <Select label="For one sale (optional)" value={saleId} onChange={(e) => setSaleId(e.target.value)}>
             <option value="">Towards the balance</option>
             {(sales.data?.items ?? [])

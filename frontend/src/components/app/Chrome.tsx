@@ -5,11 +5,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Field";
 import { ConfirmDialog, useToast } from "@/components/ui/Overlay";
 import { ChevronDownIcon, UserIcon } from "@/components/ui/icons";
 import { useApi } from "@/lib/api/provider";
+import { failureSimulated, setFailureSimulated, subscribeFailure } from "@/lib/api/mock/flags";
 
 /** Shown only in mock mode: says the data is not real, and offers a reset. */
 export function DemoRibbon() {
@@ -18,9 +20,18 @@ export function DemoRibbon() {
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
+  const failing = useSyncExternalStore(subscribeFailure, failureSimulated, () => false);
   if (mode !== "mock") return null;
 
+  async function toggleFailure(on: boolean) {
+    setFailureSimulated(on);
+    await queryClient.resetQueries();
+  }
+
   async function reset() {
+    // Only ever reached in mock mode, which production refuses; the check keeps the demo data
+    // out of a production build.
+    if (process.env.NODE_ENV === "production") return;
     setBusy(true);
     const store = await import("@/lib/api/mock/store");
     store.resetDemoData();
@@ -43,6 +54,9 @@ export function DemoRibbon() {
             <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={() => setConfirm(true)}>
               Reset demo data
             </Button>
+            <div className="mt-4 border-t border-rule-2 pt-3">
+              <Checkbox label="Simulate a connection failure" hint="Every request fails, to check the error screens. This tab only." checked={failing} onChange={(e) => toggleFailure(e.target.checked)} />
+            </div>
           </div>
         </details>
       </div>

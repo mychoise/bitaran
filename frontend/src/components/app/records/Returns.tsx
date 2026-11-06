@@ -186,6 +186,11 @@ export function NewReturnManager() {
     <>
       <BackLink href="/app/manager/returns" label="Returns" />
       <PageHeader title="New return" lead="Goods a shop sends back, recorded at the office. The credit lowers what the shop owes." />
+      {look.error ? (
+        <div className="mb-6">
+          <ErrorState message={`The list of shops did not load. ${errorMessage(look.error)}`} onRetry={look.retry} />
+        </div>
+      ) : null}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-start">
         <div className="flex flex-col gap-6 lg:col-span-2">
           <Card as="section" dense aria-label="Shop">
@@ -348,6 +353,17 @@ export function NewWriteOff() {
     <>
       <BackLink href="/app/manager/write-offs" label="Write-offs" />
       <PageHeader title="New write-off" lead="Stock that cannot be sold or was lost." />
+      {look.error || plans.isError || offs.isError || sales.isError ? (
+        <div className="mb-6 max-w-3xl">
+          <ErrorState
+            message={`Products, day plans or stock did not load, so this form cannot check the quantity. ${errorMessage(look.error ?? plans.error ?? offs.error ?? sales.error)}`}
+            onRetry={() => {
+              look.retry();
+              for (const q of [plans, offs, sales]) if (q.isError) q.refetch();
+            }}
+          />
+        </div>
+      ) : null}
       <Card as="section" className="max-w-3xl" aria-label="Write-off">
         <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
           <div className="sm:col-span-2">

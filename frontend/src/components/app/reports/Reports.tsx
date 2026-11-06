@@ -9,12 +9,12 @@ import { BarChart } from "@/components/ui/BarChart";
 import { Button } from "@/components/ui/Button";
 import { DateRangePicker, presetRange, type Range } from "@/components/ui/Controls";
 import { Card, MoneyText, PageHeader, StatusBadge } from "@/components/ui/Display";
-import { Input, Select } from "@/components/ui/Field";
+import { Select } from "@/components/ui/Field";
 import { BackLink } from "@/components/ui/Form";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { ExportButton, Table, type Column } from "@/components/ui/Table";
 import { errorMessage, useApiQuery } from "@/lib/api/provider";
-import type { Product, SalesmanHistoryEntry } from "@/lib/api/types";
+import type { LowStockItem, SalesmanHistoryEntry } from "@/lib/api/types";
 import { addDays, daysBetween, formatDate, formatTime, todayNepal } from "@/lib/dates";
 import { formatAmount, formatMoney } from "@/lib/money";
 import { cartonEquivalent, countUnits } from "@/lib/units";
@@ -41,7 +41,7 @@ function useRange(url: { from: string; to: string }): Range {
 }
 
 function RangeProblem({ range }: { range: Range }) {
-  return range.from > range.to ? <p className="mb-4 text-danger">The start date is after the end date.</p> : null;
+  return range.from > range.to ? <p className="mb-4 text-error">The start date is after the end date.</p> : null;
 }
 
 function SalesmanPick({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -85,11 +85,11 @@ const SectionTitle = ({ children, actions }: { children: ReactNode; actions?: Re
 // ---- hub -----------------------------------------------------------------------------------------
 
 const REPORTS = [
-  { href: "today", title: "Today", line: "Every shop's sales and cash for a day, and each salesman's totals." },
+  { href: "today", title: "Today", line: "Every shop's sales and cash, and each salesman's totals: today, or any dates." },
   { href: "salesman-history", title: "Salesman history", line: "Every sale and payment one salesman took in a date range, newest first." },
   { href: "salesman-analytics", title: "Salesman analytics", line: "Totals, average sale, payments by method, returns, shortage, day by day, shop by shop, and top products." },
   { href: "overdue", title: "Overdue credit", line: "Shops with an unpaid amount past its due date, oldest first." },
-  { href: "low-stock", title: "Low stock", line: "Products at or below their low-stock level in the warehouse." },
+  { href: "low-stock", title: "Low stock", line: "Products at or below their low-stock level, with how much sold in the dates." },
 ];
 
 export function ReportsHub() {
@@ -121,10 +121,15 @@ type DayRow = { id: string; count: number; totalPaisa: number; cashPaisa: number
 export function TodayReportView() {
   const look = usePlanLookups();
   const today = todayNepal();
-  const [url, setUrl] = useUrlState(["date"] as const);
-  const date = okDate(url.date) && url.date <= today ? url.date : today;
-  const q = useApiQuery(["reports", "today", date], (api) => api.reports.today(date), { placeholderData: (prev) => prev });
+  const [url, setUrl] = useUrlState(["from", "to"] as const);
+  // Today unless the address says otherwise.
+  const range: Range = { from: okDate(url.from) || today, to: okDate(url.to) || today };
+  const ok = range.from <= range.to;
+  const q = useApiQuery(["reports", "today", range], (api) => api.reports.today(range), { enabled: ok, placeholderData: (prev) => prev });
   const d = q.data;
+  const isToday = range.from === today && range.to === today;
+  const oneDay = range.from === range.to;
+  const tag = oneDay ? range.from : `${range.from}-to-${range.to}`;
 
   const rowsColumns = (header: string, name: (id: string) => ReactNode, text: (id: string) => string): Column<DayRow>[] => [
     { key: "name", header, rowHeader: true, cell: (r) => name(r.id), sortValue: (r) => text(r.id) },
@@ -142,24 +147,13 @@ export function TodayReportView() {
   return (
     <>
       {BACK}
-      <PageHeader title={date === today ? "Today" : "Sales on a day"} lead={formatDate(date)} actions={<PrintButton />} />
-      <div className="no-print mb-6 flex flex-wrap items-end gap-3">
-        <div className="w-48">
-          <Input label="Day" type="date" size="sm" max={today} value={date} onChange={(e) => setUrl({ date: e.target.value === today ? "" : e.target.value })} />
-        </div>
-        <div className="pb-7">
-          <Button variant={date === today ? "primary" : "secondary"} size="sm" aria-pressed={date === today} onClick={() => setUrl({ date: "" })}>
-            Today
-          </Button>
-        </div>
-        <div className="pb-7">
-          <Button variant="secondary" size="sm" onClick={() => setUrl({ date: addDays(date, -1) })}>
-            Day before
-          </Button>
-        </div>
+      <PageHeader title={isToday ? "Today" : "Sales and cash"} lead={oneDay ? formatDate(range.from) : `${formatDate(range.from)} to ${formatDate(range.to)}`} actions={<PrintButton />} />
+      <div className="no-print mb-6">
+        <DateRangePicker value={range} onChange={(r) => setUrl({ from: r.from === today && r.to === today ? "" : r.from, to: r.from === today && r.to === today ? "" : r.to })} />
       </div>
-      {q.isPending ? (
-        <LoadingState label="Loading the day" />
+      <RangeProblem range={range} />
+      {!ok ? null : q.isPending ? (
+        <LoadingState label="Loading the sales" />
       ) : q.isError ? (
         <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />
       ) : (
@@ -172,10 +166,10 @@ export function TodayReportView() {
               ["Shops with activity", d!.byShop.length],
             ]}
           />
-          <SectionTitle actions={<ExportButton filename={`day-${date}-by-salesman.csv`} columns={salesmanColumns} rows={bySalesman} />}>Per salesman</SectionTitle>
-          <Table caption="Per salesman" columns={salesmanColumns} rows={bySalesman} rowKey={(r) => r.id} totals={totals} empty={{ title: "No sales or cash this day", line: "Pick another day." }} />
-          <SectionTitle actions={<ExportButton filename={`day-${date}-by-shop.csv`} columns={shopColumns} rows={byShop} />}>All shops</SectionTitle>
-          <Table caption="All shops" columns={shopColumns} rows={byShop} rowKey={(r) => r.id} totals={totals} empty={{ title: "No sales or cash this day", line: "Pick another day." }} />
+          <SectionTitle actions={<ExportButton filename={`sales-${tag}-by-salesman.csv`} columns={salesmanColumns} rows={bySalesman} />}>Per salesman</SectionTitle>
+          <Table caption="Per salesman" columns={salesmanColumns} rows={bySalesman} rowKey={(r) => r.id} totals={totals} empty={{ title: oneDay ? "No sales or cash this day" : "No sales or cash in these dates", line: "Pick other dates." }} />
+          <SectionTitle actions={<ExportButton filename={`sales-${tag}-by-shop.csv`} columns={shopColumns} rows={byShop} />}>All shops</SectionTitle>
+          <Table caption="All shops" columns={shopColumns} rows={byShop} rowKey={(r) => r.id} totals={totals} empty={{ title: oneDay ? "No sales or cash this day" : "No sales or cash in these dates", line: "Pick other dates." }} />
         </>
       )}
     </>
@@ -461,20 +455,23 @@ export function OverdueReport() {
 
 export function LowStockReport() {
   const today = todayNepal();
-  const [url, setUrl] = useUrlState(["sort"] as const);
-  const q = useApiQuery(["reports", "lowStock"], (api) => api.reports.lowStock());
-  const columns: Column<Product>[] = [
+  const [url, setUrl] = useUrlState(["from", "to", "sort"] as const);
+  const range = useRange(url);
+  const ok = range.from <= range.to;
+  const q = useApiQuery(["reports", "lowStock", range], (api) => api.reports.lowStock(range), { enabled: ok, placeholderData: (prev) => prev });
+  const columns: Column<LowStockItem>[] = [
     { key: "name", header: "Product", rowHeader: true, cell: (p) => <Link href={`/app/manager/products/${p.id}`} className="text-link">{p.name}</Link>, sortValue: (p) => p.name },
     { key: "sku", header: "SKU", cell: (p) => p.sku ?? "", sortValue: (p) => p.sku ?? "" },
     { key: "stock", header: "In the warehouse", numeric: true, cell: (p) => <>{countUnits(p.stockUnits, p.unitName)}{cartonEquivalent(p.stockUnits, p.unitsPerCarton, p.unitName) ? <span className="block text-sm text-muted">{cartonEquivalent(p.stockUnits, p.unitsPerCarton, p.unitName)}</span> : null}</>, sortValue: (p) => p.stockUnits },
     { key: "level", header: "Low-stock level", numeric: true, cell: (p) => countUnits(p.lowStockUnits, p.unitName), sortValue: (p) => p.lowStockUnits },
+    { key: "sold", header: "Sold in these dates", numeric: true, cell: (p) => (p.soldUnits === undefined ? <span className="text-muted">Not available</span> : countUnits(p.soldUnits, p.unitName)), sortValue: (p) => p.soldUnits ?? -1, csv: (p) => p.soldUnits ?? "" },
   ];
   return (
     <>
       {BACK}
       <PageHeader
         title="Low stock"
-        lead={`Warehouse stock now (${formatDate(today)}). Stock out on a day plan is not counted here.`}
+        lead={`Warehouse stock now (${formatDate(today)}), with what sold from ${formatDate(range.from)} to ${formatDate(range.to)}. Stock out on a day plan is not counted.`}
         actions={
           <>
             <ExportButton filename={`low-stock-${today}.csv`} columns={columns} rows={q.data} />
@@ -482,12 +479,16 @@ export function LowStockReport() {
           </>
         }
       />
+      <div className="no-print mb-4">
+        <DateRangePicker value={range} onChange={(r) => setUrl({ from: r.from, to: r.to })} />
+      </div>
+      <RangeProblem range={range} />
       <Table
         caption="Low stock"
         columns={columns}
-        rows={q.data}
+        rows={ok ? q.data : []}
         rowKey={(p) => p.id}
-        loading={q.isPending}
+        loading={ok && q.isPending}
         error={q.isError ? errorMessage(q.error) : null}
         onRetry={() => q.refetch()}
         sort={parseSort(url.sort)}

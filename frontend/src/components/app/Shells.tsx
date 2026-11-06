@@ -22,8 +22,10 @@ function useIdentity() {
 }
 
 function BusinessName() {
-  const q = useApiQuery(["business"], (api) => api.business.get());
-  return <span className="truncate text-ink-2">{q.data?.name ?? " "}</span>;
+  const { viewer } = useApi();
+  // A shop may not read the business record; its own summary carries its supplier's name.
+  const q = useApiQuery(["business", "name"], (api) => (viewer.type === "shop" ? api.shopPortal.summary().then((x) => x.businessName) : api.business.get().then((b) => b.name)));
+  return <span className="truncate text-ink-2">{q.data ?? " "}</span>;
 }
 
 function SideNav({ items, home, onNavigate }: { items: NavEntry[]; home: string; onNavigate?: () => void }) {

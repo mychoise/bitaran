@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     return res;
   }
   try {
-    const profile = await getAuthClient().me(check.session.token);
+    const profile = await (await getAuthClient()).me(check.session.token);
     return json({ ok: true, profile });
   } catch (err) {
     const code = toCode(err);

@@ -22,7 +22,13 @@ export function Today() {
   const routes = useApiQuery(["routes", "list"], (api) => api.routes.list());
   if (plan.isPending) return <LoadingState label="Loading today" />;
   if (plan.isError) return <ErrorState message={errorMessage(plan.error)} onRetry={() => plan.refetch()} />;
-  if (!plan.data) return <EmptyState title="No plan for today" line="Your manager has not given you a route for today. When they do, it shows here." />;
+  if (!plan.data)
+    return (
+      <>
+        <h1 className="visually-hidden">Today</h1>
+        <EmptyState title="No plan for today" line="Your manager has not given you a route for today. When they do, it shows here." />
+      </>
+    );
   if (report.isPending) return <LoadingState label="Loading today" />;
   if (report.isError) return <ErrorState message={errorMessage(report.error)} onRetry={() => report.refetch()} />;
   const route = routes.data?.find((r) => r.id === plan.data!.routeId);

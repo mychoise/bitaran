@@ -93,6 +93,22 @@ manager `Manager@12345`, salesmen `Salesman@12345`, shops `Shop@12345`
 (emails such as `owner@asva.test`, `salesman1@asva.test`, `shop1@asva.test`).
 From a build: `node dist/database/seed/run-seed.js`.
 
+```bash
+npm run seed:demo
+```
+
+**Development only.** This empties every table (it refuses when `NODE_ENV=production`), seeds the same business, then adds a week of demo activity:
+
+- a second route with three more shops (`shop4@asva.test` to `shop6@asva.test`)
+- 15 day plans in every state: reconciled, closed, one in progress today, and planned
+- sales, including one cancelled
+- cash, cheque and online payments: pending, confirmed and bounced
+- two returns and two write-offs
+- salaries, fuel, khaja and other expenses
+- visit photos, three of them flagged
+
+The images are written under `LOCAL_STORAGE_PATH`; with another storage driver, records that carry images are left out. Running it again starts over. Files from earlier runs stay in the uploads folder.
+
 ## Running
 
 ```bash

@@ -1,4 +1,4 @@
-// Navigation for each audience. Sections not built yet open a "comes in a later step" page.
+// Navigation for each audience. Every section has its own route folder.
 
 import type { StaffRole } from "@/lib/api/types";
 
@@ -16,7 +16,7 @@ export const managerNav: NavEntry[] = [
   { href: "/app/manager/write-offs", label: "Write-offs", icon: "box", built: true },
   { href: "/app/manager/expenses", label: "Expenses", icon: "wallet", built: true },
   { href: "/app/manager/photos", label: "Visit photos", icon: "camera", built: true },
-  { href: "/app/manager/reports", label: "Reports", icon: "chart" },
+  { href: "/app/manager/reports", label: "Reports", icon: "chart", built: true },
   { href: "/app/manager/staff", label: "Staff", icon: "users", built: true },
   { href: "/app/manager/settings", label: "Settings", icon: "settings", ownerOnly: true, built: true },
 ];
@@ -32,15 +32,13 @@ export const salesmanNav: NavEntry[] = [
 ];
 
 export const shopNav: NavEntry[] = [
-  { href: "/app/shop", label: "Overview", icon: "home" },
-  { href: "/app/shop/statement", label: "Statement", icon: "receipt" },
-  { href: "/app/shop/invoices", label: "Invoices", icon: "receipt" },
-  { href: "/app/shop/payments", label: "Payments", icon: "wallet" },
-  { href: "/app/shop/returns", label: "Returns", icon: "return" },
+  { href: "/app/shop", label: "Home", icon: "home" },
+  { href: "/app/shop/statement", label: "Statement", icon: "receipt", built: true },
+  { href: "/app/shop/invoices", label: "Invoices", icon: "receipt", built: true },
+  { href: "/app/shop/payments", label: "Payments", icon: "wallet", built: true },
+  { href: "/app/shop/returns", label: "Returns", icon: "return", built: true },
+  { href: "/app/shop/profile", label: "Profile", icon: "store", built: true },
 ];
-
-/** The section names each area's "later step" catch-all still answers (built ones have their own route). */
-export const sectionsOf = (nav: NavEntry[], base: string) => nav.filter((n) => !n.built).map((n) => n.href.slice(base.length + 1)).filter(Boolean);
 
 /** Whether a nav entry is the current page (the area home matches only exactly). */
 export const isCurrent = (href: string, pathname: string, home: string) => (href === home ? pathname === home : pathname === href || pathname.startsWith(`${href}/`));

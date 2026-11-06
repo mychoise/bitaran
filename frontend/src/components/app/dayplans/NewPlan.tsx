@@ -85,8 +85,9 @@ export function NewPlan() {
     }
   };
 
-  if (stock.isPending || !look.ready) return <LoadingState label="Loading salesmen, routes and stock" />;
   if (stock.isError) return <ErrorState message={errorMessage(stock.error)} onRetry={() => stock.refetch()} />;
+  if (look.error) return <ErrorState message={errorMessage(look.error)} onRetry={look.retry} />;
+  if (stock.isPending || !look.ready) return <LoadingState label="Loading salesmen, routes and stock" />;
   const show = (m?: string) => (tried ? m : undefined);
   const totalUnits = [...check.totals.values()].reduce((a, b) => a + b, 0);
 

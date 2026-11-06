@@ -1,6 +1,6 @@
 # Bitaran frontend: handoff
 
-State of the work as of 4 Nov 2026 (through Step 8), for an agent picking it up. Everything lives in `frontend/`.
+State of the work as of 5 Nov 2026 (through Step 12, the polish and hand-over pass), for an agent picking it up. Everything lives in `frontend/`.
 
 ## Ground rules from the owner (follow them exactly)
 
@@ -65,7 +65,7 @@ The session is a signed httpOnly cookie (`bitaran_session`), never localStorage.
   - Business dates are Nepal `YYYY-MM-DD`; instants are ISO strings.
 - **`src/lib/api/mock/`:** the in-browser mock, persisted in localStorage under `bitaran:dev-only:demo-data`. Mock data only; the session never goes there.
   - `rules.ts`: business rules as pure functions, tested in `rules.test.ts`. The mock obeys them, and the backend must too.
-  - `seed.ts`: deterministic demo data. `DEMO_DATA_VERSION` is 9 (it includes the idempotency store and a photo with no camera time); bump it when the data's shape changes.
+  - `seed.ts`: deterministic demo data. `DEMO_DATA_VERSION` is 10 (it includes the idempotency store, a photo with no camera time, and three months of salaries); bump it when the data's shape changes.
   - `index.ts`: `createMockClient(viewer)`. **Every answer is a `structuredClone`**: the store's objects never reach the screens, so in-place changes are seen as new data by React Query. It is role-scoped: salesmen see their own records, and cost price is stripped for non-managers. Not-yet-built writes throw `not_built_yet`.
   - `store.ts`: storage and reset.
 - **`src/lib/api/http.ts`:** stub client; every method throws "Backend not connected yet".
@@ -98,7 +98,7 @@ The session is a signed httpOnly cookie (`bitaran_session`), never localStorage.
   - Manager and owner: a sidebar from 1024px, a Menu drawer below.
   - Salesman and shop: bottom tabs on phones, a sidebar from 1024px.
   - Demo ribbon with "Reset demo data" in the dev menu.
-  - The nav is `src/components/app/nav.ts`. Mark `built: true` when a section gets its own route folder; until then the `[section]` catch-all shows "Built in a later step".
+  - The nav is `src/components/app/nav.ts`. Every section has its own route folder.
 
 ## Done so far
 
@@ -115,6 +115,10 @@ The session is a signed httpOnly cookie (`bitaran_session`), never localStorage.
 | 6 | **Salesman app, part 1** (phone first): `/app/salesman` (Today: planned with Start day, in progress with progress and totals, closed summary, or no plan), `/salesman/shops` (route in order, search, ad-hoc visit, new shop), `/salesman/shops/new`, `/salesman/shops/[visitId]` (balance card, today's purchases, items taken, Mark visited, Skip with reason; sale, payment, return and photo buttons shown but not built), `/salesman/stock`, `/salesman/close-day` (guided: shops, stock left with steppers, cash, review, confirm, then a read-only summary). |
 | 7 | **Salesman app, part 2:** `/salesman/sale/new?visit=` (picker with search, category chips, piece or carton, a stepper capped at stock, a sticky total; review with discount, due date, cash now and the credit check; invoice with print and share), `/payment/new?visit=` (cash, cheque, online; live camera), `/return/new?visit=`, `/visit-photo?visit=` (live camera, Nepal time burned in, flags shown neutrally), `/history`, `/today`, `/analytics` (SVG bar chart with a table view), `/expenses`, `/more`. |
 | 8 | **Manager records:** `/app/manager/sales` (filters: dates, salesman, shop, status; CSV), `/sales/[id]` (printable invoice with the business PAN, paid and still owed, linked payments; Cancel sale with a required reason, blocked with the reason when it has confirmed payments), `/payments` ("Pending (n)" first), `/payments/[id]` (images in an ImageViewer, Confirm or Mark bounced through ConfirmDialogs, read-only once decided), `/returns`, `/returns/new` (manager return against a shop), `/returns/[id]`, `/write-offs`, `/write-offs/new` (optional open day plan; with one, warehouse stock is not lowered again), `/photos` (review grid: dates, salesman, flagged only; flags in plain words, distance, time, link to the day plan). Components in `src/components/app/records/`. |
+| 9 | **Expenses** (owner and manager): `/app/manager/expenses` (filters: dates, type, person; a totals row; CSV), `/expenses/new` and `/expenses/[id]` (one form: type, amount, date, staff member, the day plan for fuel and khaja, the month for salary, description, optional bill photo; the edit page notes that no edit history is kept), `/expenses/summary` (totals by type, a by-month chart, and a month × type table). Components in `src/components/app/expenses/`. The kit `Table` gained a `totals` row. |
+| 10 | **Dashboard and reports:** `/app/manager` (tiles linking to detail: sales today, cash today, payments waiting, flagged photos, day plans by status, top 5 overdue shops, low stock, and a 14-day sales chart), `/reports` (hub), `/reports/today` (`?from&to`, default today), `/reports/salesman-history`, `/reports/salesman-analytics` (salesman and dates in the URL), `/reports/overdue`, `/reports/low-stock` (with units sold in the dates). Every report keeps a date range in the URL and has CSV and Print. Components in `src/components/app/reports/`. The manager `[section]` catch-all was removed because every section is built. |
+| 11 | **Shop portal** (read-only): `/app/shop` (owed or credit, credit limit and how much is used, overdue, last payment, recent activity), `/shop/statement` (running balance, dates in the URL, printable), `/shop/invoices` and `/shop/invoices/[id]` (printable), `/shop/payments` (status filter, each status explained), `/shop/returns`, `/shop/profile` (details, PAN only if set, a link to `/app/change-password`). Components in `src/components/app/shop/Portal.tsx`. The shop calls return shop-only shapes (`ShopInvoice`, `ShopPayment`, `ShopReturn`): names instead of ids, no cost prices. Another shop's invoice id is "not found". `Homes.tsx`, `ComingNext.tsx` and the last `[section]` catch-all were removed: every section is built. |
+| 12 | **Polish and hand-over.** Every page was walked as each login, with `axe` accessibility checks, overflow and overlap checks at 360, 1024 and 1280 px, link checks and role-access checks. Every print layout was checked as A4 PDF. Fixes: error states for forms whose lookups fail, print CSS (wrapping headers, no buttons, no sort icons), a business header on the salesman's invoice, accessible names for image thumbnails, one non-token colour (`text-danger`), and the mock and test accounts kept out of production builds. Added the dev-menu "Simulate a connection failure" switch, `README.md`, and the call table at the top of `docs/api-contract.md`. |
 
 The shop detail page has a balance card and tabs: Statement (date range, printable), Sales, Payments, Returns, Items taken, Details (edit, reset password, deactivate).
 
@@ -160,6 +164,8 @@ The shop detail page has a balance card and tabs: Statement (date range, printab
   - Cash collected = confirmed cash payments on the plan; difference = counted − collected.
 - **Cancelling a sale** (manager only): a reason is required; a confirmed payment blocks it. The goods go back to the salesman's stock while the plan is in progress or closed, otherwise to the warehouse.
 - **Write-offs** (manager only): pieces or cartons; can't exceed what is held (warehouse, or the plan's remaining stock). Warehouse stock drops only when there is no plan.
+- **Expenses:** salary needs a staff member and the month it covers; the amount is above zero; only fuel and khaja go on a day plan, which must be that person's. Totals are by type and by the month of the expense date.
+- **Reports:** a day's totals count confirmed sales and confirmed cash. Shortage covers reconciled plans (issued − sold − back − written off), counts only shortfalls, and is valued at the unit price. Salesman history includes every status.
 - **Photo flags:** old photo (camera time over 15 minutes before sending), too far (over 250 m from the shop), same as an earlier photo, no photo data (no camera time). Flags never block saving.
 - **Routes:**
   - A shop is on at most one route (or none: `routeId: null`).
@@ -183,11 +189,16 @@ The shop detail page has a balance card and tabs: Statement (date range, printab
 
 ## Not built yet (next steps)
 
-Every mock write is built (`notBuiltYet` was removed in Step 8). Still to come:
-- **Manager:** Expenses and Reports (`built: false` in `nav.ts`).
-- **Shop portal:** Statement, Invoices, Payments, Returns.
+Every screen in the nav is built, for every audience. Every mock write is built too (`notBuiltYet` was removed in Step 8).
 
 The owner pastes each step's brief. Don't start a step until it arrives.
+
+## Connected to the real backend (after Step 12)
+
+- `.env.local` sets `AUTH_MODE=api`, `API_MODE=api` and `API_URL=http://localhost:3000/api/v1`. Restart the dev server after changing it.
+- Sign-in uses `src/lib/auth/http.ts`. Data goes browser → `/api/backend/*` (`src/app/api/backend/[...path]/route.ts`, adds the token) → backend. The translation is all in `src/lib/api/http.ts`.
+- The backend's seeded logins are `owner@asva.test` / `Owner@12345`, `salesman1@asva.test` / `Salesman@12345` and `shop1@asva.test` / `Shop@12345`.
+- `docs/backend-gaps.md` lists what's missing, what's worked around and the rules that differ. Writes against the real backend are untested.
 
 ## Gotchas learned the hard way
 
@@ -203,10 +214,14 @@ The owner pastes each step's brief. Don't start a step until it arrives.
 - **The owner's dev server can serve an old stylesheet** after `globals.css` changes; a restart fixes it. To check styles, use a production build, or inject `.next/static/chunks/*.css` into the page.
 - **Kit `Tabs` renders every panel.** Pass `null` content for tabs that aren't open, to avoid loading every tab's data (see `ShopDetail.tsx`).
 - **Inputs in tests:** clear a field with Ctrl+A then Backspace; triple-click doesn't select a whole `type=search` value. Headless Brave reports no mouse, so to test smooth scrolling launch it with `--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4`.
+- **Script edits:** when changing a file with a script, check the text being replaced occurs exactly once. A first-match replace once wiped a large part of `mock/index.ts`; it was recovered from the dev server's source maps (`.next/dev/**/*.js.map`, `sourcesContent`).
+- **Build type errors about a deleted route** come from a stale `.next/dev/types/validator.ts`. Run `next dev` briefly to regenerate it.
+- **Production builds contain no mock.** `getAuthClient` (`src/lib/auth/index.ts`), `ApiProvider` and the dev menu load the mock only behind `process.env.NODE_ENV !== "production"`. Keep it that way, and check with `grep -rl "test-pass-123" .next` after a build.
+- **Error states:** turn on "Simulate a connection failure" in the dev menu (`src/lib/api/mock/flags.ts`). Every screen that loads data must then show "This did not load" with Retry. `usePlanLookups` returns `error` and `retry` for this.
 - **Git:** never touch the owner's git index (no `git rm --cached`, no staging). Commit only when asked.
 
 ## Uncommitted right now
 
 The last commit is `6957e57 feat: added product` (Step 3). Uncommitted:
-- **Steps 4 to 8:** routes and shops; day plans and reconcile; salesman app parts 1 and 2; manager sales, payments, returns, write-offs and photos. Each comes with its rules, tests and contract entries.
+- **Steps 4 to 12:** routes and shops; day plans and reconcile; salesman app parts 1 and 2; manager sales, payments, returns, write-offs and photos; expenses; the dashboard and reports; the shop portal; the Step 12 polish, `README.md` and the contract table. Each comes with its rules, tests and contract entries.
 - **Website extras:** GSAP smooth scrolling, the route rail, the How it works phone and role explorer, and the `gsap` package.

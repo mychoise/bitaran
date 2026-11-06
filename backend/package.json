@@ -20,6 +20,7 @@
     "db:migrate": "tsx src/database/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "seed": "tsx src/database/seed/run-seed.ts",
+    "seed:demo": "tsx src/database/seed/run-seed.ts --reset --demo",
     "storage:verify-cloudinary": "tsx scripts/verify-cloudinary.ts"
   },
   "dependencies": {

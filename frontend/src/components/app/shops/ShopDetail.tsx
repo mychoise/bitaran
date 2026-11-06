@@ -115,26 +115,28 @@ function BalanceCard({ shopId }: { shopId: string }) {
   ];
   return (
     <Card as="section" aria-label="Balance" className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-      <dl className="m-0 lg:col-span-2">
-        {rows.map(([label, paisa, sign]) => (
-          <div key={label} className="flex items-baseline justify-between gap-4 border-b border-rule-2 py-2">
-            <dt className="text-ink-2">{label}</dt>
-            <dd className="m-0">
-              <span className="mr-2 font-outlier text-muted" aria-hidden>
-                {sign}
-              </span>
-              <MoneyText paisa={paisa} balance={label === "Opening balance"} />
+      <div className="lg:col-span-2">
+        <dl className="m-0">
+          {rows.map(([label, paisa, sign]) => (
+            <div key={label} className="flex items-baseline justify-between gap-4 border-b border-rule-2 py-2">
+              <dt className="text-ink-2">{label}</dt>
+              <dd className="m-0">
+                <span className="mr-2 font-outlier text-muted" aria-hidden>
+                  {sign}
+                </span>
+                <MoneyText paisa={paisa} balance={label === "Opening balance"} />
+              </dd>
+            </div>
+          ))}
+          <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink py-3">
+            <dt className="font-semibold">{b.balancePaisa < 0 ? "Credit" : "Owes"}</dt>
+            <dd className="m-0 text-2xl">
+              <MoneyText paisa={b.balancePaisa} balance />
             </dd>
           </div>
-        ))}
-        <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink py-3">
-          <dt className="font-semibold">{b.balancePaisa < 0 ? "Credit" : "Owes"}</dt>
-          <dd className="m-0 text-2xl">
-            <MoneyText paisa={b.balancePaisa} balance />
-          </dd>
-        </div>
+        </dl>
         <p className="mt-2 text-sm text-muted">Confirmed payments only. Cheques and online payments count once they clear.</p>
-      </dl>
+      </div>
       <div className="flex flex-col gap-5">
         <div>
           <p className="text-sm text-muted">In clearing</p>
@@ -172,13 +174,15 @@ function BalanceCard({ shopId }: { shopId: string }) {
 
 // ---- statement ---------------------------------------------------------------------------------
 
-const KIND: Record<StatementEntry["kind"], string> = { opening: "Opening", sale: "Sale", payment: "Payment", return: "Return" };
+const KIND: Record<StatementEntry["kind"], string> = { opening: "Opening balance", sale: "Sale", payment: "Payment", return: "Return" };
+/** "Invoice 38", "Cash payment", "Return": the ref already names the kind, so say it once. */
+const describe = (e: StatementEntry) => (e.kind === "opening" ? KIND.opening : /^(invoice|return)|payment/i.test(e.ref) ? e.ref : `${KIND[e.kind]} ${e.ref}`);
 
 function Statement({ shop, range, onRange }: { shop: ShopWithBalance; range: Range; onRange: (r: Range) => void }) {
   const q = useApiQuery(["shops", "statement", shop.id, range], (api) => api.shops.statement(shop.id, range), { placeholderData: (prev) => prev });
   const columns: Column<StatementEntry>[] = [
     { key: "date", header: "Date", cell: (e) => <span className="whitespace-nowrap">{formatDate(e.date)}</span>, csv: (e) => e.date },
-    { key: "what", header: "Details", rowHeader: true, cell: (e) => <><span className="text-sm text-muted">{KIND[e.kind]} </span>{e.ref}</>, csv: (e) => `${KIND[e.kind]}: ${e.ref}` },
+    { key: "what", header: "Details", rowHeader: true, cell: describe, csv: describe },
     { key: "debit", header: "Adds", numeric: true, cell: (e) => (e.debitPaisa ? <MoneyText paisa={e.debitPaisa} /> : null), csv: (e) => (e.debitPaisa ? plain(e.debitPaisa) : "") },
     { key: "credit", header: "Lowers", numeric: true, cell: (e) => (e.creditPaisa ? <MoneyText paisa={e.creditPaisa} /> : null), csv: (e) => (e.creditPaisa ? plain(e.creditPaisa) : "") },
     { key: "balance", header: "Balance", numeric: true, cell: (e) => <MoneyText paisa={e.balancePaisa} balance />, csv: (e) => plain(e.balancePaisa) },

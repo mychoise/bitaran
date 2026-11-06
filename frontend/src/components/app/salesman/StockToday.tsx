@@ -16,7 +16,13 @@ export function StockToday() {
   const byId = useMemo(() => new Map((products.data?.items ?? []).map((p) => [p.id, p])), [products.data]);
   if (plan.isPending) return <LoadingState label="Loading your stock" />;
   if (plan.isError) return <ErrorState message={errorMessage(plan.error)} onRetry={() => plan.refetch()} />;
-  if (!plan.data) return <EmptyState title="No stock today" line="When your manager issues stock for your route, it shows here." />;
+  if (!plan.data)
+    return (
+      <>
+        <h1 className="visually-hidden">Stock</h1>
+        <EmptyState title="No stock today" line="When your manager issues stock for your route, it shows here." />
+      </>
+    );
   if (report.isPending) return <LoadingState label="Loading your stock" />;
   if (report.isError) return <ErrorState message={errorMessage(report.error)} onRetry={() => report.refetch()} />;
   const r = report.data;

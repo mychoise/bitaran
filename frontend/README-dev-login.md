@@ -9,7 +9,7 @@ start in mock mode, so these accounts can never ship.
 There is **no sign-up page**, by design:
 
 - A **new wholesale business** is set up by the company running Bitaran (that is the "Request a demo" route on the website). That creates the **owner** login.
-- The **owner** (and managers) create logins for **managers, salesmen and shops**, and reset their passwords. Those screens are part of the app, which comes next, and the backend will provide the endpoints.
+- The **owner** (and managers) create logins for **managers, salesmen and shops**, and reset their passwords, on the Staff and Shops screens. The backend provides the endpoints.
 - Nobody can create their own account, and there is no "forgot password" email.
 
 In mock mode you cannot create accounts either: use the sample accounts below. To add one,

@@ -39,7 +39,7 @@ export async function changePassword(_prev: ChangePasswordState, form: FormData)
   if (!check.ok) return end(check.type);
 
   try {
-    await getAuthClient().changePassword(check.session.token, currentPassword, newPassword);
+    await (await getAuthClient()).changePassword(check.session.token, currentPassword, newPassword);
     return { status: "ok" };
   } catch (err) {
     const code = toCode(err);

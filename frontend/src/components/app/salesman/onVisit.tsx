@@ -64,10 +64,13 @@ export function VisitGate({ title, children }: { title: string; children: (v: Vi
   return (
     <div className="mx-auto max-w-3xl">
       {back(`/app/salesman/shops/${v.visit.id}`, v.shop.name)}
-      <h1 className="text-display-s">{title}</h1>
-      <p className="mt-1 text-lg text-ink-2">
-        {v.shop.name}, {v.shop.address}
-      </p>
+      {/* On paper only the invoice shows, with its own header. */}
+      <div className="no-print">
+        <h1 className="text-display-s">{title}</h1>
+        <p className="mt-1 text-lg text-ink-2">
+          {v.shop.name}, {v.shop.address}
+        </p>
+      </div>
       {v.planStatus !== "in_progress" ? (
         <p className="mt-6 rounded-input border border-rule-2 bg-paper-3 p-4 text-ink-2">
           {v.planStatus === "planned" ? "Start the day on Today first. Nothing can be recorded before it starts." : "This day is closed. Nothing more can be recorded on it."}

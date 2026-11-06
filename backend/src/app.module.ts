@@ -24,6 +24,7 @@ import { ReportsModule } from './reports/reports.module.js';
 import { ReturnsModule } from './returns/returns.module.js';
 import { RoutingModule } from './routing/routing.module.js';
 import { SalesModule } from './sales/sales.module.js';
+import { ShopPortalModule } from './shop-portal/shop-portal.module.js';
 import { StaffModule } from './staff/staff.module.js';
 import { StorageModule } from './storage/storage.module.js';
 
@@ -72,6 +73,7 @@ const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{1,128}$/;
     ReturnsModule,
     ExpensesModule,
     ReportsModule,
+    ShopPortalModule,
     HealthModule,
   ],
   providers: [
