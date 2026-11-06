@@ -12,6 +12,7 @@ import type { Sale } from "@/lib/api/types";
 import { formatDate } from "@/lib/dates";
 import { formatAmount } from "@/lib/money";
 import { useUrlState } from "@/lib/url-state";
+import { InvoiceItems } from "../records/InvoiceItems";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -29,6 +30,7 @@ export function History() {
     { key: "no", header: "Invoice", rowHeader: true, cell: (s) => <span className="font-outlier">{s.invoiceNo}</span>, sortValue: (s) => s.invoiceNo },
     { key: "date", header: "Date", cell: (s) => <span className="whitespace-nowrap">{formatDate(s.date)}</span>, sortValue: (s) => s.date, csv: (s) => s.date },
     { key: "shop", header: "Shop", cell: (s) => shopName(s.shopId), sortValue: (s) => shopName(s.shopId) },
+    { key: "items", header: "Items", cell: (s) => <InvoiceItems saleId={s.id} lines={s.lines} />, csv: (s) => s.lines.length || "" },
     { key: "total", header: "Total", numeric: true, cell: (s) => <MoneyText paisa={s.totalPaisa} />, sortValue: (s) => s.totalPaisa, csv: (s) => formatAmount(s.totalPaisa).replace(/,/g, "") },
     { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} />, sortValue: (s) => s.status },
   ];

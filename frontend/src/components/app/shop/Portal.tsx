@@ -20,6 +20,7 @@ import { formatAmount, formatMoney } from "@/lib/money";
 import { countUnits } from "@/lib/units";
 import { formatSort, parseSort, useUrlState } from "@/lib/url-state";
 import { okDate } from "../records/filters";
+import { InvoiceItems } from "../records/InvoiceItems";
 
 const plain = (paisa: number) => formatAmount(paisa).replace(/,/g, "");
 const METHOD = { cash: "Cash", cheque: "Cheque", online: "Online" } as const;
@@ -60,13 +61,11 @@ export function ShopHome() {
   if (q.isPending) return <LoadingState label="Loading your balance" />;
   if (q.isError) return <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />;
   const s = q.data;
-  const percent = s.creditLimitPaisa > 0 ? Math.round((s.creditUsedPaisa / s.creditLimitPaisa) * 100) : null;
-  const bar = Math.min(100, percent ?? 0);
   const owes = s.balancePaisa > 0;
   return (
     <>
       <PageHeader title={s.shopName} lead={`Your account with ${s.businessName}`} />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card as="section" dense aria-label="Balance" className="flex flex-col gap-1">
           <h2 className="text-sm text-muted">{s.balancePaisa < 0 ? "Your credit" : "You owe"}</h2>
           <p className="font-outlier text-2xl leading-tight whitespace-nowrap">
@@ -76,24 +75,6 @@ export function ShopHome() {
           <Link href="/app/shop/statement" className="text-link mt-auto pt-2 text-sm">
             See your statement
           </Link>
-        </Card>
-        <Card as="section" dense aria-label="Credit limit" className="flex flex-col gap-1">
-          <h2 className="text-sm text-muted">Credit limit</h2>
-          <p className="font-outlier text-2xl leading-tight whitespace-nowrap">{formatMoney(s.creditLimitPaisa)}</p>
-          {s.creditLimitPaisa > 0 ? (
-            <>
-              <svg viewBox="0 0 100 6" preserveAspectRatio="none" className="mt-2 block h-2 w-full" aria-hidden>
-                <rect width="100" height="6" rx="3" className="fill-paper-3" />
-                <rect width={bar} height="6" rx="3" className="fill-accent-2" />
-              </svg>
-              <p className="text-sm text-ink-2">
-                {formatMoney(s.creditUsedPaisa)} used, {percent}% of the limit.
-                {s.creditUsedPaisa > s.creditLimitPaisa ? " Above the limit: new invoices may need your supplier's approval." : ` ${formatMoney(s.creditLimitPaisa - s.creditUsedPaisa)} left.`}
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-ink-2">No credit limit is set. Ask {s.businessName} about buying on credit.</p>
-          )}
         </Card>
         <Card as="section" dense aria-label="Overdue" className="flex flex-col gap-1">
           <h2 className="text-sm text-muted">Overdue</h2>
@@ -235,14 +216,15 @@ export function ShopInvoiceList() {
   const columns: Column<ShopInvoice>[] = [
     { key: "no", header: "Invoice", rowHeader: true, cell: (s) => <Link href={`/app/shop/invoices/${s.id}`} className="text-link font-outlier">No. {s.invoiceNo}</Link>, sortValue: (s) => s.invoiceNo },
     { key: "date", header: "Date", cell: (s) => <span className="whitespace-nowrap">{formatDate(s.date)}</span>, sortValue: (s) => s.date, csv: (s) => s.date },
+    { key: "items", header: "Items", cell: (s) => <InvoiceItems saleId={s.id} source="shop" /> },
     { key: "total", header: "Total", numeric: true, cell: (s) => <MoneyText paisa={s.totalPaisa} />, sortValue: (s) => s.totalPaisa, csv: (s) => plain(s.totalPaisa) },
     { key: "paid", header: "Paid on it", numeric: true, cell: (s) => <MoneyText paisa={s.paidPaisa} />, sortValue: (s) => s.paidPaisa, csv: (s) => plain(s.paidPaisa) },
     {
       key: "due",
       header: "Due",
-      cell: (s) => <span className="whitespace-nowrap">{formatDate(s.dueDate)}{s.status === "confirmed" && s.dueDate < today && s.paidPaisa < s.totalPaisa ? <span className="block text-sm text-muted">past due</span> : null}</span>,
-      sortValue: (s) => s.dueDate,
-      csv: (s) => s.dueDate,
+      cell: (s) => <span className="whitespace-nowrap">{s.dueDate ? formatDate(s.dueDate) : "None"}{s.status === "confirmed" && s.dueDate && s.dueDate < today && s.paidPaisa < s.totalPaisa ? <span className="block text-sm text-muted">past due</span> : null}</span>,
+      sortValue: (s) => s.dueDate ?? "",
+      csv: (s) => s.dueDate ?? "",
     },
     { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} />, sortValue: (s) => s.status },
   ];
@@ -314,7 +296,7 @@ export function ShopInvoiceDetail({ id }: { id: string }) {
               <dt className="text-muted">Date</dt>
               <dd className="m-0 mt-0.5">{formatDateTime(s.createdAt)}</dd>
               <dt className="mt-2 text-muted">Due</dt>
-              <dd className="m-0 mt-0.5">{formatDate(s.dueDate)}</dd>
+              <dd className="m-0 mt-0.5">{s.dueDate ? formatDate(s.dueDate) : "None"}</dd>
             </div>
           </dl>
           <div className="table-scroll mt-5">

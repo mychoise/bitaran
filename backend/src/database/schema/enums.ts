@@ -52,3 +52,15 @@ export const userRoleEnum = pgEnum('user_role', [
   'manager',
   'salesman',
 ]);
+
+export const orderStatusEnum = pgEnum('order_status', [
+  'open',
+  'delivered',
+  'cancelled',
+]);
+
+/** prepaid: the office took the money when the order was placed. */
+export const orderPaymentEnum = pgEnum('order_payment', [
+  'prepaid',
+  'on_delivery',
+]);

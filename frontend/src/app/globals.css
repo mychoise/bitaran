@@ -207,6 +207,14 @@
   .faq-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
   .faq-row:has(.faq-toggle:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-input); }
   .faq-mark { transition: transform var(--dur-short) var(--ease-out); }
+  /* A dropdown's content slides in a little as it opens. */
+  .reveal-down { animation: reveal-down var(--dur-short) var(--ease-out); }
+  @keyframes reveal-down { from { opacity: 0; transform: translateY(-4px); } }
+  @media (prefers-reduced-motion: reduce) { .reveal-down { animation: none; } }
+  .invoice-items > summary { list-style: none; }
+  .invoice-items > summary::-webkit-details-marker { display: none; }
+  .invoice-items > summary::after { content: " ▾"; }
+  .invoice-items[open] > summary::after { content: " ▴"; }
   .faq-toggle[aria-expanded="true"] .faq-mark { transform: rotate(45deg); }
 
   /* Form fields: constant border, the focus ring is an outline, an error swaps the border colour only. */

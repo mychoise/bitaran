@@ -19,6 +19,7 @@ import type { DayPlan, DayReport, DayStockLine, Payment, Sale } from "@/lib/api/
 import { formatDate, formatDateTime, formatTime } from "@/lib/dates";
 import { countUnits } from "@/lib/units";
 import { usePlanLookups } from "./lookups";
+import { InvoiceItems } from "../records/InvoiceItems";
 
 const STEPS: { status: DayPlan["status"]; label: string; at: (p: DayPlan) => string | undefined }[] = [
   { status: "planned", label: "Planned", at: (p) => p.createdAt },
@@ -160,6 +161,7 @@ function DaySales({ planId }: { planId: string }) {
     { key: "no", header: "Invoice", rowHeader: true, cell: (s) => <span className="font-outlier">{s.invoiceNo}</span>, sortValue: (s) => s.invoiceNo },
     { key: "shop", header: "Shop", cell: (s) => <Link href={`/app/manager/shops/${s.shopId}?tab=sales`} className="text-link">{look.shop(s.shopId)?.name ?? "…"}</Link>, sortValue: (s) => look.shop(s.shopId)?.name ?? "" },
     { key: "time", header: "Time", cell: (s) => formatTime(s.createdAt), sortValue: (s) => s.createdAt },
+    { key: "items", header: "Items", cell: (s) => <InvoiceItems saleId={s.id} lines={s.lines} />, csv: (s) => s.lines.length || "" },
     { key: "total", header: "Total", numeric: true, cell: (s) => <MoneyText paisa={s.totalPaisa} />, sortValue: (s) => s.totalPaisa },
     { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} />, sortValue: (s) => s.status },
   ];

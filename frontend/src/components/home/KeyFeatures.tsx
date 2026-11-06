@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const features = [
   { title: "Routes in order", line: "Today's shops on his phone, in order." },
-  { title: "Udharo with limits", line: "Limits, balances, due dates. Overdue shops stand out." },
+  { title: "Udharo by shop", line: "A running balance per shop, and what was bought on each invoice." },
   { title: "Cheques that wait", line: "Photo required. Pending until a manager confirms." },
   { title: "Visits you can check", line: "A time-stamped photo, checked against location." },
   { title: "Stock counted at night", line: "Out in the morning, counted at night." },

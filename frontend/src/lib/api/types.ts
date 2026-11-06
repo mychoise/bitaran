@@ -250,7 +250,8 @@ export type Sale = {
   shopId: Id;
   lines: SaleLine[];
   totalPaisa: Paisa;
-  dueDate: BusinessDate;
+  /** When the udharo part is due. None: it is never counted as overdue. */
+  dueDate?: BusinessDate;
   status: SaleStatus;
   cancelledAt?: Instant;
   cancelReason?: string;
@@ -294,6 +295,29 @@ export type Payment = {
   imageIds: Id[];
   decidedAt?: Instant;
   decidedBy?: Id;
+};
+
+export type OrderStatus = "open" | "delivered" | "cancelled";
+/** prepaid: the office took the money when the order was placed; on_delivery: the salesman takes it. */
+export type OrderPaymentMode = "prepaid" | "on_delivery";
+export type OrderLine = { productId: Id; productName: string; unit: SaleUnit; quantity: number; /** Today's selling price for that unit. */ unitPricePaisa: Paisa };
+/** An order the office takes for a shop; the named salesman delivers it as a sale. */
+export type Order = {
+  id: Id;
+  status: OrderStatus;
+  paymentMode: OrderPaymentMode;
+  shopId: Id;
+  shopName: string;
+  salesmanId: Id;
+  takenBy: Id;
+  lines: OrderLine[];
+  note?: string;
+  cancelReason?: string;
+  createdAt: Instant;
+  deliveredAt?: Instant;
+  saleId?: Id;
+  invoiceNo?: number;
+  prepaid?: { paymentId: Id; amountPaisa: Paisa; method: PaymentMethod; status: PaymentStatus };
 };
 
 export type ReturnReason = "damaged" | "expired" | "other";
@@ -487,7 +511,7 @@ export type ShopInvoice = {
   invoiceNo: number;
   date: BusinessDate;
   createdAt: Instant;
-  dueDate: BusinessDate;
+  dueDate?: BusinessDate;
   status: SaleStatus;
   lines: { productName: string; unitName: string; unit: SaleUnit; quantity: number; pricePaisa: Paisa; totalPaisa: Paisa }[];
   subtotalPaisa?: Paisa;

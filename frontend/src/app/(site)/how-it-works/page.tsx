@@ -100,7 +100,7 @@ const roles: Role[] = [
       { when: "Evening", what: "Closes his day and hands back stock and cash." },
     ],
     can: ["See his own route, sales and payments", "Check a shop's balance before selling", "Photograph cheques and visits"],
-    cannot: ["See other salesmen's work", "See cost prices", "Sell past a shop's credit limit without a manager"],
+    cannot: ["See other salesmen's work", "See cost prices", "Change prices on a sale"],
     visual: (
       <ProductFigure slot="how-role-salesman" screenshot="Salesman's route screen on a phone">
         <RouteScreen className="mx-auto" />
@@ -116,7 +116,7 @@ const roles: Role[] = [
       { when: "Day", what: "Gets an invoice for every sale." },
       { when: "Evening", what: "Sees a cheque as pending until it clears." },
     ],
-    can: ["See its balance and due dates", "See its statement, invoices and payments", "See its returns"],
+    can: ["See its balance", "See its statement, invoices and payments", "See its returns"],
     cannot: ["See other shops", "Change anything: it only views"],
     visual: (
       <ProductFigure slot="how-role-shop" screenshot="A shop's own balance and statement">

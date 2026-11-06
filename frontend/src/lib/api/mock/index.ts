@@ -3,7 +3,6 @@
 // built to the same rules the backend must follow.
 
 import { addDays, nepalDateOf, todayNepal, type BusinessDate } from "../../dates.ts";
-import { formatMoney } from "../../money.ts";
 import type { z } from "zod";
 import { ApiError, type ApiClient } from "../client.ts";
 import {
@@ -21,7 +20,7 @@ import {
   staffUpdateSchema,
   temporaryPasswordField,
 } from "../schemas.ts";
-import type { Business, Category, DateRange, DayPlan, DayReport, Expense, Id, Payment, Return, Sale, Visit, VisitPhoto, VisitShop, WriteOff, Page, PageQuery, Product, Shop, ShopInvoice, ShopWithBalance, Staff, StatementEntry, Viewer } from "../types.ts";
+import type { Business, Category, DateRange, DayPlan, DayReport, Expense, Id, Order, Payment, Return, Sale, Visit, VisitPhoto, VisitShop, WriteOff, Page, PageQuery, Product, Shop, ShopInvoice, ShopWithBalance, Staff, StatementEntry, Viewer } from "../types.ts";
 import {
   canDecidePayment,
   cancelledGoodsGo,
@@ -37,7 +36,6 @@ import {
   expenseSummary,
   checkReturnLines,
   checkSaleLines,
-  checkCreditLimit,
   distanceMeters,
   initialPaymentStatus,
   mayRestock,
@@ -51,6 +49,8 @@ import {
   salesmanNumbers,
   validatePayment,
   collectable,
+  invoiceUnpaid,
+  overInvoice,
   canStartPlan,
   checkAddVisit,
   checkClose,
@@ -292,6 +292,20 @@ export function createMockClient(viewer: Viewer): ApiClient {
       cancelledAt: s.cancelledAt,
       cancelReason: s.cancelReason,
       payments: withPayments ? d.payments.filter((p) => p.saleId === s.id).sort(newestFirst).map((p) => ({ date: p.date, method: p.method, amountPaisa: p.amountPaisa, status: p.status })) : undefined,
+    };
+  };
+  /** An order with today's prices, its invoice number and the prepaid payment's current state. */
+  const shapeOrder = (o: Order): Order => {
+    const d = getData();
+    const pay = o.prepaid ? d.payments.find((x) => x.id === o.prepaid!.paymentId) : undefined;
+    return {
+      ...o,
+      lines: o.lines.map((l) => {
+        const p = d.products.find((x) => x.id === l.productId);
+        return { ...l, unitPricePaisa: p ? (l.unit === "carton" ? (p.cartonPricePaisa ?? 0) : p.unitPricePaisa) : l.unitPricePaisa };
+      }),
+      invoiceNo: o.saleId ? d.sales.find((x) => x.id === o.saleId)?.invoiceNo : undefined,
+      prepaid: o.prepaid && pay ? { ...o.prepaid, status: pay.status } : o.prepaid,
     };
   };
   const shapeExpense = (e: Expense): Expense => (e.billImageId ? { ...e, billImageUrl: imageUrl(e.billImageId) } : e);
@@ -903,7 +917,6 @@ export function createMockClient(viewer: Viewer): ApiClient {
         once(input.idempotencyKey, "sale", (id) => getData().sales.find((x) => x.id === id), () => {
           const d = getData();
           const { plan, visit, shop } = onVisit(input.visitId);
-          const me = actor();
           const problems = checkSaleLines(input.lines, d.products, remainingOnPlan(plan, d.sales));
           if (problems.length) throw invalid(problems[0]);
           // Prices come from the product records, never from the request.
@@ -911,14 +924,10 @@ export function createMockClient(viewer: Viewer): ApiClient {
           const money = saleMoney(lines, input.discountPaisa, input.cashPaidPaisa);
           if (money.problems.length) throw invalid(money.problems[0]);
           const date = today();
-          const dueDate = input.dueDate ?? addDays(date, shop.dueDays);
-          const due = checkDueDate(dueDate, date);
+          const dueDate = input.dueDate;
+          const due = dueDate ? checkDueDate(dueDate, date) : null;
           if (due) throw invalid(due);
-          const { balancePaisa } = shopBalance(shop, d.sales, d.payments, d.returns);
-          const credit = checkCreditLimit(balancePaisa, money.creditPaisa, shop.creditLimitPaisa, me.role);
-          if (!credit.ok && !(credit.canOverride && input.overrideCreditLimit)) {
-            throw new ApiError("conflict", `This sale takes ${shop.name} over its credit limit by ${formatMoney(credit.overByPaisa)}. ${credit.canOverride ? "Confirm the override to go ahead." : "Ask your manager, or take more in cash."}`);
-          }
+          // No credit limit: udharo is not capped.
           const now = new Date().toISOString();
           const sale: Sale = {
             id: `sale-${Date.now().toString(36)}`,
@@ -937,8 +946,16 @@ export function createMockClient(viewer: Viewer): ApiClient {
             dueDate,
             status: "confirmed",
           };
-          if (!credit.ok) sale.limitOverrideBy = me.id;
+          // Delivering an order: it must be open, for this shop, and this salesman's to deliver.
+          const order = input.orderId ? d.orders.find((x) => x.id === input.orderId) : undefined;
+          if (input.orderId) {
+            if (!order) throw notFound("order");
+            if (order.shopId !== shop.id) throw invalid("That order is for another shop.");
+            if (order.salesmanId !== plan.salesmanId) throw forbidden("That order is for another salesman to deliver.");
+            if (order.status !== "open") throw new ApiError("conflict", `That order is already ${order.status}.`);
+          }
           d.sales.push(sale);
+          if (order) Object.assign(order, { status: "delivered", saleId: sale.id, deliveredAt: sale.createdAt });
           if (money.cashPaidPaisa > 0) {
             d.payments.push({ id: `pay-${Date.now().toString(36)}`, date, createdAt: now, shopId: shop.id, salesmanId: plan.salesmanId, planId: plan.id, visitId: visit.id, saleId: sale.id, method: "cash", amountPaisa: money.cashPaidPaisa, status: "confirmed", imageIds: [] });
           }
@@ -982,6 +999,56 @@ export function createMockClient(viewer: Viewer): ApiClient {
       }),
     },
 
+    orders: {
+      list: (f = {}) => later(() => {
+        requireStaff();
+        const items = getData()
+          .orders.filter((o) => (!isSalesman || o.salesmanId === viewer.id) && (!f.salesmanId || o.salesmanId === f.salesmanId) && (!f.status || o.status === f.status) && (!f.shopId || o.shopId === f.shopId))
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+          .map(shapeOrder);
+        return paginate(items, f);
+      }),
+      get: (id) => later(() => {
+        requireStaff();
+        const o = getData().orders.find((x) => x.id === id && (!isSalesman || x.salesmanId === viewer.id));
+        if (!o) throw notFound("order");
+        return shapeOrder(o);
+      }),
+      create: (input) => later(() => {
+        requireManager();
+        const d = getData();
+        const shop = d.shops.find((x) => x.id === input.shopId && x.active);
+        if (!shop) throw invalid("Choose an active shop.");
+        if (!d.staff.some((x) => x.id === input.salesmanId && x.role === "salesman" && x.active)) throw invalid("Choose an active salesman to deliver the order.");
+        if (!input.lines.length) throw invalid("Add at least one product.");
+        const seen = new Set<string>();
+        const lines = input.lines.map((l) => {
+          const p = d.products.find((x) => x.id === l.productId && x.active);
+          if (!p) throw invalid("A product is unknown or inactive.");
+          if (seen.has(`${l.productId}:${l.unit}`)) throw invalid("Each product and unit may appear once on an order.");
+          seen.add(`${l.productId}:${l.unit}`);
+          priceLine(p, l.quantity, l.unit); // refuses cartons without a size, and bad quantities
+          return { productId: p.id, productName: p.name, unit: l.unit, quantity: l.quantity, unitPricePaisa: 0 };
+        });
+        if (input.paymentMode === "prepaid" && !input.prepaidPaymentId) throw invalid("A prepaid order needs the payment the office recorded.");
+        if (input.paymentMode === "on_delivery" && input.prepaidPaymentId) throw invalid("Only a prepaid order carries a payment.");
+        const pay = input.prepaidPaymentId ? d.payments.find((x) => x.id === input.prepaidPaymentId && x.shopId === shop.id && x.status !== "bounced") : undefined;
+        if (input.prepaidPaymentId && !pay) throw invalid("That payment is not this shop's, or it bounced.");
+        const order: Order = { id: `ord-${Date.now().toString(36)}`, status: "open", paymentMode: input.paymentMode, shopId: shop.id, shopName: shop.name, salesmanId: input.salesmanId, takenBy: viewer.id, lines, note: input.note?.trim() || undefined, createdAt: new Date().toISOString(), prepaid: pay ? { paymentId: pay.id, amountPaisa: pay.amountPaisa, method: pay.method, status: pay.status } : undefined };
+        d.orders.push(order);
+        return shapeOrder(order);
+      }),
+      cancel: (id, reason) => later(() => {
+        requireManager();
+        const o = getData().orders.find((x) => x.id === id);
+        if (!o) throw notFound("order");
+        if (o.status !== "open") throw new ApiError("conflict", `This order is already ${o.status}.`);
+        if (!reason.trim()) throw invalid("Say why the order is cancelled.");
+        Object.assign(o, { status: "cancelled", cancelReason: reason.trim() });
+        return shapeOrder(o);
+      }),
+    },
+
     payments: {
       list: (f = {}) => later(() => {
         requireStaff();
@@ -1000,20 +1067,30 @@ export function createMockClient(viewer: Viewer): ApiClient {
       create: (input) => later(() =>
         once(input.idempotencyKey, "payment", (id) => getData().payments.find((x) => x.id === id), () => {
           const d = getData();
-          const { plan, visit, shop } = onVisit(input.visitId);
+          // On a visit: the salesman's running plan. At the office: a manager names the shop, and
+          // may take money in advance (for a prepaid order), so the "what it owes" cap is not used.
+          const onRoad = input.visitId ? onVisit(input.visitId) : null;
+          if (!onRoad) requireManager();
+          const shop = onRoad?.shop ?? d.shops.find((x) => x.id === input.shopId);
+          if (!shop) throw notFound("shop");
           const owed = withBalance(shop);
-          const problems = validatePayment(input, new Set(d.payments.flatMap((p) => p.imageIds)), collectable(owed.balancePaisa, owed.inClearingPaisa));
+          const problems = validatePayment(input, new Set(d.payments.flatMap((p) => p.imageIds)), onRoad ? collectable(owed.balancePaisa, owed.inClearingPaisa) : undefined);
           if (problems.length) throw invalid(problems[0]);
           input.imageIds.forEach(checkImage);
           if (input.saleId && !d.sales.some((x) => x.id === input.saleId && x.shopId === shop.id && x.status === "confirmed")) throw invalid("That sale is not one of this shop's.");
+          const against = input.saleId ? d.sales.find((x) => x.id === input.saleId)! : null;
+          if (against) {
+            const unpaid = invoiceUnpaid(against, d.payments);
+            if (input.amountPaisa > unpaid) throw invalid(overInvoice(against.invoiceNo, unpaid));
+          }
           const payment: Payment = {
             id: `pay-${Date.now().toString(36)}`,
             date: today(),
             createdAt: new Date().toISOString(),
             shopId: shop.id,
-            salesmanId: plan.salesmanId,
-            planId: plan.id,
-            visitId: visit.id,
+            salesmanId: onRoad?.plan.salesmanId ?? viewer.id,
+            planId: onRoad?.plan.id,
+            visitId: onRoad?.visit.id,
             saleId: input.saleId,
             method: input.method,
             amountPaisa: input.amountPaisa,
@@ -1023,7 +1100,7 @@ export function createMockClient(viewer: Viewer): ApiClient {
           if (input.method === "cheque") Object.assign(payment, { chequeNo: input.chequeNo!.trim(), bank: input.bank!.trim(), chequeDate: input.chequeDate });
           if (input.method === "online") payment.reference = input.reference!.trim();
           d.payments.push(payment);
-          markVisited(visit);
+          if (onRoad) markVisited(onRoad.visit);
           return shapePayment(payment);
         }),
       ),

@@ -36,6 +36,7 @@ import type { Database, Transaction } from '../database/database.types.js';
 import {
   dayPlans,
   invoiceCounters,
+  orders,
   payments,
   products,
   retailClients,
@@ -155,17 +156,22 @@ const fail = {
         `Cash paid now cannot be more than the sale total (${total} paisa); record extra as a separate payment`,
       ),
     ),
-  creditLimit: (d: {
-    balanceBefore: number;
-    balanceAfter: number;
-    creditLimit: number;
-  }) =>
-    new ConflictException(
+  orderNotFound: () =>
+    new NotFoundException(errorBody('ORDER_NOT_FOUND', 'Order not found')),
+  orderOtherShop: () =>
+    new UnprocessableEntityException(
+      errorBody('ORDER_OTHER_SHOP', 'That order is for another shop'),
+    ),
+  orderNotYours: () =>
+    new ForbiddenException(
       errorBody(
-        'CREDIT_LIMIT_EXCEEDED',
-        `This sale would take the shop’s balance to ${d.balanceAfter} paisa, over its credit limit of ${d.creditLimit}. Take more cash now or ask a manager.`,
-        [d],
+        'ORDER_NOT_YOURS',
+        'That order is for another salesman to deliver',
       ),
+    ),
+  orderNotOpen: (status: string) =>
+    new ConflictException(
+      errorBody('ORDER_NOT_OPEN', `That order is already ${status}`),
     ),
   idempotencyConflict: () =>
     new ConflictException(
@@ -562,26 +568,7 @@ export class SalesService {
     const cash = dto.cashPaidNowPaisa ?? 0;
     if (cash > total) throw fail.cashTooBig(total);
 
-    // Credit: the balance after this sale and its cash payment. Only a sale
-    // that adds credit (total above cash) can be refused; managers and owners
-    // may go over the limit.
-    const balanceBefore = await this.balances.balanceOf(
-      businessId,
-      dto.clientId,
-      tx,
-    );
-    const balanceAfter = balanceBefore + total - cash;
-    if (
-      actor.role === 'salesman' &&
-      total > cash &&
-      balanceAfter > client.creditLimitPaisa
-    ) {
-      throw fail.creditLimit({
-        balanceBefore,
-        balanceAfter,
-        creditLimit: client.creditLimitPaisa,
-      });
-    }
+    // Udharo has no limit: a shop may owe any amount.
 
     // One atomic statement: never read the counter and write it back.
     const [counter] = await tx
@@ -620,6 +607,7 @@ export class SalesService {
         lineTotalPaisa: l.lineTotalPaisa,
       })),
     );
+    if (dto.orderId) await this.deliverOrder(tx, actor, dto, saleId, now);
     if (cash > 0) {
       await tx.insert(payments).values({
         id: randomUUID(),
@@ -636,6 +624,40 @@ export class SalesService {
       });
     }
     return saleId;
+  }
+
+  /** Marks the order this sale delivers as delivered, inside the sale's transaction. */
+  private async deliverOrder(
+    tx: Transaction,
+    actor: StaffTokenPayload,
+    dto: CreateSaleDto,
+    saleId: string,
+    now: Date,
+  ) {
+    const [order] = await tx
+      .select({
+        status: orders.status,
+        clientId: orders.clientId,
+        salesmanId: orders.salesmanId,
+      })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.id, dto.orderId!),
+          eq(orders.businessId, actor.businessId),
+        ),
+      )
+      .for('update');
+    if (!order) throw fail.orderNotFound();
+    if (order.clientId !== dto.clientId) throw fail.orderOtherShop();
+    if (actor.role === 'salesman' && order.salesmanId !== actor.sub) {
+      throw fail.orderNotYours();
+    }
+    if (order.status !== 'open') throw fail.orderNotOpen(order.status);
+    await tx
+      .update(orders)
+      .set({ status: 'delivered', saleId, deliveredAt: now })
+      .where(eq(orders.id, dto.orderId!));
   }
 
   /** The plan whose stock is sold, locked. See CreateSaleDto.dayPlanId. */

@@ -541,110 +541,29 @@ describe('Sales (e2e)', () => {
     });
   });
 
-  describe('credit limit', () => {
-    beforeEach(async () => {
-      await db
-        .update(retailClients)
-        .set({ creditLimitPaisa: 6000, openingBalancePaisa: 0 })
-        .where(eq(retailClients.id, shops[0].id));
-    });
+  describe('no credit limit', () => {
     const waters = (n: number, extra: object = {}) => ({
       clientId: shops[0].id,
       items: [line('WTR-1L', n)],
       ...extra,
     });
 
-    it('is enforced for salesmen', async () => {
-      await sell(tokens.salesman1, waters(2)).expect(201); // balance 5000
-      const res = await sell(tokens.salesman1, waters(2)).expect(409);
-      expect(res.body.error).toMatchObject({
-        code: 'CREDIT_LIMIT_EXCEEDED',
-        details: [
-          { balanceBefore: 5000, balanceAfter: 10_000, creditLimit: 6000 },
-        ],
-      });
-      expect((await counts()).sales).toBe(1);
-    });
-
-    it('counts cash paid now: reaching the limit exactly is allowed', async () => {
-      await sell(tokens.salesman1, waters(2)).expect(201); // 5000
-      await sell(
-        tokens.salesman1,
-        waters(2, { cashPaidNowPaisa: 4000 }),
-      ).expect(201); // 5000 + 5000 - 4000 = 6000
-      await sell(
-        tokens.salesman1,
-        waters(1, { cashPaidNowPaisa: 2499 }),
-      ).expect(409);
-    });
-
-    it('includes the opening balance and earlier payments', async () => {
+    it('lets a salesman sell on udharo past any stored limit', async () => {
       await db
         .update(retailClients)
-        .set({ openingBalancePaisa: 5000 })
+        .set({ creditLimitPaisa: 6000, openingBalancePaisa: 5000 })
         .where(eq(retailClients.id, shops[0].id));
-      await sell(tokens.salesman1, waters(1)).expect(409); // 7500
-      await db.insert(payments).values({
-        id: randomUUID(),
-        businessId: seeded.businessId,
-        clientId: shops[0].id,
-        collectedBy: staff.manager.id,
-        method: 'cash',
-        amountPaisa: 2000,
-        receivedAt: new Date(),
-        createdAt: new Date(),
-      });
-      await sell(tokens.salesman1, waters(1)).expect(201); // 5500
-    });
-
-    it('is not enforced for managers or owners', async () => {
-      await sell(tokens.manager, waters(3, { dayPlanId: planId })).expect(201);
-      await sell(tokens.owner, waters(3, { dayPlanId: planId })).expect(201);
+      await sell(tokens.salesman1, waters(2)).expect(201); // 10000
+      await sell(tokens.salesman1, waters(2)).expect(201); // 15000
       expect((await counts()).sales).toBe(2);
     });
 
-    it('never blocks a sale paid fully in cash, even over the limit', async () => {
-      await sell(tokens.manager, waters(4, { dayPlanId: planId })).expect(201); // 10000
-      await sell(
-        tokens.salesman1,
-        waters(2, { cashPaidNowPaisa: 5000 }),
-      ).expect(201);
-      await sell(tokens.salesman1, waters(1)).expect(409);
-    });
-
-    it('a shop with a zero limit can only buy for cash from a salesman', async () => {
+    it('lets a shop with a zero limit buy on udharo', async () => {
       await db
         .update(retailClients)
         .set({ creditLimitPaisa: 0 })
         .where(eq(retailClients.id, shops[0].id));
-      await sell(tokens.salesman1, waters(1)).expect(409);
-      await sell(
-        tokens.salesman1,
-        waters(1, { cashPaidNowPaisa: 2500 }),
-      ).expect(201);
-    });
-
-    it('cannot be beaten by concurrent sales to the same shop from different plans', async () => {
-      // Different plans, so only the shop lock stands between them. The
-      // limit fits one 2500 sale; two at once must not both get through.
-      await db
-        .update(retailClients)
-        .set({ creditLimitPaisa: 3000 })
-        .where(eq(retailClients.id, shops[0].id));
-      const plan2 = await makeRunningPlan(staff.salesman2, tokens.salesman2, [
-        line('WTR-1L', 10),
-      ]);
-      for (let round = 0; round < 3; round++) {
-        await db.delete(saleItems);
-        await db.delete(sales);
-        const results = await Promise.all([
-          sell(tokens.salesman1, waters(1)),
-          sell(tokens.salesman2, waters(1, { dayPlanId: plan2 })),
-        ]);
-        expect(results.map((r) => r.status).sort((a, b) => a - b)).toEqual([
-          201, 409,
-        ]);
-      }
+      await sell(tokens.salesman1, waters(1)).expect(201);
     });
   });
 

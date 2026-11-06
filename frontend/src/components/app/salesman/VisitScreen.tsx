@@ -68,20 +68,12 @@ export function VisitScreen({ visitId }: { visitId: string }) {
 function BalanceCard({ v }: { v: VisitShop }) {
   const s = v.shop;
   const credit = s.balancePaisa < 0;
-  const over = s.balancePaisa > s.creditLimitPaisa;
   return (
     <Card as="section" className="mt-6" aria-label="Balance">
       <p className="text-sm text-muted">{credit ? "Shop has credit" : "Shop owes"}</p>
       <p className={`mt-1 font-outlier text-display-s leading-none ${credit ? "text-success" : ""}`}>{formatMoney(Math.abs(s.balancePaisa))}</p>
       <dl className="m-0 mt-5 grid grid-cols-2 gap-4 border-t border-rule-2 pt-4 text-sm">
-        <div>
-          <dt className="text-muted">Credit limit</dt>
-          <dd className="m-0 mt-0.5">
-            <MoneyText paisa={s.creditLimitPaisa} />
-          </dd>
-          {over ? <dd className="m-0 mt-0.5 font-medium text-error">Over by {formatMoney(s.balancePaisa - s.creditLimitPaisa)}. No new udharo without your manager.</dd> : null}
-        </div>
-        <div>
+        <div className="col-span-2">
           <dt className="text-muted">Overdue</dt>
           <dd className={`m-0 mt-0.5 ${s.overduePaisa > 0 ? "font-medium text-warning" : ""}`}>{s.overduePaisa > 0 ? formatMoney(s.overduePaisa) : "Nothing overdue"}</dd>
         </div>

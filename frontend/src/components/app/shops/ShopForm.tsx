@@ -231,12 +231,8 @@ export function ShopForm({
       )}
 
       {section(
-        "Credit",
-        <>
-          <Input label="Credit limit (Rs)" inputMode="decimal" autoComplete="off" hint="Most the shop can owe. A salesman cannot sell past it." error={err.creditLimit?.message} {...register("creditLimit")} />
-          <Input label="Opening balance (Rs)" inputMode="decimal" autoComplete="off" hint="Owed from before. Use a minus for credit, like -500." error={err.openingBalance?.message} {...register("openingBalance")} />
-          <Input label="Days to pay" inputMode="numeric" autoComplete="off" hint="Each sale is due this many days later." error={err.dueDays?.message} {...register("dueDays")} />
-        </>,
+        "Opening balance",
+        <Input label="Opening balance (Rs)" inputMode="decimal" autoComplete="off" hint="Owed from before. Use a minus for credit, like -500." error={err.openingBalance?.message} {...register("openingBalance")} />,
       )}
 
       <Card as="section" dense>

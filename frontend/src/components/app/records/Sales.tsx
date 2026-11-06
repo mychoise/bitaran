@@ -22,6 +22,7 @@ import { countUnits } from "@/lib/units";
 import { formatSort, parseSort, useUrlState } from "@/lib/url-state";
 import { usePlanLookups } from "../dayplans/lookups";
 import { DateFilter, okDate, SalesmanFilter } from "./filters";
+import { InvoiceItems } from "./InvoiceItems";
 
 const plain = (p: number) => formatAmount(p).replace(/,/g, "");
 const METHOD: Record<Payment["method"], string> = { cash: "Cash", cheque: "Cheque", online: "Online" };
@@ -43,9 +44,10 @@ export function SaleList() {
     { key: "date", header: "Date", cell: (s) => <span className="whitespace-nowrap">{formatDate(s.date)}</span>, sortValue: (s) => s.date, csv: (s) => s.date },
     { key: "shop", header: "Shop", cell: (s) => shopName(s.shopId), sortValue: (s) => shopName(s.shopId) },
     { key: "salesman", header: "Salesman", cell: (s) => look.person(s.salesmanId), sortValue: (s) => look.person(s.salesmanId) },
+    { key: "items", header: "Items", cell: (s) => <InvoiceItems saleId={s.id} lines={s.lines} />, csv: (s) => s.lines.length || "" },
     { key: "total", header: "Total", numeric: true, cell: (s) => <MoneyText paisa={s.totalPaisa} />, sortValue: (s) => s.totalPaisa, csv: (s) => plain(s.totalPaisa) },
     { key: "paid", header: "Paid", numeric: true, cell: (s) => <MoneyText paisa={s.paidPaisa ?? 0} />, sortValue: (s) => s.paidPaisa ?? 0, csv: (s) => plain(s.paidPaisa ?? 0) },
-    { key: "due", header: "Due", cell: (s) => <span className="whitespace-nowrap">{formatDate(s.dueDate)}</span>, sortValue: (s) => s.dueDate, csv: (s) => s.dueDate },
+    { key: "due", header: "Due", cell: (s) => <span className="whitespace-nowrap">{s.dueDate ? formatDate(s.dueDate) : "None"}</span>, sortValue: (s) => s.dueDate ?? "", csv: (s) => s.dueDate ?? "" },
     { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} />, sortValue: (s) => s.status },
   ];
   const clear = () => setUrl({ from: "", to: "", salesman: "", shop: "", status: "" });
@@ -151,7 +153,7 @@ export function SaleDetail({ id }: { id: string }) {
               <dt className="text-muted">Date</dt>
               <dd className="m-0 mt-0.5">{formatDateTime(s.createdAt)}</dd>
               <dt className="mt-2 text-muted">Due</dt>
-              <dd className="m-0 mt-0.5">{formatDate(s.dueDate)}</dd>
+              <dd className="m-0 mt-0.5">{s.dueDate ? formatDate(s.dueDate) : "None"}</dd>
             </div>
           </dl>
           <div className="table-scroll mt-5">
@@ -198,8 +200,7 @@ export function SaleDetail({ id }: { id: string }) {
             </p>
           ) : null}
           <p className="mt-4 text-sm text-muted">
-            Sold by {look.person(s.salesmanId)}
-            {s.limitOverrideBy ? `. Over the credit limit, allowed by ${look.person(s.limitOverrideBy)}` : ""}.
+            Sold by {look.person(s.salesmanId)}.
           </p>
         </Card>
 

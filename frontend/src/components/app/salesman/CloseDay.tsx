@@ -1,13 +1,13 @@
 "use client";
 
-// Closing the day, one stage at a time: every shop visited or skipped, then what is left of each
-// product, then the cash handed over, then a review and a confirm. Once closed, a read-only
+// Closing the day, one stage at a time: every shop visited or skipped, then the stock left (worked
+// out from what was issued, sold and written off; never typed), then the cash handed over, then a
+// review and a confirm. Once closed, a read-only
 // summary of what was handed back.
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button, buttonClass } from "@/components/ui/Button";
-import { Stepper } from "@/components/ui/Controls";
 import { Card, MoneyText, StatusBadge } from "@/components/ui/Display";
 import { Input } from "@/components/ui/Field";
 import { FormProblem } from "@/components/ui/Form";
@@ -17,7 +17,7 @@ import { errorMessage, useApiMutation, useApiQuery } from "@/lib/api/provider";
 import type { DayReport, Product } from "@/lib/api/types";
 import { formatTime } from "@/lib/dates";
 import { formatAmount, formatMoney, parseRupees } from "@/lib/money";
-import { cartonEquivalent, countUnits, plural } from "@/lib/units";
+import { cartonEquivalent, countUnits } from "@/lib/units";
 import { DAY_AFFECTS, useToday } from "./useToday";
 
 const STAGES = ["Shops", "Stock left", "Cash", "Review"] as const;
@@ -56,7 +56,6 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
   const toast = useToast();
   const shops = useApiQuery(["dayPlans", "shops", r.plan.id], (api) => api.dayPlans.shops(r.plan.id));
   const [stage, setStage] = useState(0);
-  const [left, setLeft] = useState<Record<string, number>>(() => Object.fromEntries(r.stock.map((l) => [l.productId, l.remaining])));
   const [cash, setCash] = useState(formatAmount(r.cash.collectedPaisa));
   const [confirming, setConfirming] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -64,13 +63,12 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
 
   const pending = shops.data?.filter((v) => v.visit.status === "pending") ?? [];
   const cashPaisa = parseRupees(cash);
-  const short = r.stock.reduce((a, l) => a + (l.remaining - (left[l.productId] ?? 0)), 0);
   const canGo = [pending.length === 0 && Boolean(shops.data), true, cashPaisa !== null, true];
 
   const onClose = async () => {
     setProblem(null);
     try {
-      await close.mutateAsync({ reportedUnsold: r.stock.map((l) => ({ productId: l.productId, units: left[l.productId] ?? 0 })), cashHandedOverPaisa: cashPaisa! });
+      await close.mutateAsync({ reportedUnsold: r.stock.map((l) => ({ productId: l.productId, units: l.remaining })), cashHandedOverPaisa: cashPaisa! });
       setConfirming(false);
       toast("Day closed. Hand the stock and cash to your manager.");
     } catch (e) {
@@ -126,25 +124,41 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
           )
         ) : stage === 1 ? (
           <>
-            <h2 className="text-title tracking-normal">Count what you have left</h2>
-            <p className="mt-1 text-ink-2">Each starts at what should be left. Change it to what you really have; less shows as short.</p>
-            <ul className="m-0 mt-4 flex list-none flex-col gap-5 p-0">
-              {r.stock.map((l) => {
-                const p = product(l.productId);
-                const unit = p?.unitName ?? "unit";
-                const n = left[l.productId] ?? 0;
-                return (
-                  <li key={l.productId} className="border-t border-rule-2 pt-4">
-                    <Stepper label={p?.name ?? "Product"} value={n} min={0} max={l.remaining} unit={plural(unit)} onChange={(v) => setLeft({ ...left, [l.productId]: v })} />
-                    <p className="mt-2 text-sm text-ink-2">
-                      Should be {countUnits(l.remaining, unit)}
-                      {cartonEquivalent(n, p?.unitsPerCarton ?? null, unit) ? `. You have ${cartonEquivalent(n, p?.unitsPerCarton ?? null, unit)}` : ""}
-                      {n < l.remaining ? <span className="font-medium text-error">. {countUnits(l.remaining - n, unit)} short.</span> : "."}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
+            <h2 className="text-title tracking-normal">Stock left with you</h2>
+            <p className="mt-1 text-ink-2">Worked out from your sales: what was issued, less what you sold and any write-off. Hand this back to your manager, who counts it.</p>
+            <div className="table-scroll mt-4">
+              <table className="data-table">
+                <caption className="visually-hidden">Stock left, product by product</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Product</th>
+                    <th scope="col" className="num">Issued</th>
+                    <th scope="col" className="num">Sold</th>
+                    {r.stock.some((l) => l.writtenOff) ? <th scope="col" className="num">Written off</th> : null}
+                    <th scope="col" className="num">Left</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.stock.map((l) => {
+                    const p = product(l.productId);
+                    const unit = p?.unitName ?? "unit";
+                    const cartons = cartonEquivalent(l.remaining, p?.unitsPerCarton ?? null, unit);
+                    return (
+                      <tr key={l.productId}>
+                        <th scope="row" className="font-medium">{p?.name ?? "…"}</th>
+                        <td className="num">{countUnits(l.issued, unit)}</td>
+                        <td className="num">{countUnits(l.sold, unit)}</td>
+                        {r.stock.some((x) => x.writtenOff) ? <td className="num">{l.writtenOff ? countUnits(l.writtenOff, unit) : "None"}</td> : null}
+                        <td className="num font-semibold">
+                          {countUnits(l.remaining, unit)}
+                          {cartons ? <span className="block text-sm font-normal text-muted">{cartons}</span> : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </>
         ) : stage === 2 ? (
           <>
@@ -181,10 +195,6 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
                 <dt className="text-ink-2">Cash handed over</dt>
                 <dd className="m-0 text-right">{cashPaisa === null ? "" : <MoneyText paisa={cashPaisa} />}</dd>
               </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-ink-2">Stock short</dt>
-                <dd className={`m-0 text-right ${short ? "font-medium text-error" : ""}`}>{short ? `${short} unit${short === 1 ? "" : "s"}` : "None"}</dd>
-              </div>
             </dl>
             <h3 className="mt-5 text-sm font-semibold tracking-wide text-muted uppercase">Stock you hand back</h3>
             <ul className="m-0 mt-2 list-none p-0 text-sm">
@@ -193,7 +203,7 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
                 return (
                   <li key={l.productId} className="flex justify-between gap-3 border-t border-rule-2 py-2">
                     <span>{p?.name ?? "…"}</span>
-                    <span className="font-outlier">{countUnits(left[l.productId] ?? 0, p?.unitName ?? "unit")}</span>
+                    <span className="font-outlier">{countUnits(l.remaining, p?.unitName ?? "unit")}</span>
                   </li>
                 );
               })}
@@ -224,7 +234,7 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
         onConfirm={onClose}
         busy={close.isPending}
         title="Close your day?"
-        consequence={`You hand back ${cashPaisa === null ? "the cash" : formatMoney(cashPaisa)} and the stock you counted${short ? `, ${short} unit${short === 1 ? "" : "s"} short` : ""}. After this nothing on today's route can change; your manager counts it next.`}
+        consequence={`You hand back ${cashPaisa === null ? "the cash" : formatMoney(cashPaisa)} and the stock left with you. After this nothing on today's route can change; your manager counts it next.`}
         confirmLabel="Close day"
       />
     </>

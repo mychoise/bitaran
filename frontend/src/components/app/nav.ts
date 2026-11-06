@@ -8,6 +8,7 @@ export const managerNav: NavEntry[] = [
   { href: "/app/manager", label: "Today", icon: "home" },
   { href: "/app/manager/day-plans", label: "Day plans", icon: "route", built: true },
   { href: "/app/manager/sales", label: "Sales", icon: "receipt", built: true },
+  { href: "/app/manager/orders", label: "Orders", icon: "cart", built: true },
   { href: "/app/manager/payments", label: "Payments", icon: "wallet", built: true },
   { href: "/app/manager/shops", label: "Shops", icon: "store", built: true },
   { href: "/app/manager/routes", label: "Routes", icon: "route", built: true },

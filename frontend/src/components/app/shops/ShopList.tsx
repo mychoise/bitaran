@@ -1,6 +1,6 @@
 "use client";
 
-// Shops: every shop with its route, balance and credit limit. Search, route, overdue and status
+// Shops: every shop with its route and balance. Search, route, overdue and status
 // filters and the sort all live in the address.
 
 import Link from "next/link";
@@ -47,14 +47,12 @@ function columnsFor(routeName: (id: string | null) => string): Column<ShopWithBa
     { key: "phone", header: "Phone", cell: (s) => <span className="whitespace-nowrap">{s.phone}</span>, sortValue: (s) => s.phone },
     { key: "route", header: "Route", cell: (s) => (s.routeId ? routeName(s.routeId) : <span className="text-muted">No route</span>), sortValue: (s) => routeName(s.routeId) },
     { key: "balance", header: "Balance", numeric: true, cell: (s) => <MoneyText paisa={s.balancePaisa} balance />, sortValue: (s) => s.balancePaisa, csv: (s) => plain(s.balancePaisa) },
-    { key: "limit", header: "Credit limit", numeric: true, cell: (s) => <MoneyText paisa={s.creditLimitPaisa} />, sortValue: (s) => s.creditLimitPaisa, csv: (s) => plain(s.creditLimitPaisa) },
     {
       key: "flags",
       header: "Overdue",
       cell: (s) => (
         <span className="flex flex-wrap gap-1.5">
           {s.overduePaisa > 0 ? <StatusBadge status="overdue" /> : null}
-          {s.balancePaisa > s.creditLimitPaisa ? <StatusBadge status="over_limit" /> : null}
         </span>
       ),
       sortValue: (s) => s.overduePaisa,
@@ -95,7 +93,7 @@ export function ShopList() {
     <>
       <PageHeader
         title="Shops"
-        lead="Every shop you supply, with what it owes and its credit limit."
+        lead="Every shop you supply, with what it owes."
         actions={
           <>
             <ExportButton filename="shops.csv" columns={columns} rows={q.data?.items} />

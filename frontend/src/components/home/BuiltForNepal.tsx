@@ -4,7 +4,7 @@ import chillies from "../../../public/photos/chillies.jpg";
 const points = [
   { term: "Routes by place name", line: "Bagar to Lamachaur, set up the way your salesmen already ride it." },
   { term: "Pasals", line: "Every shop keeps its own record: what it bought, what it paid, what it owes." },
-  { term: "Udharo", line: "A credit limit, a running balance and a due date for each shop." },
+  { term: "Udharo", line: "A running balance for each shop, invoice by invoice." },
   { term: "Cheques", line: "Photographed at the counter, pending until the manager confirms them." },
   { term: "Khaja and fuel", line: "Daily expenses sit beside the day's sales, with salary and the rest." },
 ];

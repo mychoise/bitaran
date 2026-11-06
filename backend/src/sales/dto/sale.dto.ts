@@ -68,6 +68,15 @@ export class CreateSaleDto {
   @ApiPropertyOptional({
     format: 'uuid',
     description:
+      'An open order this sale delivers; it must be for the same shop, and a salesman can deliver only his own. The order becomes delivered with this sale.',
+  })
+  @IsOptional()
+  @IsUUID()
+  orderId?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
       'Plan whose stock is sold. Salesmen: defaults to their running plan. ' +
       'Managers/owners: required unless visitId is given.',
   })

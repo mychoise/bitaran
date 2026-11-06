@@ -16,7 +16,6 @@ import { ConfirmDialog, Modal, useToast } from "@/components/ui/Overlay";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { Table, type Column } from "@/components/ui/Table";
 import { ApiError, type ShopCreateInput } from "@/lib/api/client";
-import { creditUsage } from "@/lib/api/mock/rules";
 import { errorMessage, useApiMutation, useApiQuery } from "@/lib/api/provider";
 import { firstIssue, temporaryPasswordField } from "@/lib/api/schemas";
 import type { ItemTaken, Payment, Return, Sale, ShopWithBalance, StatementEntry } from "@/lib/api/types";
@@ -26,6 +25,7 @@ import { countUnits, plural } from "@/lib/units";
 import { useUrlState } from "@/lib/url-state";
 import { ShopForm } from "./ShopForm";
 import { SHOP_AFFECTS, saveShop } from "./saveShop";
+import { InvoiceItems } from "../records/InvoiceItems";
 
 const TABS = [
   { id: "statement", label: "Statement" },
@@ -85,7 +85,6 @@ export function ShopDetail({ id }: { id: string }) {
         actions={
           <>
             {shop.overduePaisa > 0 ? <StatusBadge status="overdue" /> : null}
-            {shop.balancePaisa > shop.creditLimitPaisa ? <StatusBadge status="over_limit" /> : null}
             {shop.active ? <StatusBadge status="active" /> : <Badge tone="stopped">Inactive</Badge>}
           </>
         }
@@ -105,8 +104,6 @@ function BalanceCard({ shopId }: { shopId: string }) {
   if (q.isPending) return <LoadingState label="Loading the balance" lines={3} />;
   if (q.isError) return <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />;
   const b = q.data;
-  const use = creditUsage(b.balancePaisa, b.creditLimitPaisa);
-  const bar = Math.min(100, use.percent ?? (use.usedPaisa > 0 ? 100 : 0));
   const rows: [string, number, string][] = [
     ["Opening balance", b.openingPaisa, ""],
     ["Sales", b.salesPaisa, "+"],
@@ -148,23 +145,6 @@ function BalanceCard({ shopId }: { shopId: string }) {
           <p className="text-sm text-muted">Overdue</p>
           <p className={`mt-1 text-lg ${b.overduePaisa > 0 ? "text-warning" : ""}`}>
             <MoneyText paisa={b.overduePaisa} />
-          </p>
-        </div>
-        <div>
-          <p className="text-sm text-muted">Credit limit</p>
-          <p className="mt-1 text-lg">
-            <MoneyText paisa={b.creditLimitPaisa} />
-          </p>
-          <svg viewBox="0 0 100 6" preserveAspectRatio="none" className="mt-2 block h-2 w-full" aria-hidden>
-            <rect width="100" height="6" rx="3" className="fill-paper-3" />
-            <rect width={bar} height="6" rx="3" className={use.over ? "fill-error" : "fill-accent-2"} />
-          </svg>
-          <p className={`mt-1.5 text-sm ${use.over ? "font-medium text-error" : "text-ink-2"}`}>
-            {b.creditLimitPaisa === 0
-              ? "No credit limit set."
-              : use.over
-                ? `Over the limit by Rs ${formatAmount(use.usedPaisa - b.creditLimitPaisa)}.`
-                : `Rs ${formatAmount(use.usedPaisa)} used, ${use.percent}% of the limit.`}
           </p>
         </div>
       </div>
@@ -225,9 +205,9 @@ function Sales({ shopId }: { shopId: string }) {
   const columns: Column<Sale>[] = [
     { key: "no", header: "Invoice", rowHeader: true, cell: (s) => <span className="font-outlier">{s.invoiceNo}</span>, sortValue: (s) => s.invoiceNo },
     { key: "date", header: "Date", cell: (s) => <span className="whitespace-nowrap">{formatDate(s.date)}</span>, sortValue: (s) => s.date },
-    { key: "items", header: "Items", numeric: true, cell: (s) => s.lines.length, sortValue: (s) => s.lines.length },
+    { key: "items", header: "Items", cell: (s) => <InvoiceItems saleId={s.id} lines={s.lines} />, csv: (s) => s.lines.length || "" },
     { key: "total", header: "Total", numeric: true, cell: (s) => <MoneyText paisa={s.totalPaisa} />, sortValue: (s) => s.totalPaisa },
-    { key: "due", header: "Due", cell: (s) => <span className="whitespace-nowrap">{formatDate(s.dueDate)}</span>, sortValue: (s) => s.dueDate },
+    { key: "due", header: "Due", cell: (s) => <span className="whitespace-nowrap">{s.dueDate ? formatDate(s.dueDate) : "None"}</span>, sortValue: (s) => s.dueDate ?? "" },
     { key: "status", header: "Status", cell: (s) => <StatusBadge status={s.status} />, sortValue: (s) => s.status },
   ];
   return <Table caption="Sales to this shop" columns={columns} rows={q.data?.items} rowKey={(s) => s.id} loading={q.isPending} error={q.isError ? errorMessage(q.error) : null} onRetry={() => q.refetch()} empty={{ title: "No sales yet", line: "Sales to this shop show up here." }} />;

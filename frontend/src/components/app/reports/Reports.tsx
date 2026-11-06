@@ -21,6 +21,7 @@ import { cartonEquivalent, countUnits } from "@/lib/units";
 import { formatSort, parseSort, useUrlState } from "@/lib/url-state";
 import { usePlanLookups } from "../dayplans/lookups";
 import { DateFilter, okDate } from "../records/filters";
+import { InvoiceItems } from "../records/InvoiceItems";
 
 const csvAmount = (paisa: number) => formatAmount(paisa).replace(/,/g, "");
 const METHOD = { cash: "Cash", cheque: "Cheque", online: "Online" } as const;
@@ -192,6 +193,7 @@ export function SalesmanHistoryReport() {
     { key: "date", header: "When", cell: (e) => <span className="whitespace-nowrap">{formatDate(e.date)}, {formatTime(e.at)}</span>, sortValue: (e) => e.at, csv: (e) => `${e.date} ${formatTime(e.at)}` },
     { key: "kind", header: "What", rowHeader: true, cell: (e) => <Link href={`/app/manager/${e.kind === "sale" ? "sales" : "payments"}/${e.id}`} className="text-link">{e.kind === "sale" ? e.ref : `${e.ref} payment`}</Link>, sortValue: (e) => e.kind, csv: (e) => (e.kind === "sale" ? e.ref : `${e.ref} payment`) },
     { key: "shop", header: "Shop", cell: (e) => shopName(e.shopId), sortValue: (e) => shopName(e.shopId) },
+    { key: "items", header: "Items", cell: (e) => (e.kind === "sale" ? <InvoiceItems saleId={e.id} /> : null) },
     { key: "amount", header: "Amount", numeric: true, cell: (e) => <MoneyText paisa={e.amountPaisa} />, sortValue: (e) => e.amountPaisa, csv: (e) => csvAmount(e.amountPaisa) },
     { key: "status", header: "Status", cell: (e) => <StatusBadge status={e.status} />, sortValue: (e) => e.status },
   ];

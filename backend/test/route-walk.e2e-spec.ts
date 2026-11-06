@@ -359,6 +359,14 @@ describe('Every route, every caller (e2e)', () => {
       params: { id: expense.body.id },
       body: { description: 'Petrol' },
     });
+    const order = await ok('manager', 'POST', `${A}/orders`, {
+      body: {
+        clientId: newShopId,
+        salesmanId: salesman.id,
+        items: [{ productId: product.id, unit: 'base', quantity: 1 }],
+        paymentMode: 'on_delivery',
+      },
+    });
 
     // ---------- every read, as every caller ----------
     const fill: Record<string, string> = {
@@ -371,6 +379,7 @@ describe('Every route, every caller (e2e)', () => {
       [`${A}/payments/{id}`]: paymentId,
       [`${A}/returns/{id}`]: ret.body.id,
       [`${A}/write-offs/{id}`]: writeOff.body.id,
+      [`${A}/orders/{id}`]: order.body.id,
       [`${A}/visits/{id}/photos`]: visitId,
     };
     const idFor = (path: string) =>
@@ -439,6 +448,10 @@ describe('Every route, every caller (e2e)', () => {
         currentPassword: login('shop', 'shop').password,
         newPassword: 'NewShop@12345',
       },
+    });
+    await ok('manager', 'POST', `${A}/orders/{id}/cancel`, {
+      params: { id: order.body.id },
+      body: { reason: 'Walk done' },
     });
     await ok('manager', 'DELETE', `${A}/product-categories/{id}`, {
       params: { id: categoryId },

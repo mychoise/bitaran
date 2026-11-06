@@ -1,6 +1,6 @@
 "use client";
 
-// A new shop, added by the salesman. Its credit limit and opening balance start at zero (the
+// A new shop, added by the salesman. Its opening balance starts at zero (the
 // manager sets them), and it needs a login. If the day is in progress it joins today's shops.
 
 import { useRouter } from "next/navigation";
@@ -79,7 +79,7 @@ export function NewShop() {
     <div className="mx-auto max-w-3xl">
       <BackLink href="/app/salesman/shops" label="Shops" />
       <h1 className="text-display-s">New shop</h1>
-      <p className="mt-2 text-lg text-ink-2">It starts with no credit limit and no opening balance. Your manager sets those, and puts it on a route.</p>
+      <p className="mt-2 text-lg text-ink-2">It starts with no opening balance. Your manager sets those, and puts it on a route.</p>
       <form onSubmit={onSubmit} noValidate className="mt-6 flex flex-col gap-6">
         <Card as="section" dense aria-label="The shop">
           <Input label="Shop name" autoComplete="off" error={err.name?.message} {...register("name")} />

@@ -18,3 +18,6 @@ export * from './selling.js';
 
 // Costs & losses: sale_returns, sale_return_items, stock_write_offs, expenses
 export * from './costs-and-losses.js';
+
+// Orders taken by the office, delivered by a salesman
+export * from './orders.js';

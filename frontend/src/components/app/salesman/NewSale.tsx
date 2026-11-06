@@ -6,19 +6,20 @@
 // now, and the credit check in plain words. Done: the invoice, to print or share.
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Controls";
+import { Camera, type Shot } from "@/components/ui/Camera";
 import { Card, MoneyText } from "@/components/ui/Display";
 import { Input } from "@/components/ui/Field";
 import { FormProblem } from "@/components/ui/Form";
 import { MinusIcon, PlusIcon } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Overlay";
 import { ErrorState, LoadingState } from "@/components/ui/States";
-import { checkCreditLimit, checkDueDate, priceLine, saleMoney } from "@/lib/api/mock/rules";
+import { priceLine, saleMoney, splitSale, validatePayment, collectable } from "@/lib/api/mock/rules";
 import { errorMessage, useApiMutation, useApiQuery } from "@/lib/api/provider";
 import type { Product, Sale, SaleUnit, VisitShop } from "@/lib/api/types";
-import { addDays, formatDate, formatDateTime, todayNepal } from "@/lib/dates";
+import { formatDate, formatDateTime, todayNepal } from "@/lib/dates";
 import { formatAmount, formatMoney, parseRupees } from "@/lib/money";
 import { cartonEquivalent, countUnits, plural } from "@/lib/units";
 import { useOnceKey, useSingleFlight, VisitGate } from "./onVisit";
@@ -37,6 +38,7 @@ function SaleFlow({ v }: { v: VisitShop }) {
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [stage, setStage] = useState<"pick" | "review">("pick");
   const [sale, setSale] = useState<Sale | null>(null);
+  const [extra, setExtra] = useState<ExtraPayment[]>([]);
 
   const carried = useMemo(() => new Map((report.data?.stock ?? []).map((l) => [l.productId, l.remaining])), [report.data]);
   const list = useMemo(() => (products.data?.items ?? []).filter((p) => carried.has(p.id) && p.active), [products.data, carried]);
@@ -51,8 +53,11 @@ function SaleFlow({ v }: { v: VisitShop }) {
   const priced = lines.map((l) => priceLine(l.product, l.quantity, l.unit));
   const subtotal = priced.reduce((a, l) => a + l.totalPaisa, 0);
 
-  if (sale) return <Invoice sale={sale} v={v} products={list} />;
-  if (stage === "review") return <Review v={v} lines={lines} onBack={() => setStage("pick")} onDone={setSale} />;
+  if (sale) return <Invoice sale={sale} v={v} products={list} extra={extra} />;
+  if (stage === "review") return <Review v={v} lines={lines} onBack={() => setStage("pick")} onDone={(s, x) => {
+          setSale(s);
+          setExtra(x);
+        }} />;
   return <Picker list={list} carried={carried} cart={cart} setCart={setCart} categories={categories.data ?? []} subtotal={subtotal} count={lines.length} onNext={() => setStage("review")} />;
 }
 
@@ -180,44 +185,137 @@ const capital = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
 
 // ---- review ------------------------------------------------------------------------------------
 
-function Review({ v, lines, onBack, onDone }: { v: VisitShop; lines: { product: Product; unit: SaleUnit; quantity: number }[]; onBack: () => void; onDone: (s: Sale) => void }) {
+type Method = "cash" | "cheque" | "online" | "udharo";
+const METHODS: { value: Method; label: string }[] = [
+  { value: "cash", label: "Cash" },
+  { value: "cheque", label: "Cheque" },
+  { value: "online", label: "Online" },
+  { value: "udharo", label: "Udharo" },
+];
+/** A cheque or online payment saved against the new invoice, or why it was not. */
+export type ExtraPayment = { method: "cheque" | "online"; amountPaisa: number; status?: string; problem?: string };
+
+function Review({ v, lines, onBack, onDone }: { v: VisitShop; lines: { product: Product; unit: SaleUnit; quantity: number }[]; onBack: () => void; onDone: (s: Sale, extra: ExtraPayment[]) => void }) {
   const toast = useToast();
   const { key, renew } = useOnceKey();
   const single = useSingleFlight();
   const today = todayNepal();
   const [discount, setDiscount] = useState("0");
-  const [cash, setCash] = useState("0");
-  const [due, setDue] = useState(addDays(today, v.shop.dueDays));
+  const [chosen, setChosen] = useState<Set<Method>>(new Set(["cash"]));
+  const [amounts, setAmounts] = useState<Record<"cash" | "cheque" | "online", string>>({ cash: "", cheque: "", online: "" });
+  const [chequeNo, setChequeNo] = useState("");
+  const [bank, setBank] = useState("");
+  const [chequeDate, setChequeDate] = useState(today);
+  const [reference, setReference] = useState("");
+  const [chequeShot, setChequeShot] = useState<Shot | null>(null);
+  const [onlineShot, setOnlineShot] = useState<Shot | null>(null);
+  const [tried, setTried] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const create = useApiMutation((api, input: Parameters<typeof api.sales.create>[0]) => api.sales.create(input), DAY_AFFECTS);
+  const focusOn = useRef<Method | null>(null);
+
+  // The sale first, with any cash; then each cheque or online payment against its invoice.
+  const create = useApiMutation(
+    async (api, input: { sale: Parameters<typeof api.sales.create>[0]; extra: { method: "cheque" | "online"; amountPaisa: number; shot: Shot; chequeNo?: string; bank?: string; chequeDate?: string; reference?: string }[] }) => {
+      const sale = await api.sales.create(input.sale);
+      const done: ExtraPayment[] = [];
+      for (const x of input.extra) {
+        try {
+          const { id } = await api.uploads.image(x.shot.blob);
+          const p = await api.payments.create({ idempotencyKey: `${input.sale.idempotencyKey}-${x.method}`, visitId: v.visit.id, saleId: sale.id, method: x.method, amountPaisa: x.amountPaisa, chequeNo: x.chequeNo, bank: x.bank, chequeDate: x.chequeDate, reference: x.reference, imageIds: [id] });
+          done.push({ method: x.method, amountPaisa: x.amountPaisa, status: p.status });
+        } catch (e) {
+          done.push({ method: x.method, amountPaisa: x.amountPaisa, problem: errorMessage(e) });
+        }
+      }
+      return { sale, done };
+    },
+    DAY_AFFECTS,
+  );
 
   const priced = lines.map((l) => priceLine(l.product, l.quantity, l.unit));
   const discountPaisa = parseRupees(discount);
-  const cashPaisa = parseRupees(cash);
-  const money = saleMoney(priced, discountPaisa ?? -1, cashPaisa ?? -1);
-  const moneyProblem = discountPaisa === null ? "Enter the discount in rupees, or 0." : cashPaisa === null ? "Enter the cash paid now in rupees, or 0." : money.problems[0];
-  const dueProblem = money.creditPaisa > 0 ? checkDueDate(due, today) : null;
-  const credit = checkCreditLimit(v.shop.balancePaisa, money.creditPaisa, v.shop.creditLimitPaisa, "salesman");
-  const ready = !moneyProblem && !dueProblem && credit.ok;
+  const money = saleMoney(priced, discountPaisa ?? -1, 0);
+  const total = money.totalPaisa;
+  const paying = (["cash", "cheque", "online"] as const).filter((m) => chosen.has(m));
+  const parts = Object.fromEntries(paying.map((m) => [m, parseRupees(amounts[m])])) as Partial<Record<"cash" | "cheque" | "online", number | null>>;
+  const split = splitSale(total, parts, chosen.has("udharo"));
+  const chequeProblems = chosen.has("cheque") ? validatePayment({ method: "cheque", amountPaisa: parts.cheque ?? 1, chequeNo, bank, chequeDate, imageIds: chequeShot ? ["x"] : [] }, new Set()).filter((m) => !m.includes("amount")) : [];
+  const onlineProblems = chosen.has("online") ? validatePayment({ method: "online", amountPaisa: parts.online ?? 1, reference, imageIds: onlineShot ? ["x"] : [] }, new Set()).filter((m) => !m.includes("amount")) : [];
+  // Cheque and online can be no more than the shop will owe after the sale and its cash.
+  const nonCash = (parts.cheque ?? 0) + (parts.online ?? 0);
+  const nonCashMax = collectable(v.shop.balancePaisa + total - (parts.cash ?? 0), v.shop.inClearingPaisa);
+  const nonCashProblem =
+    nonCash > nonCashMax
+      ? nonCashMax === 0
+        ? `${v.shop.name}'s credit already covers the rest, so nothing can go by cheque or online.`
+        : `${v.shop.name}'s credit covers part of this sale, so at most ${formatMoney(nonCashMax)} can go by cheque or online.`
+      : null;
+  const moneyProblem = discountPaisa === null ? "Enter the discount in rupees, or 0." : (money.problems[0] ?? split.problems[0] ?? nonCashProblem ?? undefined);
+  const ready = !moneyProblem && !chequeProblems.length && !onlineProblems.length;
+  const show = (list: string[], m: string) => (tried && list.includes(m) ? m : undefined);
+
+  // Choosing a method puts the cursor in its amount.
+  useEffect(() => {
+    if (!focusOn.current) return;
+    document.querySelector<HTMLInputElement>(`[data-pay="${focusOn.current}"]`)?.focus();
+    focusOn.current = null;
+  });
+
+  const toggle = (m: Method) => {
+    const next = new Set(chosen);
+    if (next.has(m)) {
+      next.delete(m);
+      if (m !== "udharo") setAmounts((a) => ({ ...a, [m]: "" }));
+    } else {
+      next.add(m);
+      if (m !== "udharo") {
+        // Suggest what is still unpaid.
+        const others = (["cash", "cheque", "online"] as const).filter((x) => x !== m && next.has(x)).reduce((n, x) => n + (parseRupees(amounts[x]) ?? 0), 0);
+        const left = total - others;
+        if (left > 0 && !amounts[m]) setAmounts((a) => ({ ...a, [m]: formatAmount(left).replace(/,/g, "") }));
+        focusOn.current = m;
+      }
+    }
+    setChosen(next);
+  };
 
   const confirm = () => single(async () => {
+    setTried(true);
+    if (!ready) return;
     setProblem(null);
     try {
-      const sale = await create.mutateAsync({
-        idempotencyKey: key,
-        visitId: v.visit.id,
-        lines: lines.map((l) => ({ productId: l.product.id, unit: l.unit, quantity: l.quantity })),
-        discountPaisa: discountPaisa!,
-        cashPaidPaisa: cashPaisa!,
-        dueDate: money.creditPaisa > 0 ? due : undefined,
+      const { sale, done } = await create.mutateAsync({
+        sale: {
+          idempotencyKey: key,
+          visitId: v.visit.id,
+          lines: lines.map((l) => ({ productId: l.product.id, unit: l.unit, quantity: l.quantity })),
+          discountPaisa: discountPaisa!,
+          cashPaidPaisa: parts.cash ?? 0,
+        },
+        extra: [
+          ...(chosen.has("cheque") ? [{ method: "cheque" as const, amountPaisa: parts.cheque!, shot: chequeShot!, chequeNo, bank, chequeDate }] : []),
+          ...(chosen.has("online") ? [{ method: "online" as const, amountPaisa: parts.online!, shot: onlineShot!, reference }] : []),
+        ],
       });
       renew();
-      toast(`Invoice ${sale.invoiceNo} made.`);
-      onDone(sale);
+      toast(done.some((d) => d.problem) ? `Invoice ${sale.invoiceNo} made, but a payment was not saved.` : `Invoice ${sale.invoiceNo} made.`);
+      onDone(sale, done);
     } catch (e) {
       setProblem(errorMessage(e));
     }
   });
+
+  const amountField = (m: "cash" | "cheque" | "online", label: string) => (
+    <Input
+      label={label}
+      inputMode="decimal"
+      autoComplete="off"
+      data-pay={m}
+      value={amounts[m]}
+      error={tried && (parts[m] === null || (parts[m] ?? 0) <= 0) ? `Enter the ${m} amount.` : undefined}
+      onChange={(e) => setAmounts((a) => ({ ...a, [m]: e.target.value }))}
+    />
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -239,48 +337,84 @@ function Review({ v, lines, onBack, onDone }: { v: VisitShop; lines: { product: 
           ))}
         </ul>
         <p className="mt-2 text-sm text-muted">Prices come from the product list. They cannot be changed here.</p>
+        <div className="mt-4 max-w-xs">
+          <Input label="Discount (Rs)" inputMode="decimal" autoComplete="off" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+        </div>
+        <p className="flex justify-between border-t border-rule-2 pt-3 text-lg font-semibold">
+          <span>Total</span>
+          <MoneyText paisa={total} />
+        </p>
       </Card>
 
-      <Card as="section" dense aria-label="Payment and credit">
-        <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-          <Input label="Discount (Rs)" inputMode="decimal" autoComplete="off" value={discount} onChange={(e) => setDiscount(e.target.value)} />
-          <div>
-            <Input label="Paid now in cash (Rs)" inputMode="decimal" autoComplete="off" value={cash} onChange={(e) => setCash(e.target.value)} />
-            <Button variant="quiet" size="sm" className="-mt-4 mb-4" onClick={() => setCash(formatAmount(money.totalPaisa))}>
-              All of it in cash
-            </Button>
-          </div>
-          {money.creditPaisa > 0 ? <Input label="Due date for the credit" type="date" min={today} value={due} error={dueProblem ?? undefined} onChange={(e) => setDue(e.target.value)} /> : null}
+      <Card as="section" dense aria-labelledby="pay-title">
+        <h2 id="pay-title" className="text-title tracking-normal">
+          How is it paid?
+        </h2>
+        <p className="mt-1 text-sm text-ink-2">Choose one or more. Udharo takes whatever is left.</p>
+        <div role="group" aria-label="How is it paid" className="segmented mt-3">
+          {METHODS.map((m) => (
+            <button key={m.value} type="button" aria-pressed={chosen.has(m.value)} onClick={() => toggle(m.value)}>
+              {m.label}
+            </button>
+          ))}
         </div>
-        <dl className="m-0 flex flex-col gap-1.5 border-t border-rule-2 pt-4">
-          {[
-            ["Items", money.subtotalPaisa],
-            ["Discount", -money.discountPaisa],
-            ["Total", money.totalPaisa],
-            ["Paid now in cash", money.cashPaidPaisa],
-            ["On credit (udharo)", money.creditPaisa],
-          ].map(([k, n]) => (
-            <div key={k as string} className={`flex justify-between gap-4 ${k === "Total" ? "border-t border-rule-2 pt-1.5 font-semibold" : ""}`}>
+
+        {chosen.has("cash") ? (
+          <div className="mt-5 border-t border-rule-2 pt-4">
+            <h3 className="font-medium">Cash</h3>
+            <div className="mt-2 max-w-xs">{amountField("cash", "Cash now (Rs)")}</div>
+          </div>
+        ) : null}
+
+        {chosen.has("cheque") ? (
+          <div className="mt-5 border-t border-rule-2 pt-4">
+            <h3 className="font-medium">Cheque</h3>
+            <p className="mt-1 text-sm text-ink-2">Pending until your manager confirms it.</p>
+            <div className="mt-2 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+              {amountField("cheque", "Cheque amount (Rs)")}
+              <Input label="Cheque number" inputMode="numeric" autoComplete="off" value={chequeNo} error={show(chequeProblems, "Enter the cheque number.")} onChange={(e) => setChequeNo(e.target.value)} />
+              <Input label="Bank" autoComplete="off" value={bank} error={show(chequeProblems, "Enter the bank.")} onChange={(e) => setBank(e.target.value)} />
+              <Input label="Date on the cheque" type="date" value={chequeDate} error={show(chequeProblems, "Enter the date on the cheque.")} onChange={(e) => setChequeDate(e.target.value)} />
+            </div>
+            <Camera label="Photo of the cheque (required)" shot={chequeShot} onShot={setChequeShot} />
+            {show(chequeProblems, "Add a photo of the cheque.") ? <p role="alert" className="mt-2 text-sm font-medium text-error">Add a photo of the cheque.</p> : null}
+          </div>
+        ) : null}
+
+        {chosen.has("online") ? (
+          <div className="mt-5 border-t border-rule-2 pt-4">
+            <h3 className="font-medium">Online</h3>
+            <p className="mt-1 text-sm text-ink-2">Pending until your manager confirms it.</p>
+            <div className="mt-2 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+              {amountField("online", "Online amount (Rs)")}
+              <Input label="Reference number" autoComplete="off" hint="From the payment app's receipt." value={reference} error={show(onlineProblems, "Enter the payment's reference number.")} onChange={(e) => setReference(e.target.value)} />
+            </div>
+            <Camera label="Screenshot of the payment (required)" shot={onlineShot} onShot={setOnlineShot} />
+            {show(onlineProblems, "Add a screenshot of the payment.") ? <p role="alert" className="mt-2 text-sm font-medium text-error">Add a screenshot of the payment.</p> : null}
+          </div>
+        ) : null}
+
+        <dl className="m-0 mt-4 flex flex-col gap-1.5 border-t border-rule-2 pt-4">
+          {(
+            [
+              ["Total", total],
+              ...paying.map((m) => [m === "cash" ? "Cash" : m === "cheque" ? "Cheque (pending)" : "Online (pending)", parts[m] ?? 0] as [string, number]),
+              ...(chosen.has("udharo") ? ([["Udharo", split.creditPaisa]] as [string, number][]) : []),
+            ] as [string, number][]
+          ).map(([k, n]) => (
+            <div key={k} className={`flex justify-between gap-4 ${k === "Total" ? "font-semibold" : ""}`}>
               <dt>{k}</dt>
-              <dd className="m-0">{n === 0 && k === "Discount" ? "None" : <MoneyText paisa={n as number} />}</dd>
+              <dd className="m-0">
+                <MoneyText paisa={n} />
+              </dd>
             </div>
           ))}
         </dl>
-        {moneyProblem ? <p role="alert" className="mt-3 text-sm font-medium text-error">{moneyProblem}</p> : null}
-      </Card>
-
-      <Card as="section" dense aria-label="Credit check" className={credit.ok ? "" : "ring-2 ring-error"}>
-        {money.creditPaisa === 0 ? (
-          <p>Paid in full. Nothing goes on credit.</p>
-        ) : credit.ok ? (
-          <p>
-            <MoneyText paisa={money.creditPaisa} /> goes on credit, due {/^\d{4}-\d{2}-\d{2}$/.test(due) ? formatDate(due) : "on the date above"}. {v.shop.name} stays within its credit limit of <MoneyText paisa={v.shop.creditLimitPaisa} />.
+        {moneyProblem && (tried || split.paidPaisa > total || nonCashProblem) ? (
+          <p role="alert" className="mt-3 text-sm font-medium text-error">
+            {moneyProblem}
           </p>
-        ) : (
-          <p role="alert" className="font-medium text-error">
-            This sale takes {v.shop.name} over its credit limit by {formatMoney(credit.overByPaisa)}; ask your manager. Or take more of it in cash.
-          </p>
-        )}
+        ) : null}
       </Card>
 
       <FormProblem message={problem} />
@@ -288,7 +422,7 @@ function Review({ v, lines, onBack, onDone }: { v: VisitShop; lines: { product: 
         <Button variant="secondary" size="lg" onClick={onBack} disabled={create.isPending}>
           Back to items
         </Button>
-        <Button size="lg" disabled={!ready} loading={create.isPending} loadingLabel="Saving…" onClick={confirm}>
+        <Button size="lg" loading={create.isPending} loadingLabel="Saving…" onClick={confirm}>
           Confirm sale
         </Button>
       </div>
@@ -298,7 +432,12 @@ function Review({ v, lines, onBack, onDone }: { v: VisitShop; lines: { product: 
 
 // ---- invoice ------------------------------------------------------------------------------------
 
-function Invoice({ sale, v, products }: { sale: Sale; v: VisitShop; products: Product[] }) {
+function Invoice({ sale, v, products, extra }: { sale: Sale; v: VisitShop; products: Product[]; extra: ExtraPayment[] }) {
+  const cash = sale.cashPaidPaisa ?? 0;
+  const saved = extra.filter((x) => !x.problem);
+  const failed = extra.filter((x) => x.problem);
+  const udharo = Math.max(0, sale.totalPaisa - cash - saved.reduce((n, x) => n + x.amountPaisa, 0));
+  const methodName = (m: ExtraPayment["method"]) => (m === "cheque" ? "Cheque" : "Online");
   const toast = useToast();
   const business = useApiQuery(["business"], (api) => api.business.get());
   const b = business.data;
@@ -308,8 +447,9 @@ function Invoice({ sale, v, products }: { sale: Sale; v: VisitShop; products: Pr
     v.shop.name,
     ...sale.lines.map((l) => `${l.unit === "carton" ? `${l.quantity} carton(s)` : countUnits(l.quantity, name(l.productId)?.unitName ?? "unit")} ${name(l.productId)?.name ?? ""}: ${formatMoney(l.totalPaisa)}`),
     `Total ${formatMoney(sale.totalPaisa)}`,
-    sale.cashPaidPaisa ? `Paid in cash ${formatMoney(sale.cashPaidPaisa)}` : "",
-    sale.totalPaisa - (sale.cashPaidPaisa ?? 0) > 0 ? `On credit ${formatMoney(sale.totalPaisa - (sale.cashPaidPaisa ?? 0))}, due ${formatDate(sale.dueDate)}` : "",
+    cash ? `Paid in cash ${formatMoney(cash)}` : "",
+    ...saved.map((x) => `${methodName(x.method)} ${formatMoney(x.amountPaisa)} (pending)`),
+    udharo > 0 ? `Udharo ${formatMoney(udharo)}` : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -373,22 +513,44 @@ function Invoice({ sale, v, products }: { sale: Sale; v: VisitShop; products: Pr
               <MoneyText paisa={sale.totalPaisa} />
             </dd>
           </div>
-          <div className="flex justify-between">
-            <dt>Paid in cash</dt>
-            <dd className="m-0">
-              <MoneyText paisa={sale.cashPaidPaisa ?? 0} />
-            </dd>
-          </div>
-          {sale.totalPaisa - (sale.cashPaidPaisa ?? 0) > 0 ? (
+          {cash ? (
             <div className="flex justify-between">
-              <dt>On credit, due {formatDate(sale.dueDate)}</dt>
+              <dt>Paid in cash</dt>
               <dd className="m-0">
-                <MoneyText paisa={sale.totalPaisa - (sale.cashPaidPaisa ?? 0)} />
+                <MoneyText paisa={cash} />
+              </dd>
+            </div>
+          ) : null}
+          {saved.map((x) => (
+            <div key={x.method} className="flex justify-between">
+              <dt>{methodName(x.method)} (pending)</dt>
+              <dd className="m-0">
+                <MoneyText paisa={x.amountPaisa} />
+              </dd>
+            </div>
+          ))}
+          {udharo > 0 ? (
+            <div className="flex justify-between">
+              <dt>Udharo</dt>
+              <dd className="m-0">
+                <MoneyText paisa={udharo} />
               </dd>
             </div>
           ) : null}
         </dl>
       </Card>
+      {failed.length ? (
+        <div role="alert" className="no-print mt-4 rounded-stock border-2 border-error bg-error-soft p-4">
+          {failed.map((x) => (
+            <p key={x.method}>
+              <span className="font-medium">The {x.method === "cheque" ? "cheque" : "online payment"} of {formatMoney(x.amountPaisa)} was not saved.</span> {x.problem} The sale is saved; record it with Collect payment.
+            </p>
+          ))}
+          <Link href={`/app/salesman/payment/new?visit=${v.visit.id}`} className={buttonClass("secondary", "sm", "mt-3")}>
+            Collect payment
+          </Link>
+        </div>
+      ) : null}
       <div className="no-print mt-6 grid grid-cols-2 gap-3">
         <Button variant="secondary" size="lg" onClick={() => window.print()}>
           Print

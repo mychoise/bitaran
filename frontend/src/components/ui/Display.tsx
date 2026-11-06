@@ -80,6 +80,8 @@ const STATUS: Record<string, { tone: BadgeTone; label: string }> = {
   pending: { tone: "progress", label: "Pending" },
   bounced: { tone: "danger", label: "Bounced" },
   cancelled: { tone: "stopped", label: "Cancelled" },
+  open: { tone: "progress", label: "Open" },
+  delivered: { tone: "success", label: "Delivered" },
   overdue: { tone: "warning", label: "Overdue" },
   over_limit: { tone: "danger", label: "Over limit" },
   flagged: { tone: "warning", label: "Flagged" },

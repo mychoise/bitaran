@@ -74,6 +74,9 @@ import {
   shopBalance,
   validatePayment,
   collectable,
+  splitSale,
+  invoiceUnpaid,
+  openInvoices,
 } from "./rules.ts";
 
 const shop = { id: "s1", openingBalancePaisa: 50_000 };
@@ -690,3 +693,33 @@ test("a range of days adds up, and units sold count confirmed sales in the range
   assert.deepEqual([...unitsSold(sales, { from: "2026-11-01", to: "2026-11-04" })], [["p1", 6], ["p2", 1]]);
 });
 
+
+test("a sale split across cash, cheque, online and udharo", () => {
+  // Cash and cheque cover it exactly.
+  assert.deepEqual(splitSale(10_000, { cash: 4_000, cheque: 6_000 }, false), { paidPaisa: 10_000, creditPaisa: 0, unpaidNowPaisa: 6_000, problems: [] });
+  // Some of each, the rest on udharo.
+  assert.deepEqual(splitSale(10_000, { cash: 2_000, cheque: 3_000, online: 1_000 }, true), { paidPaisa: 6_000, creditPaisa: 4_000, unpaidNowPaisa: 8_000, problems: [] });
+  // All udharo.
+  assert.deepEqual(splitSale(10_000, {}, true).problems, []);
+  assert.equal(splitSale(10_000, {}, true).creditPaisa, 10_000);
+  assert.deepEqual(splitSale(10_000, {}, false).problems, ["Choose how the sale is paid."]);
+  assert.deepEqual(splitSale(10_000, { cheque: null }, true).problems, ["Enter the cheque amount."]);
+  assert.match(splitSale(10_000, { cash: 8_000, online: 3_000 }, true).problems[0], /more than the sale/);
+  assert.match(splitSale(10_000, { cash: 8_000 }, false).problems[0], /Rs 20.00 is not paid yet/);
+});
+
+test("what is unpaid per invoice: bounced payments do not count, pending ones do", () => {
+  const a = sale({ id: "a", invoiceNo: 1, date: "2026-11-01", totalPaisa: 60_000 });
+  const b = sale({ id: "b", invoiceNo: 2, date: "2026-11-03", totalPaisa: 7_000 });
+  const c = sale({ id: "c", invoiceNo: 3, date: "2026-11-02", totalPaisa: 5_000, status: "cancelled" });
+  const pays = [
+    pay({ id: "1", saleId: "a", amountPaisa: 20_000 }),
+    pay({ id: "2", saleId: "a", amountPaisa: 10_000, method: "cheque", status: "pending" }),
+    pay({ id: "3", saleId: "a", amountPaisa: 5_000, method: "cheque", status: "bounced" }),
+    pay({ id: "4", saleId: "b", amountPaisa: 7_000 }),
+  ];
+  assert.equal(invoiceUnpaid(a, pays), 30_000);
+  assert.equal(invoiceUnpaid(b, pays), 0);
+  assert.equal(invoiceUnpaid(c, pays), 0);
+  assert.deepEqual(openInvoices([b, c, a], pays).map((x) => [x.sale.invoiceNo, x.unpaidPaisa]), [[1, 30_000]]);
+});

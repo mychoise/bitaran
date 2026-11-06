@@ -81,12 +81,12 @@ export const groups: Group[] = [
       {
         id: "credit",
         short: "Udharo and balances",
-        title: "Udharo with a limit",
-        body: "Each shop has a credit limit, a running balance and due dates. Overdue shops are listed first. A sale over the limit is blocked unless a manager allows it. Old balances can be loaded in.",
+        title: "Udharo by shop",
+        body: "Each shop has a running balance: what it bought, less what it paid and returned. A payment can go against one invoice or the whole balance, and every invoice shows what was bought on it. Old balances can be loaded in.",
         who: "Manager and owner.",
-        saves: "Credit that grows past what a shop can pay.",
+        saves: "Udharo that nobody can account for.",
         layout: "stacked",
-        screenshot: "Udharo list by shop with an over-limit sale blocked",
+        screenshot: "Udharo list by shop with a payment against one invoice",
         visual: <CreditLedger />,
       },
       {

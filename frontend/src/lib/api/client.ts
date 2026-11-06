@@ -15,6 +15,9 @@ import type {
   Expense,
   ExpenseSummary,
   SalesmanHistoryEntry,
+  Order,
+  OrderPaymentMode,
+  OrderStatus,
   ShopInvoice,
   ShopPayment,
   ShopProfile,
@@ -104,9 +107,15 @@ export type SaleInput = Once & {
   /** Paid in cash at the counter; recorded as a cash payment against the sale. */
   cashPaidPaisa: Paisa;
   overrideCreditLimit?: boolean;
+  /** The open order this sale delivers. */
+  orderId?: Id;
 };
+export type OrderInput = { shopId: Id; salesmanId: Id; lines: SaleLineInput[]; paymentMode: OrderPaymentMode; prepaidPaymentId?: Id; note?: string };
+export type OrderFilter = PageQuery & { status?: OrderStatus; shopId?: Id; salesmanId?: Id };
+/** A salesman pays on a visit; the office names the shop instead. */
 export type PaymentInput = Once & {
-  visitId: Id;
+  visitId?: Id;
+  shopId?: Id;
   saleId?: Id;
   method: PaymentMethod;
   amountPaisa: Paisa;
@@ -225,6 +234,14 @@ export interface ApiClient {
     get(id: Id): Promise<Sale>;
     create(input: SaleInput): Promise<Sale>;
     cancel(id: Id, reason: string): Promise<Sale>;
+  };
+  orders: {
+    list(filter?: OrderFilter): Promise<Page<Order>>;
+    get(id: Id): Promise<Order>;
+    /** Owner or manager. */
+    create(input: OrderInput): Promise<Order>;
+    /** Owner or manager; only an open order. */
+    cancel(id: Id, reason: string): Promise<Order>;
   };
   payments: {
     list(filter?: PaymentFilter): Promise<Page<Payment>>;

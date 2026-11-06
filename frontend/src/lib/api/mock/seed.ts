@@ -9,6 +9,7 @@ import type {
   DayPlan,
   DayPlanStatus,
   Expense,
+  Order,
   Payment,
   Product,
   Return,
@@ -22,7 +23,7 @@ import type {
 } from "../types.ts";
 import { priceLine } from "./rules.ts";
 
-export const DEMO_DATA_VERSION = 11;
+export const DEMO_DATA_VERSION = 12;
 
 export type StoredCategory = Omit<Category, "productCount">;
 
@@ -43,6 +44,7 @@ export type DemoData = {
   writeOffs: WriteOff[];
   expenses: Expense[];
   photos: VisitPhoto[];
+  orders: Order[];
   /** Images captured in the app (data URLs), by id. Seeded images are drawn, not stored. */
   images: Record<string, string>;
   /** Idempotency keys already used, with what each one made. A repeated submit returns it. */
@@ -412,5 +414,24 @@ export function seedDemoData(today: BusinessDate = todayNepal()): DemoData {
   }
   expense("u-manager", "misc", -3, 300, "Packing tape (demo)", true);
 
-  return { version: DEMO_DATA_VERSION, seededOn: today, business, staff, categories, products, routes, shops, dayPlans, sales, payments, returns, writeOffs, expenses, photos, images: {}, idempotency: {} };
+  // Two orders taken at the office for today's running route: one to collect on delivery,
+  // one the shop already paid for at the office.
+  const orders: Order[] = [];
+  const running = dayPlans.find((p) => p.status === "in_progress");
+  if (running) {
+    const pending = running.visits.filter((v) => v.status === "pending").map((v) => v.shopId);
+    const carried = running.issued.map((l) => products.find((p) => p.id === l.productId)!).filter(Boolean);
+    const shopOf = (id: string) => shops.find((x) => x.id === id)!;
+    const lineOf = (p: Product, quantity: number): Order["lines"][number] => ({ productId: p.id, productName: p.name, unit: "unit", quantity, unitPricePaisa: p.unitPricePaisa });
+    if (pending[0] && carried.length >= 2) {
+      orders.push({ id: "ord-1", status: "open", paymentMode: "on_delivery", shopId: pending[0], shopName: shopOf(pending[0]).name, salesmanId: running.salesmanId, takenBy: "u-manager", lines: [lineOf(carried[0], 6), lineOf(carried[1], 4)], note: "Phoned in this morning (demo)", createdAt: nepalInstant(today, "08:15") });
+    }
+    if (pending[1] && carried.length >= 3) {
+      const amount = carried[2].unitPricePaisa * 5;
+      payments.push({ id: "pay-order-2", date: today, createdAt: nepalInstant(today, "08:40"), shopId: pending[1], salesmanId: "u-manager", method: "cash", amountPaisa: amount, status: "confirmed", imageIds: [] });
+      orders.push({ id: "ord-2", status: "open", paymentMode: "prepaid", shopId: pending[1], shopName: shopOf(pending[1]).name, salesmanId: running.salesmanId, takenBy: "u-manager", lines: [lineOf(carried[2], 5)], note: "Paid at the office (demo)", createdAt: nepalInstant(today, "08:40"), prepaid: { paymentId: "pay-order-2", amountPaisa: amount, method: "cash", status: "confirmed" } });
+    }
+  }
+
+  return { version: DEMO_DATA_VERSION, seededOn: today, business, staff, categories, products, routes, shops, dayPlans, sales, payments, returns, writeOffs, expenses, photos, orders, images: {}, idempotency: {} };
 }

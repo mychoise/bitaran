@@ -89,7 +89,7 @@ export function overdueItems(
   const debts: OverdueItem[] = [];
   if (shop.openingBalancePaisa > 0) debts.push({ ref: "Opening balance", dueDate: openingDueDate, unpaidPaisa: shop.openingBalancePaisa });
   for (const s of [...sales].filter((x) => x.shopId === shop.id && x.status === "confirmed").sort((a, b) => a.date.localeCompare(b.date) || a.invoiceNo - b.invoiceNo)) {
-    debts.push({ ref: `Invoice ${s.invoiceNo}`, saleId: s.id, dueDate: s.dueDate, unpaidPaisa: s.totalPaisa });
+    debts.push({ ref: `Invoice ${s.invoiceNo}`, saleId: s.id, dueDate: s.dueDate ?? "", unpaidPaisa: s.totalPaisa });
   }
   let left = credits;
   for (const d of debts) {
@@ -97,7 +97,8 @@ export function overdueItems(
     d.unpaidPaisa -= used;
     left -= used;
   }
-  return debts.filter((d) => d.unpaidPaisa > 0 && d.dueDate < today);
+  // A sale with no due date is never overdue.
+  return debts.filter((d) => d.unpaidPaisa > 0 && d.dueDate !== "" && d.dueDate < today);
 }
 
 // ---- credit limit --------------------------------------------------------------------------
@@ -235,6 +236,25 @@ export const collectable = (balancePaisa: Paisa, inClearingPaisa: Paisa): Paisa 
 
 export const NOTHING_TO_COLLECT = "This shop owes nothing right now, so there is nothing to collect.";
 export const overLimit = (limitPaisa: Paisa) => `That is more than the shop owes. The most you can take is ${formatMoney(limitPaisa)}.`;
+
+/**
+ * What is still unpaid on one invoice: its total less every payment made against it that has
+ * not bounced (pending cheques and online payments count, so they are not taken twice).
+ */
+export function invoiceUnpaid(sale: Pick<Sale, "id" | "totalPaisa" | "status">, payments: readonly Pick<Payment, "saleId" | "status" | "amountPaisa">[]): Paisa {
+  if (sale.status !== "confirmed") return 0;
+  return Math.max(0, sale.totalPaisa - sum(payments.filter((p) => p.saleId === sale.id && p.status !== "bounced").map((p) => p.amountPaisa)));
+}
+
+/** A shop's invoices with something unpaid, oldest first. */
+export function openInvoices<S extends Pick<Sale, "id" | "totalPaisa" | "status" | "date" | "invoiceNo">>(sales: readonly S[], payments: readonly Pick<Payment, "saleId" | "status" | "amountPaisa">[]) {
+  return sales
+    .map((s) => ({ sale: s, unpaidPaisa: invoiceUnpaid(s, payments) }))
+    .filter((x) => x.unpaidPaisa > 0)
+    .sort((a, b) => a.sale.date.localeCompare(b.sale.date) || a.sale.invoiceNo - b.sale.invoiceNo);
+}
+
+export const overInvoice = (invoiceNo: number, unpaidPaisa: Paisa) => `That is more than is unpaid on invoice ${invoiceNo} (${formatMoney(unpaidPaisa)}).`;
 
 /** `limitPaisa`, when given, is what the shop can pay now (see collectable). */
 export function validatePayment(
@@ -645,6 +665,35 @@ export function saleMoney(
   else if (cashPaidPaisa > totalPaisa) problems.push("Cash paid cannot be more than the sale. Take the rest as a payment.");
   const cash = Number.isInteger(cashPaidPaisa) && cashPaidPaisa >= 0 && cashPaidPaisa <= totalPaisa ? cashPaidPaisa : 0;
   return { subtotalPaisa, discountPaisa: discount, totalPaisa, cashPaidPaisa: cash, creditPaisa: totalPaisa - cash, problems };
+}
+
+export type SplitMethod = "cash" | "cheque" | "online";
+const SPLIT_LABEL: Record<SplitMethod, string> = { cash: "cash", cheque: "cheque", online: "online" };
+
+/**
+ * How a sale's total is paid: any of cash, cheque and online, and udharo (credit) for the rest.
+ * Each chosen method needs an amount above zero; together they cannot pass the total. Without
+ * udharo they must cover it exactly. Cheque and online stay pending until the manager confirms
+ * them, so `unpaidNowPaisa` (total − cash) is what the credit limit sees.
+ */
+export function splitSale(
+  totalPaisa: Paisa,
+  parts: Partial<Record<SplitMethod, number | null>>,
+  udharo: boolean,
+): { paidPaisa: Paisa; creditPaisa: Paisa; unpaidNowPaisa: Paisa; problems: string[] } {
+  const problems: string[] = [];
+  const chosen = (Object.keys(parts) as SplitMethod[]).filter((m) => parts[m] !== undefined);
+  if (!chosen.length && !udharo) problems.push("Choose how the sale is paid.");
+  for (const m of chosen) {
+    const v = parts[m];
+    if (v === null || v === undefined || !Number.isInteger(v) || v <= 0) problems.push(`Enter the ${SPLIT_LABEL[m]} amount.`);
+  }
+  const paidPaisa = sum(chosen.map((m) => (Number.isInteger(parts[m]) && (parts[m] as number) > 0 ? (parts[m] as number) : 0)));
+  if (paidPaisa > totalPaisa) problems.push(`The payments add up to ${formatMoney(paidPaisa)}, more than the sale (${formatMoney(totalPaisa)}). Lower an amount.`);
+  else if (!udharo && chosen.length && paidPaisa < totalPaisa && !problems.length)
+    problems.push(`${formatMoney(totalPaisa - paidPaisa)} is not paid yet. Choose Udharo for the rest, or change an amount.`);
+  const cash = Number.isInteger(parts.cash) && (parts.cash as number) > 0 ? (parts.cash as number) : 0;
+  return { paidPaisa, creditPaisa: Math.max(0, totalPaisa - paidPaisa), unpaidNowPaisa: Math.max(0, totalPaisa - Math.min(cash, totalPaisa)), problems };
 }
 
 /** A due date for the credit part: from the sale's day up to a year after. */

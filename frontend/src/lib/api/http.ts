@@ -17,6 +17,7 @@ import type {
   Return,
   Route,
   Sale,
+  Order,
   SaleLine,
   ShopInvoice,
   ShopWithBalance,
@@ -301,7 +302,7 @@ export function createHttpClient(viewer: Viewer): ApiClient {
     shopId: s.client?.id,
     lines: lineOf(s.items ?? [], cat),
     totalPaisa: s.totalPaisa,
-    dueDate: s.dueDate ?? s.saleDate,
+    dueDate: s.dueDate ?? undefined,
     status: s.status,
     cancelReason: s.cancelReason ?? undefined,
     visitId: s.visitId ?? undefined,
@@ -407,13 +408,31 @@ export function createHttpClient(viewer: Viewer): ApiClient {
     ];
   };
 
+  const mapOrder = (o: Wire): Order => ({
+    id: o.id,
+    status: o.status,
+    paymentMode: o.paymentMode,
+    shopId: o.client.id,
+    shopName: o.client.name,
+    salesmanId: o.salesman.id,
+    takenBy: o.takenBy.id,
+    lines: (o.items ?? []).map((i: Wire) => ({ productId: i.productId, productName: i.productName, unit: i.unit === "carton" ? "carton" : "unit", quantity: i.quantity, unitPricePaisa: i.unitPricePaisa })),
+    note: o.note ?? undefined,
+    cancelReason: o.cancelReason ?? undefined,
+    createdAt: o.createdAt,
+    deliveredAt: o.deliveredAt ?? undefined,
+    saleId: o.saleId ?? undefined,
+    invoiceNo: o.invoiceNumber ?? undefined,
+    prepaid: o.prepaidPaymentId ? { paymentId: o.prepaidPaymentId, amountPaisa: o.prepaidPaisa, method: o.prepaidMethod, status: o.prepaidStatus } : undefined,
+  });
+
   /** An invoice as the shop sees it (from the shop's own calls: no ids beyond its own). */
   const mapShopInvoice = (s: Wire): ShopInvoice => ({
     id: s.id,
     invoiceNo: s.invoiceNumber,
     date: s.saleDate,
     createdAt: s.createdAt,
-    dueDate: s.dueDate ?? s.saleDate,
+    dueDate: s.dueDate ?? undefined,
     status: s.status,
     lines: (s.items ?? []).map((i: Wire) => ({ productName: i.productName, unitName: i.baseUnit ?? "unit", unit: i.unit === "carton" ? "carton" : "unit", quantity: i.quantity, pricePaisa: i.unitPricePaisa, totalPaisa: i.lineTotalPaisa })),
     subtotalPaisa: s.subtotalPaisa,
@@ -707,7 +726,7 @@ export function createHttpClient(viewer: Viewer): ApiClient {
         const v = await findVisit(i.visitId);
         const s = await call("POST", "/sales", {
           key: i.idempotencyKey,
-          json: { clientId: v.shop.id, visitId: i.visitId, dayPlanId: v.planId, dueDate: i.dueDate, discountPaisa: i.discountPaisa, cashPaidNowPaisa: i.cashPaidPaisa, items: i.lines.map((l) => ({ productId: l.productId, unit: l.unit === "carton" ? "carton" : "base", quantity: l.quantity })) },
+          json: { clientId: v.shop.id, visitId: i.visitId, dayPlanId: v.planId, orderId: i.orderId, dueDate: i.dueDate, discountPaisa: i.discountPaisa, cashPaidNowPaisa: i.cashPaidPaisa, items: i.lines.map((l) => ({ productId: l.productId, unit: l.unit === "carton" ? "carton" : "base", quantity: l.quantity })) },
         });
         return { ...mapSale(s, await products()), cashPaidPaisa: i.cashPaidPaisa };
       },
@@ -717,12 +736,25 @@ export function createHttpClient(viewer: Viewer): ApiClient {
       },
     },
 
+    orders: {
+      list: async (f = {}) => paged("/orders", { status: f.status, clientId: f.shopId, salesmanId: f.salesmanId }, f, mapOrder),
+      get: async (id) => mapOrder(await call("GET", `/orders/${id}`)),
+      create: async (i) =>
+        mapOrder(
+          await call("POST", "/orders", {
+            json: { clientId: i.shopId, salesmanId: i.salesmanId, items: i.lines.map((l) => ({ productId: l.productId, unit: l.unit === "carton" ? "carton" : "base", quantity: l.quantity })), paymentMode: i.paymentMode, prepaidPaymentId: i.prepaidPaymentId, note: i.note || undefined },
+          }),
+        ),
+      cancel: async (id, reason) => mapOrder(await call("POST", `/orders/${id}/cancel`, { json: { reason } })),
+    },
+
     payments: {
       list: async (f = {}) => paged("/payments", { from: f.from, to: f.to, clientId: f.shopId, collectedBy: f.salesmanId, dayPlanId: f.planId, saleId: f.saleId, method: f.method, status: f.status }, f, mapPayment),
       get: async (id) => mapPayment(await call("GET", `/payments/${id}`)),
       create: async (i) => {
-        const v = await findVisit(i.visitId);
-        const fields: Wire = { clientId: v.shop.id, dayPlanId: v.planId, saleId: i.saleId, method: i.method, amountPaisa: i.amountPaisa, chequeNumber: i.chequeNo, chequeBank: i.bank, chequeDate: i.chequeDate, referenceNo: i.reference };
+        // On a visit the shop and plan come from it; at the office the shop is named.
+        const v = i.visitId ? await findVisit(i.visitId) : null;
+        const fields: Wire = { clientId: v?.shop.id ?? i.shopId, dayPlanId: v?.planId, saleId: i.saleId, method: i.method, amountPaisa: i.amountPaisa, chequeNumber: i.chequeNo, chequeBank: i.bank, chequeDate: i.chequeDate, referenceNo: i.reference };
         const images = i.imageIds.map((id) => uploads.get(id)).filter((b): b is Blob => Boolean(b));
         if (!images.length) return mapPayment(await call("POST", "/payments", { key: i.idempotencyKey, json: fields }));
         const form = new FormData();
