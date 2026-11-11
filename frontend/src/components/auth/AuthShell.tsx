@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import maizeSacks from "../../../public/photos/maize-sacks.jpg";
 import { CheckIcon } from "@/components/ui/icons";
+import { Logo } from "@/components/ui/Logo";
 import { config } from "@/config";
 
 const benefits = [
@@ -17,7 +18,7 @@ export function AuthTopBar({ children }: { children?: ReactNode }) {
     <header className="border-b-2 border-ink bg-paper-2">
       <div className="container flex h-18 items-center justify-between gap-6">
         <Link href="/" aria-label={`${config.productName}, website home`} className="wordmark no-underline">
-          {config.productName}
+          <Logo />
         </Link>
         <div className="flex items-center gap-4">
           {children}

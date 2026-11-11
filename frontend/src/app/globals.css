@@ -133,7 +133,7 @@
     font-size: var(--text-xl);
     font-weight: 600;
     letter-spacing: var(--tracking-display);
-    color: var(--color-ink);
+    color: var(--color-brand);
   }
 
   .nav-link {

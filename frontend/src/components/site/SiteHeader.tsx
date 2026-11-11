@@ -2,6 +2,7 @@ import Link from "next/link";
 import { config } from "@/config";
 import { mainNav } from "@/lib/nav";
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { Logo } from "@/components/ui/Logo";
 import { MobileMenu } from "./MobileMenu";
 import { NavLinks } from "./NavLinks";
 
@@ -11,7 +12,7 @@ export function SiteHeader() {
     <header className="site-header sticky top-0 z-30 border-b-2 border-ink bg-paper-2">
       <div className="container relative flex h-18 items-center justify-between gap-6">
         <Link href="/" aria-label={`${config.productName}, home`} className="wordmark no-underline">
-          {config.productName}
+          <Logo />
         </Link>
         <nav aria-label="Main" className="hidden xl:block">
           <NavLinks items={mainNav} />

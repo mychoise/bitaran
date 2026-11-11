@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Badge, StatusBadge } from "@/components/ui/Display";
+import { Logo } from "@/components/ui/Logo";
 import { Drawer } from "@/components/ui/Overlay";
 import { MenuIcon } from "@/components/ui/icons";
 import { useApi, useApiQuery } from "@/lib/api/provider";
@@ -60,7 +61,7 @@ export function ManagerShell({ children }: { children: ReactNode }) {
             <span>Menu</span>
           </button>
           <Link href="/app/manager" className="wordmark no-underline" aria-label="Bitaran, today">
-            Bitaran
+            <Logo />
           </Link>
           <span className="hidden min-w-0 border-l border-rule-2 pl-4 md:block">
             <BusinessName />
@@ -109,7 +110,7 @@ function TabbedShell({ items, home, homeLabel, status, children }: { items: NavE
       <header className="no-print sticky top-0 z-30 border-b-2 border-ink bg-paper-2">
         <div className="flex h-14 items-center gap-3 px-4 lg:h-16 lg:gap-4 lg:px-6">
           <Link href={home} className="wordmark text-lg no-underline lg:text-xl" aria-label={`Bitaran, ${homeLabel}`}>
-            Bitaran
+            <Logo />
           </Link>
           <span className="hidden min-w-0 border-l border-rule-2 pl-4 lg:block">
             <BusinessName />
