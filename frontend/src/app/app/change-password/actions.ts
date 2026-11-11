@@ -1,5 +1,6 @@
 "use server";
 
+import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
 import { messageFor } from "@/components/auth/messages";
 import { getAuthClient } from "@/lib/auth";
@@ -21,14 +22,14 @@ const MIN_LENGTH = 8;
  * The session stays as it is, so the person remains signed in.
  */
 export async function changePassword(_prev: ChangePasswordState, form: FormData): Promise<ChangePasswordState> {
+  const t = await getTranslations("Auth.changePassword");
   const currentPassword = String(form.get("currentPassword") ?? "");
   const newPassword = String(form.get("newPassword") ?? "");
   const confirm = String(form.get("confirmPassword") ?? "");
 
-  if (!currentPassword) return { status: "error", field: "currentPassword", message: "Enter your current password." };
-  if (newPassword.length < MIN_LENGTH)
-    return { status: "error", field: "newPassword", message: `The new password needs at least ${MIN_LENGTH} characters.` };
-  if (newPassword !== confirm) return { status: "error", field: "newPassword", message: "The two new passwords do not match." };
+  if (!currentPassword) return { status: "error", field: "currentPassword", message: t("enterCurrent") };
+  if (newPassword.length < MIN_LENGTH) return { status: "error", field: "newPassword", message: t("minLength", { min: MIN_LENGTH }) };
+  if (newPassword !== confirm) return { status: "error", field: "newPassword", message: t("mismatch") };
 
   const jar = await cookies();
   const check = checkSession(jar.get(SESSION_COOKIE)?.value);
@@ -44,9 +45,9 @@ export async function changePassword(_prev: ChangePasswordState, form: FormData)
   } catch (err) {
     const code = toCode(err);
     if (code === "unauthorized") return end(check.session.profile.type);
-    if (code === "invalid_credentials") return { status: "error", field: "currentPassword", message: "Your current password is not right." };
-    if (code === "invalid_input")
-      return { status: "error", field: "newPassword", message: `The new password needs at least ${MIN_LENGTH} characters.` };
-    return { status: "error", message: messageFor(code) };
+    if (code === "invalid_credentials") return { status: "error", field: "currentPassword", message: t("currentWrong") };
+    if (code === "invalid_input") return { status: "error", field: "newPassword", message: t("minLength", { min: MIN_LENGTH }) };
+    const tMsg = await getTranslations("Auth.messages");
+    return { status: "error", message: messageFor(code, tMsg) };
   }
 }

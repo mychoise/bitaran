@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState, type ReactNode } from "react";
 import { Button } from "./Button";
 import { Skeleton } from "./Display";
@@ -41,6 +42,7 @@ type Props<T> = {
 
 /** A dense data table in a cotton card: sticky header, sortable columns, loading, empty and error states. */
 export function Table<T>({ caption, columns: allColumns, rows, rowKey, loading, error, onRetry, empty, sort: controlled, onSortChange, totals }: Props<T>) {
+  const t = useTranslations("Ui.Table");
   const columns = useMemo(() => allColumns.filter((c) => !c.csvOnly), [allColumns]);
   const [own, setOwn] = useState<SortState>(null);
   const sort = controlled !== undefined ? controlled : own;
@@ -137,7 +139,7 @@ export function Table<T>({ caption, columns: allColumns, rows, rowKey, loading, 
       </div>
       {!loading && sorted && sorted.length === 0 ? (
         <div className="px-6">
-          <EmptyState title={empty?.title ?? "Nothing here yet"} line={empty?.line ?? "When there is something to show, it will appear here."} action={empty?.action} />
+          <EmptyState title={empty?.title ?? t("emptyTitle")} line={empty?.line ?? t("emptyLine")} action={empty?.action} />
         </div>
       ) : null}
     </div>
@@ -160,32 +162,30 @@ export function exportCsv<T>(filename: string, columns: Column<T>[], rows: T[]) 
 }
 
 export function ExportButton<T>({ filename, columns, rows }: { filename: string; columns: Column<T>[]; rows: T[] | undefined }) {
+  const t = useTranslations("Ui.Table");
   return (
     <Button variant="secondary" size="sm" icon={<DownloadIcon className="size-4" />} disabled={!rows?.length} onClick={() => rows && exportCsv(filename, columns, rows)}>
-      Export CSV
+      {t("exportCsv")}
     </Button>
   );
 }
 
 export function Pagination({ page, pageSize, total, onPage }: { page: number; pageSize: number; total: number; onPage: (p: number) => void }) {
+  const t = useTranslations("Ui.Table");
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (total === 0) return null;
   const from = (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   return (
-    <nav aria-label="Pages" className="mt-4 flex items-center justify-between gap-4 text-sm">
-      <span className="text-muted">
-        {from} to {to} of {total}
-      </span>
+    <nav aria-label={t("pagesLabel")} className="mt-4 flex items-center justify-between gap-4 text-sm">
+      <span className="text-muted">{t("range", { from, to, total })}</span>
       <span className="flex items-center gap-2">
         <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => onPage(page - 1)} icon={<ChevronLeftIcon className="size-4" />}>
-          Previous
+          {t("previous")}
         </Button>
-        <span className="px-2">
-          Page {page} of {pages}
-        </span>
+        <span className="px-2">{t("pageOf", { page, pages })}</span>
         <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-          Next
+          {t("next")}
           <ChevronRightIcon className="size-4" />
         </Button>
       </span>

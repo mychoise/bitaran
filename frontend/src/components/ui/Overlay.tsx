@@ -3,6 +3,7 @@
 // Modal, Drawer, ConfirmDialog and Toast. Modal and Drawer use the native <dialog> element,
 // which traps focus, closes on Escape and returns focus to what opened it.
 
+import { useTranslations } from "next-intl";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Button } from "./Button";
 import { AlertIcon, CheckIcon, CloseIcon, InfoIcon } from "./icons";
@@ -10,6 +11,7 @@ import { AlertIcon, CheckIcon, CloseIcon, InfoIcon } from "./icons";
 type DialogProps = { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; drawer?: boolean };
 
 function Dialog({ open, onClose, title, children, footer, drawer = false }: DialogProps) {
+  const t = useTranslations("Ui.Common");
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -38,7 +40,7 @@ function Dialog({ open, onClose, title, children, footer, drawer = false }: Dial
             <h2 id={titleId} className="text-title">
               {title}
             </h2>
-            <button type="button" onClick={onClose} className="pw-toggle -mr-2 flex size-11 items-center justify-center rounded-input" aria-label="Close">
+            <button type="button" onClick={onClose} className="pw-toggle -mr-2 flex size-11 items-center justify-center rounded-input" aria-label={t("close")}>
               <CloseIcon className="size-5" />
             </button>
           </div>
@@ -76,6 +78,7 @@ export function ConfirmDialog({
   busy?: boolean;
   danger?: boolean;
 }) {
+  const t = useTranslations("Ui.Common");
   return (
     <Modal
       open={open}
@@ -84,9 +87,9 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={busy}>
-            Go back
+            {t("goBack")}
           </Button>
-          <Button onClick={onConfirm} loading={busy} loadingLabel="Working…">
+          <Button onClick={onConfirm} loading={busy} loadingLabel={t("working")}>
             {confirmLabel}
           </Button>
         </>

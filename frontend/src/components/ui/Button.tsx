@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "quiet";
@@ -23,10 +24,11 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export function Button({ variant = "primary", size = "md", loading = false, loadingLabel, icon, className = "", disabled, children, type = "button", ...rest }: Props) {
+  const t = useTranslations("Ui.Common");
   return (
     <button type={type} className={buttonClass(variant, size, className)} disabled={disabled || loading} aria-busy={loading || undefined} {...rest}>
       {icon}
-      {loading ? (loadingLabel ?? "Working…") : children}
+      {loading ? (loadingLabel ?? t("working")) : children}
     </button>
   );
 }

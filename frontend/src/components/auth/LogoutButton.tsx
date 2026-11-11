@@ -1,10 +1,12 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /** Clears the session through the logout route handler, then goes to the login chooser. */
 export function LogoutButton() {
+  const t = useTranslations("Auth.logout");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   async function logout() {
@@ -19,7 +21,7 @@ export function LogoutButton() {
   }
   return (
     <button type="button" onClick={logout} disabled={busy} aria-busy={busy || undefined} className="btn btn-card">
-      {busy ? "Logging out…" : "Log out"}
+      {busy ? t("loggingOut") : t("logOut")}
     </button>
   );
 }

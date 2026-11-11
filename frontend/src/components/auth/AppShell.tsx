@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { AuthTopBar } from "./AuthShell";
 
@@ -14,10 +15,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 /** A quiet placeholder while the session is read on the server. */
-export function AppLoading() {
+export async function AppLoading() {
+  const t = await getTranslations("Auth");
   return (
     <p role="status" className="text-lg text-muted">
-      Loading…
+      {t("appLoading")}
     </p>
   );
 }

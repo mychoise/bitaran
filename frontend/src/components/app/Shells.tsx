@@ -4,13 +4,16 @@
 // lg, a Menu drawer below it (too many sections for tabs). Salesman and shop: a bottom tab bar on
 // phones, the same sidebar from lg. All use the website's slab, wordmark and coral marker.
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { LocaleSwitcher } from "@/components/ui/LocaleSwitcher";
 import { Badge, StatusBadge } from "@/components/ui/Display";
 import { Logo } from "@/components/ui/Logo";
 import { Drawer } from "@/components/ui/Overlay";
 import { MenuIcon } from "@/components/ui/icons";
+import { config } from "@/config";
 import { useApi, useApiQuery } from "@/lib/api/provider";
 import { DemoRibbon, UserMenu } from "./Chrome";
 import { isCurrent, managerNavFor, salesmanNav, shopNav, type NavEntry } from "./nav";
@@ -30,6 +33,7 @@ function BusinessName() {
 }
 
 function SideNav({ items, home, onNavigate }: { items: NavEntry[]; home: string; onNavigate?: () => void }) {
+  const t = useTranslations("Nav");
   const pathname = usePathname();
   return (
     <ul className="m-0 flex list-none flex-col gap-1 p-0">
@@ -37,7 +41,7 @@ function SideNav({ items, home, onNavigate }: { items: NavEntry[]; home: string;
         <li key={item.href}>
           <Link href={item.href} className="side-link" aria-current={isCurrent(item.href, pathname, home) ? "page" : undefined} onClick={onNavigate}>
             <NavIcon name={item.icon} />
-            {item.label}
+            {t(item.label)}
           </Link>
         </li>
       ))}
@@ -48,6 +52,8 @@ function SideNav({ items, home, onNavigate }: { items: NavEntry[]; home: string;
 // ---- owner and manager -------------------------------------------------------------------
 
 export function ManagerShell({ children }: { children: ReactNode }) {
+  const t = useTranslations("Shell");
+  const tNav = useTranslations("Nav");
   const { viewer } = useApi();
   const { name, roleLabel } = useIdentity();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,22 +64,23 @@ export function ManagerShell({ children }: { children: ReactNode }) {
         <div className="flex h-16 items-center gap-4 px-4 lg:px-6">
           <button type="button" className="btn btn-card btn-sm px-3 lg:hidden" aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>
             <MenuIcon className="size-5" />
-            <span>Menu</span>
+            <span>{t("menu")}</span>
           </button>
-          <Link href="/app/manager" className="wordmark no-underline" aria-label="Bitaran, today">
+          <Link href="/app/manager" className="wordmark no-underline" aria-label={t("brandAria", { product: config.productName, area: tNav("today") })}>
             <Logo />
           </Link>
           <span className="hidden min-w-0 border-l border-rule-2 pl-4 md:block">
             <BusinessName />
           </span>
-          <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-3">
+            <LocaleSwitcher className="hidden sm:inline-flex" />
             <UserMenu name={name} roleLabel={roleLabel} />
           </span>
         </div>
       </header>
       <DemoRibbon />
       <div className="flex flex-1">
-        <nav aria-label="Main" className="no-print hidden w-64 shrink-0 border-r-2 border-ink bg-paper-2 p-4 lg:block">
+        <nav aria-label={t("main")} className="no-print hidden w-64 shrink-0 border-r-2 border-ink bg-paper-2 p-4 lg:block">
           <div className="sticky top-20">
             <SideNav items={items} home="/app/manager" />
           </div>
@@ -82,8 +89,8 @@ export function ManagerShell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
-      <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu">
-        <nav aria-label="Main">
+      <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} title={t("menu")}>
+        <nav aria-label={t("main")}>
           <SideNav items={items} home="/app/manager" onNavigate={() => setMenuOpen(false)} />
         </nav>
       </Drawer>
@@ -94,36 +101,40 @@ export function ManagerShell({ children }: { children: ReactNode }) {
 // ---- salesman and shop: bottom tabs on phones, a sidebar on desktop ---------------------
 
 function DayStatus() {
+  const t = useTranslations("Shell");
   const q = useApiQuery(["dayPlans", "today"], (api) => api.dayPlans.today());
-  if (q.isPending) return <Badge>Loading day…</Badge>;
-  if (q.isError) return <Badge tone="danger">Day not loaded</Badge>;
-  if (!q.data) return <Badge>No route today</Badge>;
+  if (q.isPending) return <Badge>{t("dayLoading")}</Badge>;
+  if (q.isError) return <Badge tone="danger">{t("dayNotLoaded")}</Badge>;
+  if (!q.data) return <Badge>{t("noRouteToday")}</Badge>;
   return <StatusBadge status={q.data.status} />;
 }
 
 /** Phones get a fixed bottom tab bar; from lg the same entries move to the manager's sidebar. */
 function TabbedShell({ items, home, homeLabel, status, children }: { items: NavEntry[]; home: string; homeLabel: string; status?: ReactNode; children: ReactNode }) {
+  const t = useTranslations("Shell");
+  const tNav = useTranslations("Nav");
   const pathname = usePathname();
   const { name, roleLabel } = useIdentity();
   return (
     <div className="flex min-h-svh flex-col pb-20 lg:pb-0">
       <header className="no-print sticky top-0 z-30 border-b-2 border-ink bg-paper-2">
         <div className="flex h-14 items-center gap-3 px-4 lg:h-16 lg:gap-4 lg:px-6">
-          <Link href={home} className="wordmark text-lg no-underline lg:text-xl" aria-label={`Bitaran, ${homeLabel}`}>
+          <Link href={home} className="wordmark text-lg no-underline lg:text-xl" aria-label={t("brandAria", { product: config.productName, area: tNav(homeLabel) })}>
             <Logo />
           </Link>
           <span className="hidden min-w-0 border-l border-rule-2 pl-4 lg:block">
             <BusinessName />
           </span>
           {status}
-          <span className="ml-auto">
+          <span className="ml-auto flex items-center gap-3">
+            <LocaleSwitcher className="hidden sm:inline-flex" />
             <UserMenu name={name} roleLabel={roleLabel} />
           </span>
         </div>
       </header>
       <DemoRibbon />
       <div className="flex flex-1">
-        <nav aria-label="Main" className="no-print hidden w-60 shrink-0 border-r-2 border-ink bg-paper-2 p-4 lg:block">
+        <nav aria-label={t("main")} className="no-print hidden w-60 shrink-0 border-r-2 border-ink bg-paper-2 p-4 lg:block">
           <div className="sticky top-20">
             <SideNav items={items} home={home} />
           </div>
@@ -132,13 +143,13 @@ function TabbedShell({ items, home, homeLabel, status, children }: { items: NavE
           {children}
         </main>
       </div>
-      <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-paper-2 lg:hidden">
+      <nav aria-label={t("main")} className="no-print fixed inset-x-0 bottom-0 z-30 border-t-2 border-ink bg-paper-2 lg:hidden">
         <ul className="m-0 flex list-none p-0">
           {items.map((item) => (
             <li key={item.href} className="flex min-w-0 flex-1">
               <Link href={item.href} className="bottom-tab" aria-current={isCurrent(item.href, pathname, home) ? "page" : undefined}>
                 <NavIcon name={item.icon} className="size-6" />
-                {item.label}
+                {tNav(item.label)}
               </Link>
             </li>
           ))}

@@ -4,6 +4,7 @@
 // the Nepal date and time burned into its corner, as proof of when it was taken. If the camera
 // is not available, it says why; a file picker appears only in development, labelled as such.
 
+import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 import { formatDateTime } from "@/lib/dates";
 import { Button } from "./Button";
@@ -15,7 +16,7 @@ const MAX_PX = 1024;
 const isDev = process.env.NODE_ENV !== "production";
 
 /** Draws the source into a canvas no larger than MAX_PX, with the time stamp if asked. */
-async function toShot(source: CanvasImageSource, width: number, height: number, stamp: boolean): Promise<Shot> {
+async function toShot(source: CanvasImageSource, width: number, height: number, stamp: boolean, nepalTimeLabel: (time: string) => string): Promise<Shot> {
   const scale = Math.min(1, MAX_PX / Math.max(width, height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(width * scale);
@@ -25,7 +26,7 @@ async function toShot(source: CanvasImageSource, width: number, height: number, 
   const takenAt = new Date().toISOString();
   if (stamp) {
     const css = getComputedStyle(document.documentElement);
-    const text = `${formatDateTime(takenAt)} (Nepal time)`;
+    const text = nepalTimeLabel(formatDateTime(takenAt));
     const size = Math.max(14, Math.round(canvas.width / 32));
     ctx.font = `600 ${size}px ${css.getPropertyValue("--font-outlier") || "monospace"}`;
     const pad = Math.round(size / 2);
@@ -43,6 +44,8 @@ async function toShot(source: CanvasImageSource, width: number, height: number, 
 }
 
 export function Camera({ label, stamp = false, shot, onShot }: { label: string; stamp?: boolean; shot: Shot | null; onShot: (s: Shot | null) => void }) {
+  const t = useTranslations("Ui.Camera");
+  const nepalTimeLabel = (time: string) => t("nepalTime", { time });
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const fileId = useId();
@@ -62,7 +65,7 @@ export function Camera({ label, stamp = false, shot, onShot }: { label: string; 
     setProblem(null);
     if (!navigator.mediaDevices?.getUserMedia) {
       setState("error");
-      setProblem("This browser cannot open the camera. Open Bitaran in Chrome on the phone.");
+      setProblem(t("noMediaApi"));
       return;
     }
     setState("starting");
@@ -76,7 +79,7 @@ export function Camera({ label, stamp = false, shot, onShot }: { label: string; 
     } catch (e) {
       setState("error");
       const name = e instanceof DOMException ? e.name : "";
-      setProblem(name === "NotAllowedError" ? "Camera permission was refused. Allow the camera for this site in the browser settings, then try again." : name === "NotFoundError" ? "No camera was found on this device." : "The camera could not start. Try again.");
+      setProblem(name === "NotAllowedError" ? t("permissionDenied") : name === "NotFoundError" ? t("notFound") : t("startFailed"));
     }
   };
 
@@ -84,11 +87,11 @@ export function Camera({ label, stamp = false, shot, onShot }: { label: string; 
     const v = video.current;
     if (!v || !v.videoWidth) return;
     try {
-      onShot(await toShot(v, v.videoWidth, v.videoHeight, stamp));
+      onShot(await toShot(v, v.videoWidth, v.videoHeight, stamp, nepalTimeLabel));
       stop();
       setState("idle");
     } catch {
-      setProblem("The photo could not be made. Try again.");
+      setProblem(t("captureFailed"));
     }
   };
 
@@ -96,10 +99,10 @@ export function Camera({ label, stamp = false, shot, onShot }: { label: string; 
     if (!file) return;
     try {
       const bitmap = await createImageBitmap(file);
-      onShot(await toShot(bitmap, bitmap.width, bitmap.height, stamp));
+      onShot(await toShot(bitmap, bitmap.width, bitmap.height, stamp, nepalTimeLabel));
       bitmap.close();
     } catch {
-      setProblem("That file could not be read as a picture.");
+      setProblem(t("fileReadFailed"));
     }
   };
 
@@ -109,28 +112,28 @@ export function Camera({ label, stamp = false, shot, onShot }: { label: string; 
       {shot ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element -- a photo just taken, held in memory */}
-          <img src={shot.preview} alt={`${label}, taken ${formatDateTime(shot.takenAt)}`} className="max-h-96 w-full rounded-input border border-rule-2 bg-paper-3 object-contain" />
+          <img src={shot.preview} alt={t("takenAlt", { label, time: formatDateTime(shot.takenAt) })} className="max-h-96 w-full rounded-input border border-rule-2 bg-paper-3 object-contain" />
           <Button variant="secondary" onClick={() => onShot(null)}>
-            Take it again
+            {t("retake")}
           </Button>
         </>
       ) : (
         <>
           <div className={state === "live" || state === "starting" ? "relative overflow-hidden rounded-input border border-rule-2 bg-board" : "hidden"}>
-            <video ref={video} playsInline muted className="block max-h-96 w-full object-contain" aria-label="Camera view" />
+            <video ref={video} playsInline muted className="block max-h-96 w-full object-contain" aria-label={t("videoAria")} />
             {stamp && state === "live" ? (
               <span className="absolute bottom-2 left-2 rounded-input bg-board px-2 py-1 font-outlier text-xs text-board-type" aria-hidden>
-                {formatDateTime(new Date())} (Nepal time)
+                {nepalTimeLabel(formatDateTime(new Date()))}
               </span>
             ) : null}
           </div>
           {state === "live" ? (
             <Button size="lg" icon={<CameraIcon className="size-6" />} onClick={capture}>
-              Take photo
+              {t("takePhoto")}
             </Button>
           ) : (
-            <Button variant="secondary" size="lg" icon={<CameraIcon className="size-6" />} loading={state === "starting"} loadingLabel="Opening the camera…" onClick={start}>
-              Open the camera
+            <Button variant="secondary" size="lg" icon={<CameraIcon className="size-6" />} loading={state === "starting"} loadingLabel={t("opening")} onClick={start}>
+              {t("openCamera")}
             </Button>
           )}
         </>
@@ -141,10 +144,10 @@ export function Camera({ label, stamp = false, shot, onShot }: { label: string; 
       {isDev && !shot ? (
         <div className="rounded-input border border-dashed border-muted p-3 text-sm">
           <label htmlFor={fileId} className="font-medium">
-            Development only: choose a picture file instead
+            {t("devPickFile")}
           </label>
           <input id={fileId} type="file" accept="image/png,image/jpeg,image/webp" className="mt-2 block w-full text-sm" onChange={(e) => fromFile(e.target.files?.[0])} />
-          <p className="mt-1 text-muted">Not shown in the live app; the camera is the only way there.</p>
+          <p className="mt-1 text-muted">{t("devNote")}</p>
         </div>
       ) : null}
     </div>

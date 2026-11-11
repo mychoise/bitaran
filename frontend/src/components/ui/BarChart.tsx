@@ -5,6 +5,7 @@
 // bar colour. Each bar answers hover and focus with its value, and the same numbers are one
 // click away as a table. A single series needs no legend: the title names it.
 
+import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 import { Button } from "./Button";
 
@@ -22,6 +23,7 @@ function barPath(x: number, w: number, top: number, base: number) {
 }
 
 export function BarChart({ title, bars, valueLabel }: { title: string; bars: Bar[]; /** Column heading for the table view. */ valueLabel: string }) {
+  const t = useTranslations("Ui.BarChart");
   const id = useId();
   const [active, setActive] = useState<number | null>(null);
   const [asTable, setAsTable] = useState(false);
@@ -44,18 +46,18 @@ export function BarChart({ title, bars, valueLabel }: { title: string; bars: Bar
           {title}
         </figcaption>
         <Button variant="quiet" size="sm" aria-pressed={asTable} onClick={() => setAsTable(!asTable)}>
-          {asTable ? "Show as chart" : "Show as table"}
+          {asTable ? t("showAsChart") : t("showAsTable")}
         </Button>
       </div>
       {bars.length === 0 ? (
-        <p className="mt-3 text-ink-2">Nothing in these dates.</p>
+        <p className="mt-3 text-ink-2">{t("empty")}</p>
       ) : asTable ? (
         <div className="table-scroll mt-3">
           <table className="data-table">
             <caption className="visually-hidden">{title}</caption>
             <thead>
               <tr>
-                <th scope="col">Day</th>
+                <th scope="col">{t("dayColumn")}</th>
                 <th scope="col" className="num">{valueLabel}</th>
               </tr>
             </thead>
@@ -70,7 +72,7 @@ export function BarChart({ title, bars, valueLabel }: { title: string; bars: Bar
           </table>
         </div>
       ) : (
-        <svg viewBox={`0 0 ${W} ${H}`} className="bar-chart mt-3 block h-auto w-full" role="group" aria-label={`${title}. ${bars.length} bars; use Tab to read each one.`} onMouseLeave={() => setActive(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="bar-chart mt-3 block h-auto w-full" role="group" aria-label={t("groupAria", { title, count: bars.length })} onMouseLeave={() => setActive(null)}>
           {[0.25, 0.5, 0.75, 1].map((f) => (
             <line key={f} x1={PAD.left} x2={W - PAD.right} y1={y(max * f)} y2={y(max * f)} className="bar-grid" />
           ))}
@@ -89,7 +91,7 @@ export function BarChart({ title, bars, valueLabel }: { title: string; bars: Bar
                   className="bar-hit"
                   tabIndex={0}
                   role="img"
-                  aria-label={`${b.label}: ${b.display}`}
+                  aria-label={t("barAria", { label: b.label, display: b.display })}
                   onMouseEnter={() => setActive(i)}
                   onFocus={() => setActive(i)}
                   onBlur={() => setActive(null)}

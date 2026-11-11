@@ -1,31 +1,15 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { EMAIL_PATTERN, messageFor, SESSION_ENDED } from "./messages";
+import { EMAIL_PATTERN, messageFor } from "./messages";
 import { PasswordField } from "./PasswordField";
 
 type Kind = "staff" | "shop";
 
-const COPY: Record<Kind, { title: string; who: string; forgot: string; switchAsk: string; switchText: string; switchHref: string }> = {
-  staff: {
-    title: "Sign in to work",
-    who: "For owners, managers and salesmen.",
-    forgot: "Forgot your password? Ask your manager or the business owner to reset it.",
-    switchAsk: "Are you a shop?",
-    switchText: "Shop sign in",
-    switchHref: "/login/shop",
-  },
-  shop: {
-    title: "Sign in as a shop",
-    who: "See your balance and statement.",
-    forgot: "Forgot your password? Ask your wholesaler to reset it.",
-    switchAsk: "Do you work for the wholesaler?",
-    switchText: "Staff sign in",
-    switchHref: "/login/staff",
-  },
-};
+const SWITCH_HREF: Record<Kind, string> = { staff: "/login/shop", shop: "/login/staff" };
 
 type FieldErrors = { email?: string; password?: string };
 
@@ -34,7 +18,12 @@ type FieldErrors = { email?: string; password?: string };
  * httpOnly cookie; nothing is kept in localStorage, sessionStorage or the URL.
  */
 export function LoginForm({ kind, ended = false }: { kind: Kind; ended?: boolean }) {
-  const copy = COPY[kind];
+  const t = useTranslations("Auth.login");
+  const tMsg = useTranslations("Auth.messages");
+  const copy =
+    kind === "staff"
+      ? { title: t("staffTitle"), who: t("staffWho"), forgot: t("staffForgot"), switchAsk: t("staffSwitchAsk"), switchText: t("staffSwitchText") }
+      : { title: t("shopTitle"), who: t("shopWho"), forgot: t("shopForgot"), switchAsk: t("shopSwitchAsk"), switchText: t("shopSwitchText") };
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -55,9 +44,9 @@ export function LoginForm({ kind, ended = false }: { kind: Kind; ended?: boolean
     const password = String(data.get("password") ?? "");
 
     const errors: FieldErrors = {};
-    if (!email) errors.email = "Enter your email address.";
-    else if (!EMAIL_PATTERN.test(email)) errors.email = "That email looks incomplete. Write it as name@example.com.";
-    if (!password) errors.password = "Enter your password.";
+    if (!email) errors.email = t("emailRequired");
+    else if (!EMAIL_PATTERN.test(email)) errors.email = t("emailInvalid");
+    if (!password) errors.password = t("passwordRequired");
     setFieldErrors(errors);
     setFormError(null);
     if (errors.email || errors.password) {
@@ -81,9 +70,9 @@ export function LoginForm({ kind, ended = false }: { kind: Kind; ended?: boolean
         router.replace(body.redirectTo);
         return;
       }
-      setFormError(messageFor(body?.error));
+      setFormError(messageFor(body?.error, tMsg));
     } catch {
-      setFormError(messageFor("unreachable"));
+      setFormError(messageFor("unreachable", tMsg));
     }
     inFlight.current = false;
     setSending(false);
@@ -97,14 +86,14 @@ export function LoginForm({ kind, ended = false }: { kind: Kind; ended?: boolean
 
       {ended && !formError ? (
         <p role="status" className="stock mt-8 rounded-stock px-5 py-4 font-medium">
-          {SESSION_ENDED}
+          {tMsg("unauthorized")}
         </p>
       ) : null}
 
       <form noValidate onSubmit={onSubmit} className="mt-8 flex flex-col gap-2" aria-busy={sending || undefined}>
         <div className="flex flex-col gap-2">
           <label htmlFor="email" className="font-medium">
-            Email
+            {t("email")}
           </label>
           <input
             ref={emailRef}
@@ -127,21 +116,21 @@ export function LoginForm({ kind, ended = false }: { kind: Kind; ended?: boolean
           </p>
         </div>
 
-        <PasswordField id="password" label="Password" autoComplete="current-password" error={fieldErrors.password} disabled={sending} />
+        <PasswordField id="password" label={t("password")} autoComplete="current-password" error={fieldErrors.password} disabled={sending} />
 
         <div ref={alertRef} tabIndex={-1} role="alert" aria-live="assertive" className="outline-none">
           {formError ? <p className="rounded-stock border-2 border-error px-5 py-4 font-medium">{formError}</p> : null}
         </div>
 
         <button type="submit" className="btn btn-ink mt-4 w-full" disabled={sending}>
-          {sending ? "Signing in…" : "Sign in"}
+          {sending ? t("signingIn") : t("signIn")}
         </button>
       </form>
 
       <p className="mt-8 text-ink-2">{copy.forgot}</p>
       <p className="mt-4">
         {copy.switchAsk}{" "}
-        <Link href={copy.switchHref} className="text-link whitespace-nowrap">
+        <Link href={SWITCH_HREF[kind]} className="text-link whitespace-nowrap">
           {copy.switchText}
         </Link>
       </p>

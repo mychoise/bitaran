@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/AuthShell";
@@ -6,20 +7,23 @@ import { EndedNote } from "@/components/auth/EndedNote";
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { config } from "@/config";
 
-export const metadata: Metadata = { title: "Sign in" };
-
-const choices = [
-  { href: "/login/staff", title: "I work here", line: "For the owner, managers and salesmen of a wholesale business." },
-  { href: "/login/shop", title: "I'm a shop", line: "For pasals that buy from a wholesaler and want to see their balance." },
-];
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Meta");
+  return { title: t("signIn") };
+}
 
 /** The chooser: staff and shops sign in on separate forms. */
-export default function LoginChooserPage() {
+export default async function LoginChooserPage() {
+  const t = await getTranslations("LoginPage");
+  const choices = [
+    { href: "/login/staff", title: t("staffChoiceTitle"), line: t("staffChoiceLine") },
+    { href: "/login/shop", title: t("shopChoiceTitle"), line: t("shopChoiceLine") },
+  ];
   return (
     <AuthShell>
       <div>
-        <h1 className="text-display-s">Sign in</h1>
-        <p className="lead mt-4 text-ink-2">Choose how you use Bitaran.</p>
+        <h1 className="text-display-s">{t("title")}</h1>
+        <p className="lead mt-4 text-ink-2">{t("subtitle")}</p>
         <Suspense fallback={null}>
           <EndedNote />
         </Suspense>
@@ -37,14 +41,12 @@ export default function LoginChooserPage() {
           ))}
         </ul>
         <div className="mt-10 border-t border-rule-2 pt-6">
-          <h2 className="text-title tracking-normal">No account yet?</h2>
-          <p className="mt-2 text-ink-2">
-            There is no sign-up form. Staff and shops get their login from the wholesale business they work with or buy from.
-          </p>
+          <h2 className="text-title tracking-normal">{t("noAccountTitle")}</h2>
+          <p className="mt-2 text-ink-2">{t("noAccountLine")}</p>
           <p className="mt-3 text-ink-2">
-            Running a wholesale business?{" "}
+            {t("ownBusiness")}{" "}
             <Link href={config.demoUrl} className="text-link whitespace-nowrap">
-              Request a demo
+              {t("requestDemo")}
             </Link>
           </p>
         </div>

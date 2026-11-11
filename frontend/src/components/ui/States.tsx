@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { Button } from "./Button";
 import { AlertIcon } from "./icons";
@@ -17,16 +18,17 @@ export function EmptyState({ title, line, action, icon }: { title: string; line:
 
 /** Something failed: say so plainly, and offer Retry. */
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const t = useTranslations("Ui");
   return (
     <div role="alert" className="flex flex-col items-start gap-3 rounded-stock border-2 border-error bg-error-soft p-6">
       <p className="flex items-center gap-2 font-semibold text-error">
         <AlertIcon className="size-5" />
-        This did not load
+        {t("States.errorTitle")}
       </p>
       <p className="text-ink">{message}</p>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
-          Retry
+          {t("Common.retry")}
         </Button>
       ) : null}
     </div>
@@ -34,9 +36,11 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 }
 
 /** Lines of placeholder while data loads. Announced once, politely. */
-export function LoadingState({ lines = 4, label = "Loading" }: { lines?: number; label?: string }) {
+export function LoadingState({ lines = 4, label }: { lines?: number; label?: string }) {
+  const t = useTranslations("Ui.Common");
+  const resolvedLabel = label ?? t("loading");
   return (
-    <div role="status" aria-label={label} className="flex flex-col gap-3 py-4">
+    <div role="status" aria-label={resolvedLabel} className="flex flex-col gap-3 py-4">
       {Array.from({ length: lines }, (_, i) => (
         <Skeleton key={i} className={`h-5 ${i % 3 === 2 ? "w-1/2" : "w-full"}`} />
       ))}

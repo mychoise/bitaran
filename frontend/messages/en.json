@@ -1,0 +1,233 @@
+{
+  "LocaleSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "ne": "नेपाली"
+  },
+  "Ui": {
+    "Common": {
+      "working": "Working…",
+      "goBack": "Go back",
+      "close": "Close",
+      "retry": "Retry",
+      "loading": "Loading"
+    },
+    "States": {
+      "errorTitle": "This did not load"
+    },
+    "Table": {
+      "emptyTitle": "Nothing here yet",
+      "emptyLine": "When there is something to show, it will appear here.",
+      "exportCsv": "Export CSV",
+      "pagesLabel": "Pages",
+      "range": "{from} to {to} of {total}",
+      "pageOf": "Page {page} of {pages}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "Controls": {
+      "dateRangeLegend": "Date range",
+      "from": "From",
+      "to": "To",
+      "presetToday": "Today",
+      "presetWeek": "Last 7 days",
+      "presetMonth": "Last 30 days",
+      "fewer": "Fewer {unit}",
+      "more": "More {unit}",
+      "demoCheque": "Cheque photo",
+      "demoScreenshot": "Payment screenshot",
+      "demoShop": "Shop visit photo",
+      "demoBill": "Bill photo",
+      "demoDefault": "Photo",
+      "demoAria": "{alt} ({label} {n}, demo)",
+      "demoCaption": "{label} {n}, demo",
+      "open": "Open "
+    },
+    "Camera": {
+      "noMediaApi": "This browser cannot open the camera. Open Bitaran in Chrome on the phone.",
+      "permissionDenied": "Camera permission was refused. Allow the camera for this site in the browser settings, then try again.",
+      "notFound": "No camera was found on this device.",
+      "startFailed": "The camera could not start. Try again.",
+      "captureFailed": "The photo could not be made. Try again.",
+      "fileReadFailed": "That file could not be read as a picture.",
+      "retake": "Take it again",
+      "videoAria": "Camera view",
+      "takePhoto": "Take photo",
+      "opening": "Opening the camera…",
+      "openCamera": "Open the camera",
+      "devPickFile": "Development only: choose a picture file instead",
+      "devNote": "Not shown in the live app; the camera is the only way there.",
+      "nepalTime": "{time} (Nepal time)",
+      "takenAlt": "{label}, taken {time}"
+    },
+    "ImagePicker": {
+      "readFailed": "This image could not be read. Try another file.",
+      "chooseAnother": "Choose another",
+      "chooseImage": "Choose an image",
+      "keepOld": "Keep the old one",
+      "remove": "Remove",
+      "reading": "Reading…",
+      "newImage": "New image, {pending}.",
+      "removedImage": "Image removed, {pending}.",
+      "defaultPending": "saved when you save settings"
+    },
+    "BarChart": {
+      "showAsChart": "Show as chart",
+      "showAsTable": "Show as table",
+      "empty": "Nothing in these dates.",
+      "dayColumn": "Day",
+      "groupAria": "{title}. {count} bars; use Tab to read each one.",
+      "barAria": "{label}: {display}"
+    }
+  },
+  "Status": {
+    "planned": "Planned",
+    "in_progress": "In progress",
+    "closed": "Closed, to count",
+    "reconciled": "Reconciled",
+    "confirmed": "Confirmed",
+    "pending": "Pending",
+    "bounced": "Bounced",
+    "cancelled": "Cancelled",
+    "open": "Open",
+    "delivered": "Delivered",
+    "overdue": "Overdue",
+    "over_limit": "Over limit",
+    "flagged": "Flagged",
+    "visited": "Visited",
+    "skipped": "Skipped",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "Auth": {
+    "messages": {
+      "invalid_credentials": "That email or password is not right.",
+      "rate_limited": "Too many attempts. Please wait a few minutes and try again.",
+      "account_inactive": "This account is switched off. Please contact your business owner.",
+      "unreachable": "We could not reach the server. Please try again.",
+      "unauthorized": "Your session ended. Please sign in again.",
+      "invalid_input": "Please check the email and password and try again."
+    },
+    "appLoading": "Loading…",
+    "topBar": {
+      "homeAria": "{product}, website home",
+      "backToWebsite": "Back to website"
+    },
+    "shell": {
+      "aboutAria": "About {product}",
+      "benefit1": "Your routes, shops and stock in one place.",
+      "benefit2": "Every sale, payment and return recorded with proof.",
+      "benefit3": "End-of-day stock and cash checked automatically."
+    },
+    "changePassword": {
+      "title": "Change password",
+      "subtitle": "You stay signed in after changing it.",
+      "success": "Your password has been changed.",
+      "currentLabel": "Current password",
+      "newLabel": "New password",
+      "confirmLabel": "New password again",
+      "newHint": "At least 8 characters.",
+      "enterCurrent": "Enter your current password.",
+      "minLength": "The new password needs at least {min} characters.",
+      "sameAsCurrent": "Choose a password different from the current one.",
+      "confirmRequired": "Type the new password again.",
+      "mismatch": "The two new passwords do not match.",
+      "currentWrong": "Your current password is not right.",
+      "saving": "Saving…",
+      "submit": "Change password",
+      "backToPage": "Back to your page"
+    },
+    "login": {
+      "staffTitle": "Sign in to work",
+      "staffWho": "For owners, managers and salesmen.",
+      "staffForgot": "Forgot your password? Ask your manager or the business owner to reset it.",
+      "staffSwitchAsk": "Are you a shop?",
+      "staffSwitchText": "Shop sign in",
+      "shopTitle": "Sign in as a shop",
+      "shopWho": "See your balance and statement.",
+      "shopForgot": "Forgot your password? Ask your wholesaler to reset it.",
+      "shopSwitchAsk": "Do you work for the wholesaler?",
+      "shopSwitchText": "Staff sign in",
+      "email": "Email",
+      "password": "Password",
+      "emailRequired": "Enter your email address.",
+      "emailInvalid": "That email looks incomplete. Write it as name@example.com.",
+      "passwordRequired": "Enter your password.",
+      "signingIn": "Signing in…",
+      "signIn": "Sign in"
+    },
+    "logout": {
+      "loggingOut": "Logging out…",
+      "logOut": "Log out"
+    },
+    "password": {
+      "hide": "Hide",
+      "show": "Show",
+      "srSuffix": " password",
+      "capsLockOn": "Caps Lock is on."
+    }
+  },
+  "Nav": {
+    "today": "Today",
+    "overview": "Overview",
+    "dayPlans": "Day plans",
+    "sales": "Sales",
+    "orders": "Orders",
+    "payments": "Payments",
+    "shops": "Shops",
+    "routes": "Routes",
+    "productsAndStock": "Products and stock",
+    "returns": "Returns",
+    "writeOffs": "Write-offs",
+    "expenses": "Expenses",
+    "visitPhotos": "Visit photos",
+    "reports": "Reports",
+    "staff": "Staff",
+    "settings": "Settings",
+    "stock": "Stock",
+    "more": "More",
+    "home": "Home",
+    "statement": "Statement",
+    "invoices": "Invoices",
+    "profile": "Profile"
+  },
+  "Shell": {
+    "loadingArea": "Loading your area",
+    "menu": "Menu",
+    "main": "Main",
+    "dayLoading": "Loading day…",
+    "dayNotLoaded": "Day not loaded",
+    "noRouteToday": "No route today",
+    "brandAria": "{product}, {area}"
+  },
+  "Chrome": {
+    "demoLabel": "Demo data.",
+    "demoLine": "Nothing here is real, and it is kept only in this browser.",
+    "devMenu": "Dev menu",
+    "devTools": "Development tools. Not part of the product.",
+    "resetDemoData": "Reset demo data",
+    "simulateFailure": "Simulate a connection failure",
+    "simulateFailureHint": "Every request fails, to check the error screens. This tab only.",
+    "resetTitle": "Reset demo data?",
+    "resetConsequence": "Every change you made to the demo data in this browser is thrown away, and the starting demo data comes back. Your login is not affected.",
+    "resetToast": "Demo data reset to the starting set."
+  },
+  "Meta": {
+    "signIn": "Sign in",
+    "staffSignIn": "Staff sign in",
+    "shopSignIn": "Shop sign in",
+    "changePassword": "Change password"
+  },
+  "LoginPage": {
+    "title": "Sign in",
+    "subtitle": "Choose how you use Bitaran.",
+    "staffChoiceTitle": "I work here",
+    "staffChoiceLine": "For the owner, managers and salesmen of a wholesale business.",
+    "shopChoiceTitle": "I'm a shop",
+    "shopChoiceLine": "For pasals that buy from a wholesaler and want to see their balance.",
+    "noAccountTitle": "No account yet?",
+    "noAccountLine": "There is no sign-up form. Staff and shops get their login from the wholesale business they work with or buy from.",
+    "ownBusiness": "Running a wholesale business?",
+    "requestDemo": "Request a demo"
+  }
+}

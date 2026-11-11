@@ -2,6 +2,7 @@
 
 // Tabs, Stepper, DateRangePicker, DemoImage and ImageViewer.
 
+import { useTranslations } from "next-intl";
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { addDays, todayNepal, type BusinessDate } from "@/lib/dates";
 import { Button } from "./Button";
@@ -76,6 +77,7 @@ export function Segmented<T extends string>({ options, value, onChange, label }:
 
 /** A whole-number stepper with big +/− buttons, for the salesman's phone. Typing is optional. */
 export function Stepper({ label, value, onChange, min = 0, max = 9999, unit }: { label: string; value: number; onChange: (n: number) => void; min?: number; max?: number; unit?: string }) {
+  const t = useTranslations("Ui.Controls");
   const id = useId();
   const set = (n: number) => onChange(Math.min(max, Math.max(min, Number.isFinite(n) ? Math.round(n) : min)));
   return (
@@ -84,7 +86,7 @@ export function Stepper({ label, value, onChange, min = 0, max = 9999, unit }: {
         {label}
       </label>
       <div className="flex items-center gap-2">
-        <button type="button" className="btn btn-card btn-lg w-14 px-0" aria-label={`Fewer ${unit ?? ""}`.trim()} disabled={value <= min} onClick={() => set(value - 1)}>
+        <button type="button" className="btn btn-card btn-lg w-14 px-0" aria-label={t("fewer", { unit: unit ?? "" }).trim()} disabled={value <= min} onClick={() => set(value - 1)}>
           <MinusIcon className="size-6" />
         </button>
         <input
@@ -97,7 +99,7 @@ export function Stepper({ label, value, onChange, min = 0, max = 9999, unit }: {
           onChange={(e) => set(e.currentTarget.valueAsNumber)}
           className="field field-lg w-24 rounded-input border border-muted bg-cotton text-center font-outlier text-ink"
         />
-        <button type="button" className="btn btn-card btn-lg w-14 px-0" aria-label={`More ${unit ?? ""}`.trim()} disabled={value >= max} onClick={() => set(value + 1)}>
+        <button type="button" className="btn btn-card btn-lg w-14 px-0" aria-label={t("more", { unit: unit ?? "" }).trim()} disabled={value >= max} onClick={() => set(value + 1)}>
           <PlusIcon className="size-6" />
         </button>
         {unit ? <span className="text-ink-2">{unit}</span> : null}
@@ -118,20 +120,21 @@ export function presetRange(preset: "today" | "week" | "month", today: BusinessD
 
 /** Two date fields (Nepal dates, shown in AD) and quick presets. */
 export function DateRangePicker({ value, onChange }: { value: Range; onChange: (r: Range) => void }) {
+  const t = useTranslations("Ui.Controls");
   const id = useId();
-  const presets: [string, "today" | "week" | "month"][] = [["Today", "today"], ["Last 7 days", "week"], ["Last 30 days", "month"]];
+  const presets: [string, "today" | "week" | "month"][] = [[t("presetToday"), "today"], [t("presetWeek"), "week"], [t("presetMonth"), "month"]];
   return (
     <fieldset className="flex flex-wrap items-end gap-3">
-      <legend className="visually-hidden">Date range</legend>
+      <legend className="visually-hidden">{t("dateRangeLegend")}</legend>
       <div className="flex flex-col gap-1">
         <label htmlFor={`${id}-from`} className="text-sm text-muted">
-          From
+          {t("from")}
         </label>
         <input id={`${id}-from`} type="date" value={value.from} max={value.to} onChange={(e) => e.currentTarget.value && onChange({ ...value, from: e.currentTarget.value })} className="field field-sm rounded-input border border-muted bg-cotton px-3 text-ink" />
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor={`${id}-to`} className="text-sm text-muted">
-          To
+          {t("to")}
         </label>
         <input id={`${id}-to`} type="date" value={value.to} min={value.from} onChange={(e) => e.currentTarget.value && onChange({ ...value, to: e.currentTarget.value })} className="field field-sm rounded-input border border-muted bg-cotton px-3 text-ink" />
       </div>
@@ -152,21 +155,20 @@ export function DateRangePicker({ value, onChange }: { value: Range; onChange: (
 
 // ---- images ------------------------------------------------------------------------------
 
-const DEMO_LABEL: Record<string, string> = { cheque: "Cheque photo", screenshot: "Payment screenshot", shop: "Shop visit photo", bill: "Bill photo" };
-
 /**
  * A stored image. Demo images ("demo-img:kind:n") are drawn here from tokens, never fetched;
  * real ones (data or https URLs) are shown as they are.
  */
 export function DemoImage({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
+  const t = useTranslations("Ui.Controls");
   if (src.startsWith("demo-img:")) {
     const [, kind, n] = src.split(":");
+    const demoLabelKey = kind === "cheque" ? "demoCheque" : kind === "screenshot" ? "demoScreenshot" : kind === "shop" ? "demoShop" : kind === "bill" ? "demoBill" : null;
+    const label = demoLabelKey ? t(demoLabelKey) : t("demoDefault");
     return (
-      <div role="img" aria-label={`${alt} (${DEMO_LABEL[kind] ?? "Photo"} ${n}, demo)`} className={`visit-photo relative flex flex-col items-start justify-end gap-1 overflow-hidden rounded-input p-3 ${className}`.trim()}>
+      <div role="img" aria-label={t("demoAria", { alt, label, n })} className={`visit-photo relative flex flex-col items-start justify-end gap-1 overflow-hidden rounded-input p-3 ${className}`.trim()}>
         <CameraIcon className="size-6 text-ink-2" />
-        <span className="rounded-input bg-board px-2 text-xs text-board-type">
-          {DEMO_LABEL[kind] ?? "Photo"} {n}, demo
-        </span>
+        <span className="rounded-input bg-board px-2 text-xs text-board-type">{t("demoCaption", { label, n })}</span>
       </div>
     );
   }
@@ -176,11 +178,12 @@ export function DemoImage({ src, alt, className = "" }: { src: string; alt: stri
 
 /** A thumbnail that opens the full image in a modal. */
 export function ImageViewer({ src, alt, thumbClassName = "h-20 w-28" }: { src: string; alt: string; /** Size of the thumbnail. */ thumbClassName?: string }) {
+  const t = useTranslations("Ui.Controls");
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={`choice rounded-input ${thumbClassName.includes("w-full") ? "block w-full" : ""}`.trim()}>
-        <span className="visually-hidden">Open </span>
+        <span className="visually-hidden">{t("open")}</span>
         <DemoImage src={src} alt={alt} className={thumbClassName} />
       </button>
       <Modal open={open} onClose={() => setOpen(false)} title={alt}>

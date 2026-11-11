@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, type KeyboardEvent } from "react";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 
 /** A password input with a show/hide toggle and a caps-lock warning. The value is never logged. */
 export function PasswordField({ id, label, autoComplete, error, hint, disabled, autoFocus }: Props) {
+  const t = useTranslations("Auth.password");
   const [visible, setVisible] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const checkCaps = (e: KeyboardEvent<HTMLInputElement>) => setCapsLock(e.getModifierState?.("CapsLock") ?? false);
@@ -52,13 +54,13 @@ export function PasswordField({ id, label, autoComplete, error, hint, disabled, 
           aria-pressed={visible}
           className="pw-toggle absolute inset-y-1 right-1 rounded-input px-3 text-sm font-medium text-ink"
         >
-          {visible ? "Hide" : "Show"}
-          <span className="sr-only"> password</span>
+          {visible ? t("hide") : t("show")}
+          <span className="sr-only">{t("srSuffix")}</span>
         </button>
       </div>
       {capsLock ? (
         <p id={capsId} className="text-sm font-medium text-ink">
-          Caps Lock is on.
+          {t("capsLockOn")}
         </p>
       ) : null}
       <p id={noteId} role={error ? "alert" : undefined} className={`min-h-5 text-sm ${error ? "font-medium text-error" : "text-muted"}`}>

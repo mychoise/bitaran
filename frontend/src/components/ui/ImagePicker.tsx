@@ -3,6 +3,7 @@
 // Picks an image for a record (business logo, product photo), shrinks it in the browser, and
 // shows it before it is saved. The parent decides when the change is uploaded.
 
+import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ImageProblem, prepareImage } from "@/lib/images";
 import { Button } from "./Button";
@@ -20,7 +21,7 @@ export function ImagePicker({
   hint,
   emptyText,
   maxPx = 512,
-  pendingText = "saved when you save settings",
+  pendingText,
   footer,
 }: {
   title: string;
@@ -36,6 +37,8 @@ export function ImagePicker({
   pendingText?: string;
   footer?: ReactNode;
 }) {
+  const t = useTranslations("Ui.ImagePicker");
+  const resolvedPendingText = pendingText ?? t("defaultPending");
   const inputId = useId();
   const input = useRef<HTMLInputElement>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -55,7 +58,7 @@ export function ImagePicker({
       const blob = await prepareImage(file, maxPx);
       onChange({ kind: "new", blob, preview: URL.createObjectURL(blob) });
     } catch (e) {
-      setProblem(e instanceof ImageProblem ? e.message : "This image could not be read. Try another file.");
+      setProblem(e instanceof ImageProblem ? e.message : t("readFailed"));
     } finally {
       setBusy(false);
       if (input.current) input.current.value = "";
@@ -73,15 +76,15 @@ export function ImagePicker({
           <span className="px-4 text-center text-sm text-muted">{emptyText}</span>
         )}
       </div>
-      <p className="mt-3 text-sm text-ink-2">{change.kind === "new" ? `New image, ${pendingText}.` : change.kind === "remove" ? `Image removed, ${pendingText}.` : hint}</p>
+      <p className="mt-3 text-sm text-ink-2">{change.kind === "new" ? t("newImage", { pending: resolvedPendingText }) : change.kind === "remove" ? t("removedImage", { pending: resolvedPendingText }) : hint}</p>
       <div className="mt-4 flex flex-wrap gap-3">
         <input ref={input} id={inputId} type="file" accept="image/png,image/jpeg,image/webp" className="visually-hidden" tabIndex={-1} aria-hidden onChange={(e) => pick(e.target.files?.[0])} />
-        <Button variant="secondary" size="sm" loading={busy} loadingLabel="Reading…" onClick={() => input.current?.click()}>
-          {shown ? "Choose another" : "Choose an image"}
+        <Button variant="secondary" size="sm" loading={busy} loadingLabel={t("reading")} onClick={() => input.current?.click()}>
+          {shown ? t("chooseAnother") : t("chooseImage")}
         </Button>
         {shown ? (
           <Button variant="quiet" size="sm" onClick={() => onChange(change.kind === "new" ? { kind: "keep" } : { kind: "remove" })}>
-            {change.kind === "new" && current ? "Keep the old one" : "Remove"}
+            {change.kind === "new" && current ? t("keepOld") : t("remove")}
           </Button>
         ) : null}
       </div>

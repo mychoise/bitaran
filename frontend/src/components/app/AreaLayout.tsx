@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Suspense, type ReactNode } from "react";
 import { ToastProvider } from "@/components/ui/Overlay";
 import { LoadingState } from "@/components/ui/States";
@@ -30,11 +31,12 @@ async function Loaded({ area, children }: { area: Area; children: ReactNode }) {
  * route can still prerender its shell); the person and the API mode go to the client shell.
  */
 export function AreaLayout({ area, children }: { area: Area; children: ReactNode }) {
+  const t = useTranslations("Shell");
   return (
     <Suspense
       fallback={
         <div className="mx-auto max-w-3xl px-4 py-16">
-          <LoadingState label="Loading your area" />
+          <LoadingState label={t("loadingArea")} />
         </div>
       }
     >

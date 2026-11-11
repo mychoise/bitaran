@@ -1,6 +1,7 @@
 // Small display pieces: Card, Stat, PageHeader, Badge, StatusBadge, MoneyText, Skeleton.
 // All built from the website's tokens and recipes (docs/design-language.md).
 
+import { useTranslations } from "next-intl";
 import type { HTMLAttributes, ReactNode } from "react";
 import { formatBalance, formatMoney, type Paisa } from "@/lib/money";
 import { AlertIcon, CheckIcon, ClockIcon, XCircleIcon } from "./icons";
@@ -71,30 +72,31 @@ export function Badge({ tone = "neutral", children }: { tone?: BadgeTone; childr
   );
 }
 
-const STATUS: Record<string, { tone: BadgeTone; label: string }> = {
-  planned: { tone: "neutral", label: "Planned" },
-  in_progress: { tone: "progress", label: "In progress" },
-  closed: { tone: "warning", label: "Closed, to count" },
-  reconciled: { tone: "settled", label: "Reconciled" },
-  confirmed: { tone: "success", label: "Confirmed" },
-  pending: { tone: "progress", label: "Pending" },
-  bounced: { tone: "danger", label: "Bounced" },
-  cancelled: { tone: "stopped", label: "Cancelled" },
-  open: { tone: "progress", label: "Open" },
-  delivered: { tone: "success", label: "Delivered" },
-  overdue: { tone: "warning", label: "Overdue" },
-  over_limit: { tone: "danger", label: "Over limit" },
-  flagged: { tone: "warning", label: "Flagged" },
-  visited: { tone: "settled", label: "Visited" },
-  skipped: { tone: "stopped", label: "Skipped" },
-  active: { tone: "success", label: "Active" },
-  inactive: { tone: "stopped", label: "Inactive" },
+const STATUS_TONE: Record<string, BadgeTone> = {
+  planned: "neutral",
+  in_progress: "progress",
+  closed: "warning",
+  reconciled: "settled",
+  confirmed: "success",
+  pending: "progress",
+  bounced: "danger",
+  cancelled: "stopped",
+  open: "progress",
+  delivered: "success",
+  overdue: "warning",
+  over_limit: "danger",
+  flagged: "warning",
+  visited: "settled",
+  skipped: "stopped",
+  active: "success",
+  inactive: "stopped",
 };
 
 /** The one place a record status becomes a badge, so every screen says it the same way. */
-export function StatusBadge({ status, label }: { status: keyof typeof STATUS | string; label?: string }) {
-  const s = STATUS[status] ?? { tone: "neutral" as const, label: status };
-  return <Badge tone={s.tone}>{label ?? s.label}</Badge>;
+export function StatusBadge({ status, label }: { status: keyof typeof STATUS_TONE | string; label?: string }) {
+  const t = useTranslations("Status");
+  const tone = STATUS_TONE[status] ?? "neutral";
+  return <Badge tone={tone}>{label ?? (t.has(status) ? t(status) : status)}</Badge>;
 }
 
 /** Money from paisa, in figures. `balance` shows a negative as "Credit Rs X". */
