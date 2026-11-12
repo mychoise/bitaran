@@ -4,6 +4,7 @@
 // In progress: how far along, today's sales and cash, the next shop, and Close day.
 // Closed: a read-only summary. No plan: says so plainly.
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { Button, buttonClass } from "@/components/ui/Button";
@@ -18,25 +19,27 @@ import { cartonEquivalent, countUnits } from "@/lib/units";
 import { DAY_AFFECTS, useToday } from "./useToday";
 
 export function Today() {
+  const t = useTranslations("Salesman.today");
+  const tNav = useTranslations("Nav");
   const { plan, report } = useToday();
   const routes = useApiQuery(["routes", "list"], (api) => api.routes.list());
-  if (plan.isPending) return <LoadingState label="Loading today" />;
+  if (plan.isPending) return <LoadingState label={t("loading")} />;
   if (plan.isError) return <ErrorState message={errorMessage(plan.error)} onRetry={() => plan.refetch()} />;
   if (!plan.data)
     return (
       <>
-        <h1 className="visually-hidden">Today</h1>
-        <EmptyState title="No plan for today" line="Your manager has not given you a route for today. When they do, it shows here." />
+        <h1 className="visually-hidden">{tNav("today")}</h1>
+        <EmptyState title={t("noPlanTitle")} line={t("noPlanLine")} />
       </>
     );
-  if (report.isPending) return <LoadingState label="Loading today" />;
+  if (report.isPending) return <LoadingState label={t("loading")} />;
   if (report.isError) return <ErrorState message={errorMessage(report.error)} onRetry={() => report.refetch()} />;
   const route = routes.data?.find((r) => r.id === plan.data!.routeId);
   const r = report.data;
   return (
     <div className="mx-auto max-w-3xl">
       <p className="text-ink-2">{formatDate(r.plan.date)}</p>
-      <h1 className="mt-1 text-display-s">{route?.name ?? "Today's route"}</h1>
+      <h1 className="mt-1 text-display-s">{route?.name ?? t("defaultRouteName")}</h1>
       <p className="mt-3">
         <StatusBadge status={r.plan.status} />
       </p>
@@ -48,12 +51,13 @@ export function Today() {
 }
 
 function StockSummary({ report: r }: { report: DayReport }) {
+  const t = useTranslations("Salesman.today");
   const products = useApiQuery(["products", "list", "names"], (api) => api.products.list({ pageSize: 200 }));
   const p = (id: string) => products.data?.items.find((x) => x.id === id);
   return (
     <Card as="section" dense aria-labelledby="carry-title">
       <h2 id="carry-title" className="text-title tracking-normal">
-        Stock you carry
+        {t("stockTitle")}
       </h2>
       <ul className="m-0 mt-3 list-none p-0">
         {r.stock.map((l) => {
@@ -76,32 +80,31 @@ function StockSummary({ report: r }: { report: DayReport }) {
 }
 
 function Planned({ report: r }: { report: DayReport }) {
+  const t = useTranslations("Salesman.today");
   const toast = useToast();
   const [problem, setProblem] = useState<string | null>(null);
   const start = useApiMutation((api) => api.dayPlans.start(r.plan.id), DAY_AFFECTS);
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-lg">
-        {r.plan.visits.length} shop{r.plan.visits.length === 1 ? "" : "s"} to visit today, in order.
-      </p>
+      <p className="text-lg">{t("shopsToVisit", { count: r.plan.visits.length })}</p>
       <StockSummary report={r} />
       <div>
         <Button
           size="lg"
           className="w-full"
           loading={start.isPending}
-          loadingLabel="Starting…"
+          loadingLabel={t("starting")}
           onClick={async () => {
             setProblem(null);
             try {
               await start.mutateAsync(undefined);
-              toast("Day started. Your first shop is waiting.");
+              toast(t("dayStartedToast"));
             } catch (e) {
               setProblem(errorMessage(e));
             }
           }}
         >
-          Start day
+          {t("startDay")}
         </Button>
         <FormProblem message={problem} />
       </div>
@@ -110,15 +113,17 @@ function Planned({ report: r }: { report: DayReport }) {
 }
 
 function InProgress({ report: r }: { report: DayReport }) {
+  const t = useTranslations("Salesman.today");
+  const tShared = useTranslations("Salesman.shared");
   const shops = useApiQuery(["dayPlans", "shops", r.plan.id], (api) => api.dayPlans.shops(r.plan.id));
   const done = r.visits.visited + r.visits.skipped;
   const total = done + r.visits.pending;
   const next = shops.data?.find((v) => v.visit.status === "pending");
   return (
     <div className="flex flex-col gap-6">
-      <Card as="section" dense aria-label="How far along">
+      <Card as="section" dense aria-label={t("howFarAlong")}>
         <p className="text-lg">
-          <span className="font-outlier text-2xl">{done}</span> of {total} shops done
+          <span className="font-outlier text-2xl">{done}</span> {t("ofShopsDone", { total })}
         </p>
         <svg viewBox="0 0 100 6" preserveAspectRatio="none" className="mt-3 block h-2 w-full" aria-hidden>
           <rect width="100" height="6" rx="3" className="fill-paper-3" />
@@ -126,13 +131,13 @@ function InProgress({ report: r }: { report: DayReport }) {
         </svg>
         <dl className="m-0 mt-5 grid grid-cols-2 gap-4">
           <div>
-            <dt className="text-sm text-muted">Sales today</dt>
+            <dt className="text-sm text-muted">{tShared("sales")}</dt>
             <dd className="m-0 mt-1 text-xl">
               <MoneyText paisa={r.sales.totalPaisa} />
             </dd>
           </div>
           <div>
-            <dt className="text-sm text-muted">Cash collected</dt>
+            <dt className="text-sm text-muted">{tShared("cashCollected")}</dt>
             <dd className="m-0 mt-1 text-xl">
               <MoneyText paisa={r.cash.collectedPaisa} />
             </dd>
@@ -140,23 +145,23 @@ function InProgress({ report: r }: { report: DayReport }) {
         </dl>
       </Card>
       {next ? (
-        <Card as="section" dense aria-label="Next shop">
-          <p className="text-sm text-muted">Next shop</p>
+        <Card as="section" dense aria-label={t("nextShop")}>
+          <p className="text-sm text-muted">{t("nextShop")}</p>
           <p className="mt-1 text-title font-semibold">{next.shop.name}</p>
           <p className="text-ink-2">{next.shop.address}</p>
           <Link href={`/app/salesman/shops/${next.visit.id}`} className={buttonClass("primary", "lg", "mt-4 w-full")}>
-            Open {next.shop.name}
+            {t("openShop", { name: next.shop.name })}
           </Link>
         </Card>
       ) : shops.data ? (
-        <p className="text-lg">Every shop is visited or skipped. You can close the day.</p>
+        <p className="text-lg">{t("everyShopDone")}</p>
       ) : null}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link href="/app/salesman/shops" className={buttonClass("secondary", "lg", "w-full")}>
-          All shops
+          {t("allShops")}
         </Link>
         <Link href="/app/salesman/close-day" className={buttonClass("secondary", "lg", "w-full")}>
-          Close day
+          {t("closeDayLink")}
         </Link>
       </div>
     </div>
@@ -164,37 +169,38 @@ function InProgress({ report: r }: { report: DayReport }) {
 }
 
 function Closed({ report: r }: { report: DayReport }) {
+  const t = useTranslations("Salesman.today");
+  const tShared = useTranslations("Salesman.shared");
+  const tNav = useTranslations("Nav");
   return (
-    <Card as="section" aria-label="Your day">
+    <Card as="section" aria-label={t("yourDay")}>
       <p className="text-lg">
-        Day closed{r.plan.closedAt ? ` at ${formatTime(r.plan.closedAt)}` : ""}. {r.plan.status === "reconciled" ? "Your manager has counted it." : "Your manager will count it."}
+        {r.plan.closedAt ? t("dayClosedAt", { time: formatTime(r.plan.closedAt) }) : t("dayClosed")} {r.plan.status === "reconciled" ? t("mgrCounted") : t("mgrWillCount")}
       </p>
       <dl className="m-0 mt-5 grid grid-cols-2 gap-4">
         <div>
-          <dt className="text-sm text-muted">Shops</dt>
-          <dd className="m-0 mt-1">
-            {r.visits.visited} visited, {r.visits.skipped} skipped
-          </dd>
+          <dt className="text-sm text-muted">{tNav("shops")}</dt>
+          <dd className="m-0 mt-1">{tShared("shopsVisitedSkipped", { visited: r.visits.visited, skipped: r.visits.skipped })}</dd>
         </div>
         <div>
-          <dt className="text-sm text-muted">Sales</dt>
+          <dt className="text-sm text-muted">{tShared("sales")}</dt>
           <dd className="m-0 mt-1">
             <MoneyText paisa={r.sales.totalPaisa} />
           </dd>
         </div>
         <div>
-          <dt className="text-sm text-muted">Cash collected</dt>
+          <dt className="text-sm text-muted">{tShared("cashCollected")}</dt>
           <dd className="m-0 mt-1">
             <MoneyText paisa={r.cash.collectedPaisa} />
           </dd>
         </div>
         <div>
-          <dt className="text-sm text-muted">Cash handed over</dt>
-          <dd className="m-0 mt-1">{r.cash.handedOverPaisa === null ? "Not given" : <MoneyText paisa={r.cash.handedOverPaisa} />}</dd>
+          <dt className="text-sm text-muted">{tShared("cashHandedOver")}</dt>
+          <dd className="m-0 mt-1">{r.cash.handedOverPaisa === null ? tShared("notGiven") : <MoneyText paisa={r.cash.handedOverPaisa} />}</dd>
         </div>
       </dl>
       <Link href="/app/salesman/close-day" className={buttonClass("secondary", "md", "mt-6")}>
-        See what you handed back
+        {t("seeHandedBack")}
       </Link>
     </Card>
   );

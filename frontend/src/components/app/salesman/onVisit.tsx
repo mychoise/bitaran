@@ -3,6 +3,7 @@
 // Shared by the screens that act on one shop visit (sale, payment, return, photo): the visit
 // from ?visit=…, a guard for when it cannot be acted on, and one idempotency key per attempt.
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useRef, useState, type ReactNode } from "react";
@@ -44,6 +45,8 @@ export function useSingleFlight() {
 }
 
 export function VisitGate({ title, children }: { title: string; children: (v: VisitShop) => ReactNode }) {
+  const t = useTranslations("Salesman.onVisit");
+  const tNav = useTranslations("Nav");
   const params = useSearchParams();
   const id = params.get("visit") ?? "";
   const q = useApiQuery(["visits", id], (api) => api.visits.get(id), { enabled: Boolean(id) });
@@ -51,13 +54,13 @@ export function VisitGate({ title, children }: { title: string; children: (v: Vi
   if (!id)
     return (
       <>
-        {back("/app/salesman/shops", "Shops")}
-        <EmptyState title={`${title}: choose a shop first`} line="Open a shop from today's list, then use its buttons." action={<Link href="/app/salesman/shops" className={buttonClass("secondary", "sm")}>Today&apos;s shops</Link>} />
+        {back("/app/salesman/shops", tNav("shops"))}
+        <EmptyState title={t("chooseShopFirst", { title })} line={t("openShopFirst")} action={<Link href="/app/salesman/shops" className={buttonClass("secondary", "sm")}>{t("todaysShops")}</Link>} />
       </>
     );
-  if (q.isPending) return <LoadingState label="Loading the shop" />;
+  if (q.isPending) return <LoadingState label={t("loadingShop")} />;
   if (q.isError) {
-    if (q.error instanceof ApiError && q.error.code === "not_found") return <EmptyState title="This visit was not found" line="It may be from another day." action={<Link href="/app/salesman/shops" className={buttonClass("secondary", "sm")}>Today&apos;s shops</Link>} />;
+    if (q.error instanceof ApiError && q.error.code === "not_found") return <EmptyState title={t("notFoundTitle")} line={t("notFoundLine")} action={<Link href="/app/salesman/shops" className={buttonClass("secondary", "sm")}>{t("todaysShops")}</Link>} />;
     return <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />;
   }
   const v = q.data;
@@ -73,7 +76,7 @@ export function VisitGate({ title, children }: { title: string; children: (v: Vi
       </div>
       {v.planStatus !== "in_progress" ? (
         <p className="mt-6 rounded-input border border-rule-2 bg-paper-3 p-4 text-ink-2">
-          {v.planStatus === "planned" ? "Start the day on Today first. Nothing can be recorded before it starts." : "This day is closed. Nothing more can be recorded on it."}
+          {v.planStatus === "planned" ? t("notStarted") : t("dayClosed")}
         </p>
       ) : (
         <div className="mt-6">{children(v)}</div>

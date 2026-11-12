@@ -3,6 +3,7 @@
 // The day's shops in route order, each with its visit status, what it owes and what it bought
 // today. Search by name or place. Add a shop that is not on the route, or a new shop.
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -17,25 +18,34 @@ import { errorMessage, useApiMutation, useApiQuery } from "@/lib/api/provider";
 import type { VisitShop } from "@/lib/api/types";
 import { DAY_AFFECTS, useToday } from "./useToday";
 
-export const VISIT_LABEL = { pending: "Planned", visited: "Visited", skipped: "Skipped" } as const;
+/** Same words as the day-plan Status namespace: "pending" for a visit means "Planned". */
+export function useVisitLabel() {
+  const t = useTranslations("Status");
+  return { pending: t("planned"), visited: t("visited"), skipped: t("skipped") } as const;
+}
 
 export function RouteShops() {
+  const t = useTranslations("Salesman.routeShops");
+  const tNav = useTranslations("Nav");
+  const tShared = useTranslations("Salesman.shared");
+  const tToday = useTranslations("Salesman.today");
+  const tNewShop = useTranslations("Salesman.newShop");
   const { plan } = useToday();
   const id = plan.data?.id;
   const shops = useApiQuery(["dayPlans", "shops", id ?? "none"], (api) => api.dayPlans.shops(id!), { enabled: Boolean(id) });
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
 
-  if (plan.isPending) return <LoadingState label="Loading your shops" />;
+  if (plan.isPending) return <LoadingState label={t("loadingShops")} />;
   if (plan.isError) return <ErrorState message={errorMessage(plan.error)} onRetry={() => plan.refetch()} />;
   if (!plan.data)
     return (
       <>
-        <h1 className="visually-hidden">Shops</h1>
-        <EmptyState title="No plan for today" line="When your manager gives you a route, its shops show here in order." />
+        <h1 className="visually-hidden">{tNav("shops")}</h1>
+        <EmptyState title={tToday("noPlanTitle")} line={t("noPlanLine")} />
       </>
     );
-  if (shops.isPending) return <LoadingState label="Loading your shops" />;
+  if (shops.isPending) return <LoadingState label={t("loadingShops")} />;
   if (shops.isError) return <ErrorState message={errorMessage(shops.error)} onRetry={() => shops.refetch()} />;
 
   const live = plan.data.status === "in_progress";
@@ -45,26 +55,24 @@ export function RouteShops() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-display-s">Shops</h1>
-      <p className="mt-2 text-lg text-ink-2">
-        {done} of {shops.data.length} done, in route order.
-      </p>
+      <h1 className="text-display-s">{tNav("shops")}</h1>
+      <p className="mt-2 text-lg text-ink-2">{t("doneInOrder", { done, total: shops.data.length })}</p>
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Button variant="secondary" size="lg" icon={<PlusIcon className="size-5" />} disabled={!live} onClick={() => setAdding(true)}>
-          Visit a shop not on the route
+          {t("visitNotOnRoute")}
         </Button>
         <Link href="/app/salesman/shops/new" className={buttonClass("secondary", "lg")}>
           <PlusIcon className="size-5" />
-          New shop
+          {tNewShop("title")}
         </Link>
       </div>
-      {!live ? <p className="mt-2 text-sm text-ink-2">{plan.data.status === "planned" ? "Start the day on Today to visit shops." : "This day is closed."}</p> : null}
+      {!live ? <p className="mt-2 text-sm text-ink-2">{plan.data.status === "planned" ? t("startDayToVisit") : tShared("dayClosedNote")}</p> : null}
 
       <div className="mt-6">
-        <Input label="Search" type="search" placeholder="Shop, owner or place" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input label={t("search")} type="search" placeholder={t("searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
       {list.length === 0 ? (
-        <EmptyState title="No shop matches" line="Try another name, or clear the search." />
+        <EmptyState title={t("noShopMatch")} line={t("noShopMatchLine")} />
       ) : (
         <ol className="m-0 flex list-none flex-col gap-3 p-0">
           {list.map((v) => (
@@ -80,6 +88,8 @@ export function RouteShops() {
 }
 
 function ShopCard({ v }: { v: VisitShop }) {
+  const t = useTranslations("Salesman.routeShops");
+  const visitLabel = useVisitLabel();
   return (
     <Link href={`/app/salesman/shops/${v.visit.id}`} className="block rounded-stock no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
       <Card dense className="flex items-start gap-4">
@@ -90,26 +100,29 @@ function ShopCard({ v }: { v: VisitShop }) {
           <span className="block text-lg font-medium text-ink">{v.shop.name}</span>
           <span className="block text-sm text-muted">
             {v.shop.address}
-            {v.visit.adHoc ? " · added today" : ""}
+            {v.visit.adHoc ? t("addedToday") : ""}
           </span>
           <span className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
             <span>
-              <span className="text-muted">{v.shop.balancePaisa < 0 ? "Credit " : "Owes "}</span>
+              <span className="text-muted">{v.shop.balancePaisa < 0 ? t("creditPrefix") : t("owesPrefix")}</span>
               <MoneyText paisa={Math.abs(v.shop.balancePaisa)} />
             </span>
             <span>
-              <span className="text-muted">Today </span>
-              {v.todaySalesCount ? <MoneyText paisa={v.todayPurchasesPaisa} /> : "nothing yet"}
+              <span className="text-muted">{t("todayPrefix")}</span>
+              {v.todaySalesCount ? <MoneyText paisa={v.todayPurchasesPaisa} /> : t("nothingYet")}
             </span>
           </span>
         </span>
-        <StatusBadge status={v.visit.status} label={VISIT_LABEL[v.visit.status]} />
+        <StatusBadge status={v.visit.status} label={visitLabel[v.visit.status]} />
       </Card>
     </Link>
   );
 }
 
 function AddVisit({ open, onClose, planId, onList }: { open: boolean; onClose: () => void; planId: string; onList: VisitShop[] }) {
+  const t = useTranslations("Salesman.routeShops");
+  const tShared = useTranslations("Salesman.shared");
+  const tCommon = useTranslations("Ui.Common");
   const router = useRouter();
   const toast = useToast();
   const all = useApiQuery(["shops", "list", "active"], (api) => api.shops.list({ pageSize: 200, active: true }), { enabled: open });
@@ -126,44 +139,44 @@ function AddVisit({ open, onClose, planId, onList }: { open: boolean; onClose: (
     <Modal
       open={open}
       onClose={close}
-      title="Visit a shop not on the route"
+      title={t("visitNotOnRoute")}
       footer={
         <>
           <Button variant="secondary" onClick={close}>
-            Go back
+            {tCommon("goBack")}
           </Button>
           <Button
             disabled={!shopId}
             loading={add.isPending}
-            loadingLabel="Adding…"
+            loadingLabel={t("adding")}
             onClick={async () => {
               setProblem(null);
               try {
                 const v = await add.mutateAsync(shopId);
                 close();
-                toast(`${v.shop.name} added to today's shops.`);
+                toast(t("addedToast", { name: v.shop.name }));
                 router.push(`/app/salesman/shops/${v.visit.id}`);
               } catch (e) {
                 setProblem(errorMessage(e));
               }
             }}
           >
-            Add to today
+            {t("addToToday")}
           </Button>
         </>
       }
     >
-      <p className="mb-4 text-ink-2">It goes at the end of today&apos;s list. Your route itself does not change.</p>
+      <p className="mb-4 text-ink-2">{t("addedAtEnd")}</p>
       {all.isPending ? (
-        <LoadingState label="Loading shops" lines={2} />
+        <LoadingState label={t("loadingShopsList")} lines={2} />
       ) : all.isError ? (
         <ErrorState message={errorMessage(all.error)} onRetry={() => all.refetch()} />
       ) : (
-        <Select label="Shop" value={shopId} onChange={(e) => setShopId(e.target.value)}>
-          <option value="">Choose a shop</option>
+        <Select label={t("shopFieldLabel")} value={shopId} onChange={(e) => setShopId(e.target.value)}>
+          <option value="">{tShared("chooseShop")}</option>
           {choices.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.name}, {s.address}
+              {t("shopOption", { name: s.name, address: s.address })}
             </option>
           ))}
         </Select>

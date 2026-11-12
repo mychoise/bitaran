@@ -5,6 +5,7 @@
 // review and a confirm. Once closed, a read-only
 // summary of what was handed back.
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Button, buttonClass } from "@/components/ui/Button";
@@ -20,29 +21,30 @@ import { formatAmount, formatMoney, parseRupees } from "@/lib/money";
 import { cartonEquivalent, countUnits } from "@/lib/units";
 import { DAY_AFFECTS, useToday } from "./useToday";
 
-const STAGES = ["Shops", "Stock left", "Cash", "Review"] as const;
-
 export function CloseDay() {
+  const t = useTranslations("Salesman.closeDay");
+  const tToday = useTranslations("Salesman.today");
+  const tNav = useTranslations("Nav");
   const { plan, report } = useToday();
   const products = useApiQuery(["products", "list", "names"], (api) => api.products.list({ pageSize: 200 }));
   const byId = useMemo(() => new Map((products.data?.items ?? []).map((p) => [p.id, p])), [products.data]);
-  if (plan.isPending) return <LoadingState label="Loading your day" />;
+  if (plan.isPending) return <LoadingState label={t("loading")} />;
   if (plan.isError) return <ErrorState message={errorMessage(plan.error)} onRetry={() => plan.refetch()} />;
   if (!plan.data)
     return (
       <>
-        <h1 className="visually-hidden">Close the day</h1>
-        <EmptyState title="No plan for today" line="There is nothing to close." />
+        <h1 className="visually-hidden">{t("title")}</h1>
+        <EmptyState title={tToday("noPlanTitle")} line={t("noPlanLine")} />
       </>
     );
-  if (report.isPending || products.isPending) return <LoadingState label="Loading your day" />;
+  if (report.isPending || products.isPending) return <LoadingState label={t("loading")} />;
   if (report.isError) return <ErrorState message={errorMessage(report.error)} onRetry={() => report.refetch()} />;
   const r = report.data;
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-display-s">Close day</h1>
+      <h1 className="text-display-s">{t("title")}</h1>
       {r.plan.status === "planned" ? (
-        <EmptyState title="The day has not started" line="Start it on Today first. It can be closed at the end of the route." action={<Link href="/app/salesman" className={buttonClass("secondary", "sm")}>Today</Link>} />
+        <EmptyState title={t("notStartedTitle")} line={t("notStartedLine")} action={<Link href="/app/salesman" className={buttonClass("secondary", "sm")}>{tNav("today")}</Link>} />
       ) : r.plan.status === "in_progress" ? (
         <Wizard report={r} product={(id) => byId.get(id)} />
       ) : (
@@ -53,6 +55,10 @@ export function CloseDay() {
 }
 
 function Wizard({ report: r, product }: { report: DayReport; product: (id: string) => Product | undefined }) {
+  const t = useTranslations("Salesman.closeDay");
+  const tShared = useTranslations("Salesman.shared");
+  const tRouteShops = useTranslations("Salesman.routeShops");
+  const STAGES = [t("stages.shops"), t("stages.stockLeft"), t("stages.cash"), t("stages.review")];
   const toast = useToast();
   const shops = useApiQuery(["dayPlans", "shops", r.plan.id], (api) => api.dayPlans.shops(r.plan.id));
   const [stage, setStage] = useState(0);
@@ -70,7 +76,7 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
     try {
       await close.mutateAsync({ reportedUnsold: r.stock.map((l) => ({ productId: l.productId, units: l.remaining })), cashHandedOverPaisa: cashPaisa! });
       setConfirming(false);
-      toast("Day closed. Hand the stock and cash to your manager.");
+      toast(t("closedToast"));
     } catch (e) {
       setConfirming(false);
       setProblem(errorMessage(e));
@@ -79,7 +85,7 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
 
   return (
     <>
-      <ol className="m-0 mt-6 flex list-none items-start justify-between p-0" aria-label="Stages">
+      <ol className="m-0 mt-6 flex list-none items-start justify-between p-0" aria-label={t("stagesAria")}>
         {STAGES.map((s, i) => (
           <li key={s} className="day-point flex flex-1 flex-col items-center gap-1 text-center" data-state={i < stage ? "done" : i === stage ? "now" : "next"} aria-current={i === stage ? "step" : undefined}>
             <span className="day-point-dot" aria-hidden />
@@ -91,15 +97,13 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
       <Card as="section" className="mt-6" aria-label={STAGES[stage]}>
         {stage === 0 ? (
           shops.isPending ? (
-            <LoadingState label="Loading your shops" lines={3} />
+            <LoadingState label={tRouteShops("loadingShops")} lines={3} />
           ) : shops.isError ? (
             <ErrorState message={errorMessage(shops.error)} onRetry={() => shops.refetch()} />
           ) : pending.length ? (
             <>
-              <h2 className="text-title tracking-normal">
-                {pending.length} shop{pending.length === 1 ? "" : "s"} still to visit or skip
-              </h2>
-              <p className="mt-1 text-ink-2">Every shop has to be visited or skipped before the day can close.</p>
+              <h2 className="text-title tracking-normal">{t("shopsLeftTitle", { count: pending.length })}</h2>
+              <p className="mt-1 text-ink-2">{t("shopsLeftLine")}</p>
               <ul className="m-0 mt-4 list-none p-0">
                 {pending.map((v) => (
                   <li key={v.visit.id} className="flex items-center justify-between gap-3 border-t border-rule-2 py-3">
@@ -108,7 +112,7 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
                       <span className="block text-sm text-muted">{v.shop.address}</span>
                     </span>
                     <Link href={`/app/salesman/shops/${v.visit.id}`} className={buttonClass("secondary", "sm")}>
-                      Open
+                      {t("openButton")}
                     </Link>
                   </li>
                 ))}
@@ -116,26 +120,24 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
             </>
           ) : (
             <>
-              <h2 className="text-title tracking-normal">Every shop is done</h2>
-              <p className="mt-1 text-ink-2">
-                {r.visits.visited} visited, {r.visits.skipped} skipped.
-              </p>
+              <h2 className="text-title tracking-normal">{t("everyShopDoneTitle")}</h2>
+              <p className="mt-1 text-ink-2">{tShared("shopsVisitedSkipped", { visited: r.visits.visited, skipped: r.visits.skipped })}</p>
             </>
           )
         ) : stage === 1 ? (
           <>
-            <h2 className="text-title tracking-normal">Stock left with you</h2>
-            <p className="mt-1 text-ink-2">Worked out from your sales: what was issued, less what you sold and any write-off. Hand this back to your manager, who counts it.</p>
+            <h2 className="text-title tracking-normal">{t("stockLeftTitle")}</h2>
+            <p className="mt-1 text-ink-2">{t("stockLeftLine")}</p>
             <div className="table-scroll mt-4">
               <table className="data-table">
-                <caption className="visually-hidden">Stock left, product by product</caption>
+                <caption className="visually-hidden">{t("stockCaption")}</caption>
                 <thead>
                   <tr>
-                    <th scope="col">Product</th>
-                    <th scope="col" className="num">Issued</th>
-                    <th scope="col" className="num">Sold</th>
-                    {r.stock.some((l) => l.writtenOff) ? <th scope="col" className="num">Written off</th> : null}
-                    <th scope="col" className="num">Left</th>
+                    <th scope="col">{t("product")}</th>
+                    <th scope="col" className="num">{t("issued")}</th>
+                    <th scope="col" className="num">{t("sold")}</th>
+                    {r.stock.some((l) => l.writtenOff) ? <th scope="col" className="num">{t("writtenOff")}</th> : null}
+                    <th scope="col" className="num">{t("left")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -148,7 +150,7 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
                         <th scope="row" className="font-medium">{p?.name ?? "…"}</th>
                         <td className="num">{countUnits(l.issued, unit)}</td>
                         <td className="num">{countUnits(l.sold, unit)}</td>
-                        {r.stock.some((x) => x.writtenOff) ? <td className="num">{l.writtenOff ? countUnits(l.writtenOff, unit) : "None"}</td> : null}
+                        {r.stock.some((x) => x.writtenOff) ? <td className="num">{l.writtenOff ? countUnits(l.writtenOff, unit) : t("none")}</td> : null}
                         <td className="num font-semibold">
                           {countUnits(l.remaining, unit)}
                           {cartons ? <span className="block text-sm font-normal text-muted">{cartons}</span> : null}
@@ -162,41 +164,37 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
           </>
         ) : stage === 2 ? (
           <>
-            <h2 className="text-title tracking-normal">Cash you hand over</h2>
-            <p className="mt-1 text-ink-2">
-              You collected <MoneyText paisa={r.cash.collectedPaisa} /> in cash today. Cheques and online payments are not part of this.
-            </p>
+            <h2 className="text-title tracking-normal">{t("cashTitle")}</h2>
+            <p className="mt-1 text-ink-2">{t("cashLine", { amount: formatMoney(r.cash.collectedPaisa) })}</p>
             <div className="mt-4 max-w-xs">
-              <Input label="Cash handed over (Rs)" inputMode="decimal" size="lg" autoComplete="off" value={cash} error={cashPaisa === null ? "Enter the cash in rupees, like 6,600." : undefined} onChange={(e) => setCash(e.target.value)} />
+              <Input label={t("cashHandedOverLabel")} inputMode="decimal" size="lg" autoComplete="off" value={cash} error={cashPaisa === null ? t("cashEnterError") : undefined} onChange={(e) => setCash(e.target.value)} />
             </div>
             {cashPaisa !== null && cashPaisa !== r.cash.collectedPaisa ? (
               <p className="text-sm font-medium text-error">
-                {cashPaisa < r.cash.collectedPaisa ? `Rs ${formatAmount(r.cash.collectedPaisa - cashPaisa)} less than you collected.` : `Rs ${formatAmount(cashPaisa - r.cash.collectedPaisa)} more than you collected.`}
+                {cashPaisa < r.cash.collectedPaisa ? t("cashLess", { amount: formatAmount(r.cash.collectedPaisa - cashPaisa) }) : t("cashMore", { amount: formatAmount(cashPaisa - r.cash.collectedPaisa) })}
               </p>
             ) : null}
           </>
         ) : (
           <>
-            <h2 className="text-title tracking-normal">Check before closing</h2>
+            <h2 className="text-title tracking-normal">{t("reviewTitle")}</h2>
             <dl className="m-0 mt-4 flex flex-col gap-2">
               <div className="flex justify-between gap-4">
-                <dt className="text-ink-2">Shops</dt>
-                <dd className="m-0 text-right">
-                  {r.visits.visited} visited, {r.visits.skipped} skipped
-                </dd>
+                <dt className="text-ink-2">{t("shops")}</dt>
+                <dd className="m-0 text-right">{tShared("shopsVisitedSkipped", { visited: r.visits.visited, skipped: r.visits.skipped })}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-ink-2">Sales</dt>
+                <dt className="text-ink-2">{t("sales")}</dt>
                 <dd className="m-0 text-right">
                   {r.sales.count}, <MoneyText paisa={r.sales.totalPaisa} />
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-ink-2">Cash handed over</dt>
+                <dt className="text-ink-2">{tShared("cashHandedOver")}</dt>
                 <dd className="m-0 text-right">{cashPaisa === null ? "" : <MoneyText paisa={cashPaisa} />}</dd>
               </div>
             </dl>
-            <h3 className="mt-5 text-sm font-semibold tracking-wide text-muted uppercase">Stock you hand back</h3>
+            <h3 className="mt-5 text-sm font-semibold tracking-wide text-muted uppercase">{t("stockHandBackTitle")}</h3>
             <ul className="m-0 mt-2 list-none p-0 text-sm">
               {r.stock.map((l) => {
                 const p = product(l.productId);
@@ -215,15 +213,15 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
       <FormProblem message={problem} />
       <div className="mt-6 grid grid-cols-2 gap-3">
         <Button variant="secondary" size="lg" disabled={stage === 0} onClick={() => setStage(stage - 1)}>
-          Back
+          {t("back")}
         </Button>
         {stage < STAGES.length - 1 ? (
           <Button size="lg" disabled={!canGo[stage]} onClick={() => setStage(stage + 1)}>
-            Next
+            {t("next")}
           </Button>
         ) : (
           <Button size="lg" onClick={() => setConfirming(true)}>
-            Close my day
+            {t("closeMyDay")}
           </Button>
         )}
       </div>
@@ -233,34 +231,36 @@ function Wizard({ report: r, product }: { report: DayReport; product: (id: strin
         onClose={() => setConfirming(false)}
         onConfirm={onClose}
         busy={close.isPending}
-        title="Close your day?"
-        consequence={`You hand back ${cashPaisa === null ? "the cash" : formatMoney(cashPaisa)} and the stock left with you. After this nothing on today's route can change; your manager counts it next.`}
-        confirmLabel="Close day"
+        title={t("closeDialogTitle")}
+        consequence={t("closeConsequence", { cash: cashPaisa === null ? t("theCash") : formatMoney(cashPaisa) })}
+        confirmLabel={t("closeDayButton")}
       />
     </>
   );
 }
 
 function ClosedSummary({ report: r, product }: { report: DayReport; product: (id: string) => Product | undefined }) {
+  const t = useTranslations("Salesman.closeDay");
+  const tShared = useTranslations("Salesman.shared");
   return (
-    <Card as="section" className="mt-6" aria-label="What you handed back">
+    <Card as="section" className="mt-6" aria-label={t("handedBackAria")}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-lg">Closed{r.plan.closedAt ? ` at ${formatTime(r.plan.closedAt)}` : ""}.</p>
+        <p className="text-lg">{r.plan.closedAt ? t("closedAt", { time: formatTime(r.plan.closedAt) }) : t("closed")}</p>
         <StatusBadge status={r.plan.status} />
       </div>
       <dl className="m-0 mt-4 flex flex-col gap-2">
         <div className="flex justify-between gap-4">
-          <dt className="text-ink-2">Cash collected</dt>
+          <dt className="text-ink-2">{tShared("cashCollected")}</dt>
           <dd className="m-0">
             <MoneyText paisa={r.cash.collectedPaisa} />
           </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-ink-2">Cash handed over</dt>
-          <dd className="m-0">{r.cash.handedOverPaisa === null ? "Not given" : <MoneyText paisa={r.cash.handedOverPaisa} />}</dd>
+          <dt className="text-ink-2">{tShared("cashHandedOver")}</dt>
+          <dd className="m-0">{r.cash.handedOverPaisa === null ? tShared("notGiven") : <MoneyText paisa={r.cash.handedOverPaisa} />}</dd>
         </div>
       </dl>
-      <h2 className="mt-5 text-sm font-semibold tracking-wide text-muted uppercase">Stock handed back</h2>
+      <h2 className="mt-5 text-sm font-semibold tracking-wide text-muted uppercase">{t("stockHandedBackTitle")}</h2>
       <ul className="m-0 mt-2 list-none p-0 text-sm">
         {r.stock.map((l) => {
           const p = product(l.productId);
@@ -272,7 +272,7 @@ function ClosedSummary({ report: r, product }: { report: DayReport; product: (id
           );
         })}
       </ul>
-      <p className="mt-4 text-sm text-muted">{r.plan.status === "reconciled" ? "Your manager has counted this day." : "Your manager counts it next."}</p>
+      <p className="mt-4 text-sm text-muted">{r.plan.status === "reconciled" ? t("mgrCountedDay") : t("mgrWillCountNext")}</p>
     </Card>
   );
 }

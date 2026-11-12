@@ -3,6 +3,7 @@
 // My expenses: add fuel, khaja or miscellaneous spending (amount, date, note, an optional bill
 // photo), and see my own list. Salary is added by the manager.
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Camera, type Shot } from "@/components/ui/Camera";
@@ -16,17 +17,18 @@ import { checkExpense } from "@/lib/api/mock/rules";
 import { errorMessage, useApi, useApiMutation, useApiQuery } from "@/lib/api/provider";
 import type { ExpenseType } from "@/lib/api/types";
 import { formatDate, todayNepal } from "@/lib/dates";
-import { parseRupees } from "@/lib/money";
+import { formatMoney, parseRupees } from "@/lib/money";
 import { useOnceKey, useSingleFlight } from "./onVisit";
 
-const TYPES: { value: Exclude<ExpenseType, "salary">; label: string }[] = [
-  { value: "fuel", label: "Fuel" },
-  { value: "khaja", label: "Khaja" },
-  { value: "misc", label: "Other" },
-];
-const LABEL: Record<ExpenseType, string> = { fuel: "Fuel", khaja: "Khaja", misc: "Other", salary: "Salary" };
-
 export function Expenses() {
+  const t = useTranslations("Salesman.expenses");
+  const tCommon = useTranslations("Ui.Common");
+  const TYPES: { value: Exclude<ExpenseType, "salary">; label: string }[] = [
+    { value: "fuel", label: t("types.fuel") },
+    { value: "khaja", label: t("types.khaja") },
+    { value: "misc", label: t("types.other") },
+  ];
+  const LABEL: Record<ExpenseType, string> = { fuel: t("types.fuel"), khaja: t("types.khaja"), misc: t("types.other"), salary: t("types.salary") };
   const { viewer } = useApi();
   const toast = useToast();
   const { key, renew } = useOnceKey();
@@ -56,7 +58,7 @@ export function Expenses() {
     try {
       await create.mutateAsync({ shot: withBill ? bill : null, input: { idempotencyKey: key, type, amountPaisa, date, note } });
       renew();
-      toast(`${LABEL[type]} expense added.`);
+      toast(t("addedToast", { type: LABEL[type] }));
       setAmount("");
       setNote("");
       setBill(null);
@@ -70,49 +72,47 @@ export function Expenses() {
   const items = list.data?.items ?? [];
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-display-s">My expenses</h1>
+      <h1 className="text-display-s">{t("title")}</h1>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <Card as="section" dense aria-labelledby="add-title">
           <h2 id="add-title" className="text-title tracking-normal">
-            Add an expense
+            {t("addTitle")}
           </h2>
           <div className="mt-4">
-            <Segmented label="Kind of expense" value={type} onChange={setType} options={TYPES} />
+            <Segmented label={t("kindLabel")} value={type} onChange={setType} options={TYPES} />
           </div>
           <div className="mt-4 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-            <Input label="Amount (Rs)" inputMode="decimal" autoComplete="off" value={amount} error={tried && (amountPaisa === null || ruleProblem === "Enter an amount above zero.") ? "Enter the amount in rupees, like 450." : undefined} onChange={(e) => setAmount(e.target.value)} />
-            <Input label="Date" type="date" max={today} value={date} error={tried && ruleProblem && ruleProblem !== "Enter an amount above zero." && !ruleProblem.includes("note") ? ruleProblem : undefined} onChange={(e) => setDate(e.target.value)} />
+            <Input label={t("amountLabel")} inputMode="decimal" autoComplete="off" value={amount} error={tried && (amountPaisa === null || ruleProblem === "Enter an amount above zero.") ? t("amountError") : undefined} onChange={(e) => setAmount(e.target.value)} />
+            <Input label={t("dateLabel")} type="date" max={today} value={date} error={tried && ruleProblem && ruleProblem !== "Enter an amount above zero." && !ruleProblem.includes("note") ? ruleProblem : undefined} onChange={(e) => setDate(e.target.value)} />
           </div>
-          <Textarea label="Note" hint="Optional, like where or what for." value={note} error={note.length > 300 ? "Keep the note under 300 characters." : undefined} onChange={(e) => setNote(e.target.value)} />
+          <Textarea label={t("noteLabel")} hint={t("noteHint")} value={note} error={note.length > 300 ? "Keep the note under 300 characters." : undefined} onChange={(e) => setNote(e.target.value)} />
           {withBill ? (
-            <Camera label="Photo of the bill" shot={bill} onShot={setBill} />
+            <Camera label={t("billPhotoLabel")} shot={bill} onShot={setBill} />
           ) : (
             <Button variant="quiet" size="sm" onClick={() => setWithBill(true)}>
-              Add a photo of the bill
+              {t("addBillPhoto")}
             </Button>
           )}
           <FormProblem message={problem} />
-          <Button size="lg" className="mt-4 w-full" loading={create.isPending} loadingLabel="Saving…" onClick={submit}>
-            Add expense
+          <Button size="lg" className="mt-4 w-full" loading={create.isPending} loadingLabel={tCommon("saving")} onClick={submit}>
+            {t("addButton")}
           </Button>
-          <p className="mt-2 text-sm text-muted">Salary is added by your manager.</p>
+          <p className="mt-2 text-sm text-muted">{t("salaryNote")}</p>
         </Card>
 
         <section aria-labelledby="mine-title">
           <h2 id="mine-title" className="text-title tracking-normal">
-            My list
+            {t("myListTitle")}
           </h2>
           {list.isPending ? (
-            <LoadingState label="Loading your expenses" lines={3} />
+            <LoadingState label={t("loadingExpenses")} lines={3} />
           ) : list.isError ? (
             <ErrorState message={errorMessage(list.error)} onRetry={() => list.refetch()} />
           ) : items.length === 0 ? (
-            <EmptyState title="No expenses yet" line="What you add shows up here." />
+            <EmptyState title={t("noExpensesTitle")} line={t("noExpensesLine")} />
           ) : (
             <>
-              <p className="mt-1 text-sm text-ink-2">
-                {items.length} expense{items.length === 1 ? "" : "s"}, <MoneyText paisa={items.reduce((a, e) => a + e.amountPaisa, 0)} /> in all.
-              </p>
+              <p className="mt-1 text-sm text-ink-2">{t("summary", { count: items.length, total: formatMoney(items.reduce((a, e) => a + e.amountPaisa, 0)) })}</p>
               <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
                 {items.map((e) => (
                   <li key={e.id}>
@@ -120,7 +120,7 @@ export function Expenses() {
                       <span className="min-w-0">
                         <span className="block font-medium">
                           {LABEL[e.type]}
-                          {e.billImageId ? <span className="text-sm font-normal text-muted"> · bill photo</span> : null}
+                          {e.billImageId ? <span className="text-sm font-normal text-muted">{t("billPhotoSuffix")}</span> : null}
                         </span>
                         <span className="block text-sm text-muted">
                           {formatDate(e.date)}

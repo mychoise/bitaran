@@ -2,20 +2,24 @@
 
 // More: the salesman's other screens.
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Card } from "@/components/ui/Display";
 import { ChartIcon, ReceiptIcon, WalletIcon } from "@/components/ui/icons";
 
-const LINKS = [
-  { href: "/app/salesman/history", title: "My sales", line: "Every sale, by date and shop.", icon: <ReceiptIcon className="size-6" /> },
-  { href: "/app/salesman/analytics", title: "My numbers", line: "Totals, payments, sales per day and top products.", icon: <ChartIcon className="size-6" /> },
-  { href: "/app/salesman/expenses", title: "My expenses", line: "Fuel, khaja and other spending.", icon: <WalletIcon className="size-6" /> },
-];
-
 export function More() {
+  const t = useTranslations("Salesman.more");
+  const tHistory = useTranslations("Salesman.history");
+  const tAnalytics = useTranslations("Salesman.analytics");
+  const tExpenses = useTranslations("Salesman.expenses");
+  const LINKS = [
+    { href: "/app/salesman/history", title: tHistory("title"), line: t("historyLine"), icon: <ReceiptIcon className="size-6" /> },
+    { href: "/app/salesman/analytics", title: tAnalytics("title"), line: t("analyticsLine"), icon: <ChartIcon className="size-6" /> },
+    { href: "/app/salesman/expenses", title: tExpenses("title"), line: t("expensesLine"), icon: <WalletIcon className="size-6" /> },
+  ];
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-display-s">More</h1>
+      <h1 className="text-display-s">{t("title")}</h1>
       <ul className="m-0 mt-6 flex list-none flex-col gap-3 p-0">
         {LINKS.map((l) => (
           <li key={l.href}>
