@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  experimental: {
+    agentUpgrade: "security",
+  },
 };
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
