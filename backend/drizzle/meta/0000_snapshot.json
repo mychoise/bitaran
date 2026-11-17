@@ -1,5 +1,5 @@
 {
-  "id": "ee880a2c-4b16-41d1-9495-1c23ef6926b9",
+  "id": "3c178996-85e2-4438-8169-cb07e79b704f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -89,7 +89,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "businesses_pan_number_format": {
+          "name": "businesses_pan_number_format",
+          "value": "\"businesses\".\"pan_number\" ~ '^[0-9]{9}$'"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.product_categories": {
@@ -250,6 +255,22 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_users_one_owner_per_business": {
+          "name": "idx_users_one_owner_per_business",
+          "columns": [
+            {
+              "expression": "business_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"users\".\"role\" = 'owner'",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -502,7 +523,36 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "products_price_paisa_nonneg": {
+          "name": "products_price_paisa_nonneg",
+          "value": "\"products\".\"price_paisa\" >= 0"
+        },
+        "products_carton_price_paisa_nonneg": {
+          "name": "products_carton_price_paisa_nonneg",
+          "value": "\"products\".\"carton_price_paisa\" >= 0"
+        },
+        "products_mrp_paisa_nonneg": {
+          "name": "products_mrp_paisa_nonneg",
+          "value": "\"products\".\"mrp_paisa\" >= 0"
+        },
+        "products_cost_price_paisa_nonneg": {
+          "name": "products_cost_price_paisa_nonneg",
+          "value": "\"products\".\"cost_price_paisa\" >= 0"
+        },
+        "products_stock_quantity_nonneg": {
+          "name": "products_stock_quantity_nonneg",
+          "value": "\"products\".\"stock_quantity\" >= 0"
+        },
+        "products_units_per_carton_positive": {
+          "name": "products_units_per_carton_positive",
+          "value": "\"products\".\"units_per_carton\" > 0"
+        },
+        "products_low_stock_alert_nonneg": {
+          "name": "products_low_stock_alert_nonneg",
+          "value": "\"products\".\"low_stock_alert\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.retail_clients": {
@@ -704,7 +754,16 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "retail_clients_pan_number_format": {
+          "name": "retail_clients_pan_number_format",
+          "value": "\"retail_clients\".\"pan_number\" ~ '^[0-9]{9}$'"
+        },
+        "retail_clients_credit_limit_paisa_nonneg": {
+          "name": "retail_clients_credit_limit_paisa_nonneg",
+          "value": "\"retail_clients\".\"credit_limit_paisa\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.route_clients": {
@@ -1000,7 +1059,20 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "day_plan_stock_quantity_issued_nonneg": {
+          "name": "day_plan_stock_quantity_issued_nonneg",
+          "value": "\"day_plan_stock\".\"quantity_issued\" >= 0"
+        },
+        "day_plan_stock_quantity_returned_nonneg": {
+          "name": "day_plan_stock_quantity_returned_nonneg",
+          "value": "\"day_plan_stock\".\"quantity_returned\" >= 0"
+        },
+        "day_plan_stock_quantity_counted_nonneg": {
+          "name": "day_plan_stock_quantity_counted_nonneg",
+          "value": "\"day_plan_stock\".\"quantity_counted\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.day_plans": {
@@ -1214,7 +1286,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "day_plans_cash_handed_over_paisa_nonneg": {
+          "name": "day_plans_cash_handed_over_paisa_nonneg",
+          "value": "\"day_plans\".\"cash_handed_over_paisa\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.visit_photos": {
@@ -1490,7 +1567,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "invoice_counters_last_number_nonneg": {
+          "name": "invoice_counters_last_number_nonneg",
+          "value": "\"invoice_counters\".\"last_number\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.payment_images": {
@@ -1839,7 +1921,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "payments_amount_paisa_positive": {
+          "name": "payments_amount_paisa_positive",
+          "value": "\"payments\".\"amount_paisa\" > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.sale_items": {
@@ -1958,7 +2045,20 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "sale_items_quantity_positive": {
+          "name": "sale_items_quantity_positive",
+          "value": "\"sale_items\".\"quantity\" > 0"
+        },
+        "sale_items_unit_price_paisa_nonneg": {
+          "name": "sale_items_unit_price_paisa_nonneg",
+          "value": "\"sale_items\".\"unit_price_paisa\" >= 0"
+        },
+        "sale_items_line_total_paisa_nonneg": {
+          "name": "sale_items_line_total_paisa_nonneg",
+          "value": "\"sale_items\".\"line_total_paisa\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.sales": {
@@ -2230,7 +2330,20 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "sales_invoice_number_positive": {
+          "name": "sales_invoice_number_positive",
+          "value": "\"sales\".\"invoice_number\" > 0"
+        },
+        "sales_discount_paisa_nonneg": {
+          "name": "sales_discount_paisa_nonneg",
+          "value": "\"sales\".\"discount_paisa\" >= 0"
+        },
+        "sales_total_paisa_nonneg": {
+          "name": "sales_total_paisa_nonneg",
+          "value": "\"sales\".\"total_paisa\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.expenses": {
@@ -2412,7 +2525,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "expenses_amount_paisa_positive": {
+          "name": "expenses_amount_paisa_positive",
+          "value": "\"expenses\".\"amount_paisa\" > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.sale_return_items": {
@@ -2530,7 +2648,20 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "sale_return_items_quantity_positive": {
+          "name": "sale_return_items_quantity_positive",
+          "value": "\"sale_return_items\".\"quantity\" > 0"
+        },
+        "sale_return_items_unit_price_paisa_nonneg": {
+          "name": "sale_return_items_unit_price_paisa_nonneg",
+          "value": "\"sale_return_items\".\"unit_price_paisa\" >= 0"
+        },
+        "sale_return_items_line_total_paisa_nonneg": {
+          "name": "sale_return_items_line_total_paisa_nonneg",
+          "value": "\"sale_return_items\".\"line_total_paisa\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.sale_returns": {
@@ -2706,7 +2837,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "sale_returns_total_paisa_nonneg": {
+          "name": "sale_returns_total_paisa_nonneg",
+          "value": "\"sale_returns\".\"total_paisa\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.stock_write_offs": {
@@ -2882,6 +3018,322 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
+      "checkConstraints": {
+        "stock_write_offs_quantity_positive": {
+          "name": "stock_write_offs_quantity_positive",
+          "value": "\"stock_write_offs\".\"quantity\" > 0"
+        },
+        "stock_write_offs_cost_value_paisa_nonneg": {
+          "name": "stock_write_offs_cost_value_paisa_nonneg",
+          "value": "\"stock_write_offs\".\"cost_value_paisa\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.order_items": {
+      "name": "order_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "order_id": {
+          "name": "order_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_id": {
+          "name": "product_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_name": {
+          "name": "product_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_order_items_order": {
+          "name": "idx_order_items_order",
+          "columns": [
+            {
+              "expression": "order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "order_items_order_id_orders_id_fk": {
+          "name": "order_items_order_id_orders_id_fk",
+          "tableFrom": "order_items",
+          "tableTo": "orders",
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "order_items_product_id_products_id_fk": {
+          "name": "order_items_product_id_products_id_fk",
+          "tableFrom": "order_items",
+          "tableTo": "products",
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "order_items_quantity_positive": {
+          "name": "order_items_quantity_positive",
+          "value": "\"order_items\".\"quantity\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.orders": {
+      "name": "orders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "salesman_id": {
+          "name": "salesman_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "taken_by": {
+          "name": "taken_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "order_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "payment_mode": {
+          "name": "payment_mode",
+          "type": "order_payment",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prepaid_payment_id": {
+          "name": "prepaid_payment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sale_id": {
+          "name": "sale_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancel_reason": {
+          "name": "cancel_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delivered_at": {
+          "name": "delivered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_orders_client": {
+          "name": "idx_orders_client",
+          "columns": [
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_orders_salesman_status": {
+          "name": "idx_orders_salesman_status",
+          "columns": [
+            {
+              "expression": "salesman_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "orders_business_id_businesses_id_fk": {
+          "name": "orders_business_id_businesses_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "businesses",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_client_id_retail_clients_id_fk": {
+          "name": "orders_client_id_retail_clients_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "retail_clients",
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_salesman_id_users_id_fk": {
+          "name": "orders_salesman_id_users_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "salesman_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_taken_by_users_id_fk": {
+          "name": "orders_taken_by_users_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "users",
+          "columnsFrom": [
+            "taken_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_prepaid_payment_id_payments_id_fk": {
+          "name": "orders_prepaid_payment_id_payments_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "payments",
+          "columnsFrom": [
+            "prepaid_payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orders_sale_id_sales_id_fk": {
+          "name": "orders_sale_id_sales_id_fk",
+          "tableFrom": "orders",
+          "tableTo": "sales",
+          "columnsFrom": [
+            "sale_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     }
@@ -2914,6 +3366,23 @@
         "damaged",
         "expired",
         "other"
+      ]
+    },
+    "public.order_payment": {
+      "name": "order_payment",
+      "schema": "public",
+      "values": [
+        "prepaid",
+        "on_delivery"
+      ]
+    },
+    "public.order_status": {
+      "name": "order_status",
+      "schema": "public",
+      "values": [
+        "open",
+        "delivered",
+        "cancelled"
       ]
     },
     "public.payment_image_kind": {

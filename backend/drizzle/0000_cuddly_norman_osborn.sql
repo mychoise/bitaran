@@ -1,6 +1,8 @@
 CREATE TYPE "public"."day_plan_status" AS ENUM('planned', 'in_progress', 'closed', 'reconciled');--> statement-breakpoint
 CREATE TYPE "public"."expense_type" AS ENUM('salary', 'fuel', 'khaja', 'miscellaneous');--> statement-breakpoint
 CREATE TYPE "public"."loss_reason" AS ENUM('damaged', 'expired', 'other');--> statement-breakpoint
+CREATE TYPE "public"."order_payment" AS ENUM('prepaid', 'on_delivery');--> statement-breakpoint
+CREATE TYPE "public"."order_status" AS ENUM('open', 'delivered', 'cancelled');--> statement-breakpoint
 CREATE TYPE "public"."payment_image_kind" AS ENUM('cheque_front', 'cheque_back', 'online_screenshot', 'other');--> statement-breakpoint
 CREATE TYPE "public"."payment_method" AS ENUM('cash', 'cheque', 'online');--> statement-breakpoint
 CREATE TYPE "public"."payment_status" AS ENUM('pending', 'confirmed', 'bounced');--> statement-breakpoint
@@ -19,7 +21,8 @@ CREATE TABLE "businesses" (
 	"logo_key" text,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
-	CONSTRAINT "businesses_pan_number_unique" UNIQUE("pan_number")
+	CONSTRAINT "businesses_pan_number_unique" UNIQUE("pan_number"),
+	CONSTRAINT "businesses_pan_number_format" CHECK ("businesses"."pan_number" ~ '^[0-9]{9}$')
 );
 --> statement-breakpoint
 CREATE TABLE "product_categories" (
@@ -63,7 +66,14 @@ CREATE TABLE "products" (
 	"low_stock_alert" integer,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"updated_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "products_price_paisa_nonneg" CHECK ("products"."price_paisa" >= 0),
+	CONSTRAINT "products_carton_price_paisa_nonneg" CHECK ("products"."carton_price_paisa" >= 0),
+	CONSTRAINT "products_mrp_paisa_nonneg" CHECK ("products"."mrp_paisa" >= 0),
+	CONSTRAINT "products_cost_price_paisa_nonneg" CHECK ("products"."cost_price_paisa" >= 0),
+	CONSTRAINT "products_stock_quantity_nonneg" CHECK ("products"."stock_quantity" >= 0),
+	CONSTRAINT "products_units_per_carton_positive" CHECK ("products"."units_per_carton" > 0),
+	CONSTRAINT "products_low_stock_alert_nonneg" CHECK ("products"."low_stock_alert" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "retail_clients" (
@@ -86,7 +96,9 @@ CREATE TABLE "retail_clients" (
 	"linked_business_id" uuid,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp with time zone NOT NULL,
-	CONSTRAINT "retail_clients_email_unique" UNIQUE("email")
+	CONSTRAINT "retail_clients_email_unique" UNIQUE("email"),
+	CONSTRAINT "retail_clients_pan_number_format" CHECK ("retail_clients"."pan_number" ~ '^[0-9]{9}$'),
+	CONSTRAINT "retail_clients_credit_limit_paisa_nonneg" CHECK ("retail_clients"."credit_limit_paisa" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "route_clients" (
@@ -112,7 +124,10 @@ CREATE TABLE "day_plan_stock" (
 	"unit" text NOT NULL,
 	"quantity_issued" integer NOT NULL,
 	"quantity_returned" integer,
-	"quantity_counted" integer
+	"quantity_counted" integer,
+	CONSTRAINT "day_plan_stock_quantity_issued_nonneg" CHECK ("day_plan_stock"."quantity_issued" >= 0),
+	CONSTRAINT "day_plan_stock_quantity_returned_nonneg" CHECK ("day_plan_stock"."quantity_returned" >= 0),
+	CONSTRAINT "day_plan_stock_quantity_counted_nonneg" CHECK ("day_plan_stock"."quantity_counted" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "day_plans" (
@@ -129,7 +144,8 @@ CREATE TABLE "day_plans" (
 	"reconciled_by" uuid,
 	"reconciled_at" timestamp with time zone,
 	"note" text,
-	"created_at" timestamp with time zone NOT NULL
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "day_plans_cash_handed_over_paisa_nonneg" CHECK ("day_plans"."cash_handed_over_paisa" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "visit_photos" (
@@ -161,7 +177,8 @@ CREATE TABLE "visits" (
 --> statement-breakpoint
 CREATE TABLE "invoice_counters" (
 	"business_id" uuid PRIMARY KEY NOT NULL,
-	"last_number" integer DEFAULT 0 NOT NULL
+	"last_number" integer DEFAULT 0 NOT NULL,
+	CONSTRAINT "invoice_counters_last_number_nonneg" CHECK ("invoice_counters"."last_number" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "payment_images" (
@@ -192,7 +209,8 @@ CREATE TABLE "payments" (
 	"reference_no" text,
 	"note" text,
 	"idempotency_key" text,
-	"created_at" timestamp with time zone NOT NULL
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "payments_amount_paisa_positive" CHECK ("payments"."amount_paisa" > 0)
 );
 --> statement-breakpoint
 CREATE TABLE "sale_items" (
@@ -203,7 +221,10 @@ CREATE TABLE "sale_items" (
 	"unit" text NOT NULL,
 	"quantity" integer NOT NULL,
 	"unit_price_paisa" bigint NOT NULL,
-	"line_total_paisa" bigint NOT NULL
+	"line_total_paisa" bigint NOT NULL,
+	CONSTRAINT "sale_items_quantity_positive" CHECK ("sale_items"."quantity" > 0),
+	CONSTRAINT "sale_items_unit_price_paisa_nonneg" CHECK ("sale_items"."unit_price_paisa" >= 0),
+	CONSTRAINT "sale_items_line_total_paisa_nonneg" CHECK ("sale_items"."line_total_paisa" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "sales" (
@@ -221,7 +242,10 @@ CREATE TABLE "sales" (
 	"status" "sale_status" DEFAULT 'confirmed' NOT NULL,
 	"cancel_reason" text,
 	"idempotency_key" text,
-	"created_at" timestamp with time zone NOT NULL
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "sales_invoice_number_positive" CHECK ("sales"."invoice_number" > 0),
+	CONSTRAINT "sales_discount_paisa_nonneg" CHECK ("sales"."discount_paisa" >= 0),
+	CONSTRAINT "sales_total_paisa_nonneg" CHECK ("sales"."total_paisa" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "expenses" (
@@ -236,7 +260,8 @@ CREATE TABLE "expenses" (
 	"description" text,
 	"receipt_key" text,
 	"recorded_by" uuid NOT NULL,
-	"created_at" timestamp with time zone NOT NULL
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "expenses_amount_paisa_positive" CHECK ("expenses"."amount_paisa" > 0)
 );
 --> statement-breakpoint
 CREATE TABLE "sale_return_items" (
@@ -249,7 +274,10 @@ CREATE TABLE "sale_return_items" (
 	"unit_price_paisa" bigint NOT NULL,
 	"line_total_paisa" bigint NOT NULL,
 	"reason" "loss_reason" NOT NULL,
-	"restocked" boolean DEFAULT false NOT NULL
+	"restocked" boolean DEFAULT false NOT NULL,
+	CONSTRAINT "sale_return_items_quantity_positive" CHECK ("sale_return_items"."quantity" > 0),
+	CONSTRAINT "sale_return_items_unit_price_paisa_nonneg" CHECK ("sale_return_items"."unit_price_paisa" >= 0),
+	CONSTRAINT "sale_return_items_line_total_paisa_nonneg" CHECK ("sale_return_items"."line_total_paisa" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "sale_returns" (
@@ -262,7 +290,8 @@ CREATE TABLE "sale_returns" (
 	"return_date" date NOT NULL,
 	"total_paisa" bigint NOT NULL,
 	"note" text,
-	"created_at" timestamp with time zone NOT NULL
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "sale_returns_total_paisa_nonneg" CHECK ("sale_returns"."total_paisa" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "stock_write_offs" (
@@ -277,6 +306,34 @@ CREATE TABLE "stock_write_offs" (
 	"day_plan_id" uuid,
 	"recorded_by" uuid NOT NULL,
 	"note" text,
+	"created_at" timestamp with time zone NOT NULL,
+	CONSTRAINT "stock_write_offs_quantity_positive" CHECK ("stock_write_offs"."quantity" > 0),
+	CONSTRAINT "stock_write_offs_cost_value_paisa_nonneg" CHECK ("stock_write_offs"."cost_value_paisa" >= 0)
+);
+--> statement-breakpoint
+CREATE TABLE "order_items" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"order_id" uuid NOT NULL,
+	"product_id" uuid NOT NULL,
+	"product_name" text NOT NULL,
+	"unit" text NOT NULL,
+	"quantity" integer NOT NULL,
+	CONSTRAINT "order_items_quantity_positive" CHECK ("order_items"."quantity" > 0)
+);
+--> statement-breakpoint
+CREATE TABLE "orders" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"business_id" uuid NOT NULL,
+	"client_id" uuid NOT NULL,
+	"salesman_id" uuid NOT NULL,
+	"taken_by" uuid NOT NULL,
+	"status" "order_status" DEFAULT 'open' NOT NULL,
+	"payment_mode" "order_payment" NOT NULL,
+	"prepaid_payment_id" uuid,
+	"sale_id" uuid,
+	"note" text,
+	"cancel_reason" text,
+	"delivered_at" timestamp with time zone,
 	"created_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
@@ -330,8 +387,17 @@ ALTER TABLE "stock_write_offs" ADD CONSTRAINT "stock_write_offs_business_id_busi
 ALTER TABLE "stock_write_offs" ADD CONSTRAINT "stock_write_offs_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stock_write_offs" ADD CONSTRAINT "stock_write_offs_day_plan_id_day_plans_id_fk" FOREIGN KEY ("day_plan_id") REFERENCES "public"."day_plans"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stock_write_offs" ADD CONSTRAINT "stock_write_offs_recorded_by_users_id_fk" FOREIGN KEY ("recorded_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_business_id_businesses_id_fk" FOREIGN KEY ("business_id") REFERENCES "public"."businesses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_client_id_retail_clients_id_fk" FOREIGN KEY ("client_id") REFERENCES "public"."retail_clients"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_salesman_id_users_id_fk" FOREIGN KEY ("salesman_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_taken_by_users_id_fk" FOREIGN KEY ("taken_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_prepaid_payment_id_payments_id_fk" FOREIGN KEY ("prepaid_payment_id") REFERENCES "public"."payments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_sale_id_sales_id_fk" FOREIGN KEY ("sale_id") REFERENCES "public"."sales"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "idx_product_categories_business_name" ON "product_categories" USING btree ("business_id","name");--> statement-breakpoint
 CREATE INDEX "idx_users_business_role" ON "users" USING btree ("business_id","role");--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_users_one_owner_per_business" ON "users" USING btree ("business_id") WHERE "users"."role" = 'owner';--> statement-breakpoint
 CREATE INDEX "idx_products_business_active" ON "products" USING btree ("business_id","is_active");--> statement-breakpoint
 CREATE INDEX "idx_products_category" ON "products" USING btree ("category_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "idx_products_business_sku" ON "products" USING btree ("business_id","sku");--> statement-breakpoint
@@ -361,4 +427,7 @@ CREATE INDEX "idx_sale_return_items_return" ON "sale_return_items" USING btree (
 CREATE INDEX "idx_sale_returns_client_date" ON "sale_returns" USING btree ("client_id","return_date");--> statement-breakpoint
 CREATE INDEX "idx_sale_returns_day_plan" ON "sale_returns" USING btree ("day_plan_id");--> statement-breakpoint
 CREATE INDEX "idx_stock_write_offs_business_date" ON "stock_write_offs" USING btree ("business_id","write_off_date");--> statement-breakpoint
-CREATE INDEX "idx_stock_write_offs_day_plan" ON "stock_write_offs" USING btree ("day_plan_id");
+CREATE INDEX "idx_stock_write_offs_day_plan" ON "stock_write_offs" USING btree ("day_plan_id");--> statement-breakpoint
+CREATE INDEX "idx_order_items_order" ON "order_items" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "idx_orders_client" ON "orders" USING btree ("client_id");--> statement-breakpoint
+CREATE INDEX "idx_orders_salesman_status" ON "orders" USING btree ("salesman_id","status");

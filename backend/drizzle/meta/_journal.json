@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1793087828019,
-      "tag": "0000_broken_sue_storm",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1793090281524,
-      "tag": "0001_constraints",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1793950694164,
-      "tag": "0002_orders",
+      "when": 1794896831361,
+      "tag": "0000_cuddly_norman_osborn",
       "breakpoints": true
     }
   ]
